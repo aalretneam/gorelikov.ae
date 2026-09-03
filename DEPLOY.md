@@ -61,9 +61,9 @@ bash /opt/gorelikov.ae/deploy/setup-ssl.sh
 В `site/js/app.js`, объект `CONFIG`:
 
 1. **Донат.** `donateUrl: ""` — CloudTips / Boosty / Tribute. Пока пусто — кнопка открывает почту `artem@gorelikov.ae`.
-2. **Яндекс.Метрика.** `metrikaId` — номер счётчика с [metrika.yandex.ru](https://metrika.yandex.ru/). Пока `0`, тег на прод не вставляется.
+2. **Яндекс.Метрика.** Счётчик **112279782** стоит в `site/index.html`. Тег грузится только на `gorelikov.ae`.
 
-После вставки id сайт сам шлёт цели:
+Сайт сам шлёт цели:
 
 | Цель | Когда |
 |---|---|

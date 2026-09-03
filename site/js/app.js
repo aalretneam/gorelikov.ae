@@ -4,8 +4,7 @@ const CONFIG = {
   abacusNs: "gorelikov.ae",
   donateUrl: "",
   donateEmail: "artem@gorelikov.ae",
-  // Номер счётчика с https://metrika.yandex.ru/ — без него сбор не стартует.
-  metrikaId: 0
+  metrikaId: 112279782
 };
 
 function isProdHost() {
@@ -1019,30 +1018,9 @@ function metrikaGoal(name, params) {
   } catch {}
 }
 
-function injectMetrika(id) {
-  if (!id || !isProdHost()) return;
-  window.ym = window.ym || function () { (window.ym.a = window.ym.a || []).push(arguments); };
-  window.ym.l = Date.now();
-  window.ym(id, "init", {
-    clickmap: true,
-    trackLinks: true,
-    accurateTrackBounce: true,
-    webvisor: true,
-    trackHash: true
-  });
-  const s = document.createElement("script");
-  s.async = true;
-  s.src = "https://mc.yandex.ru/metrika/tag.js";
-  document.head.appendChild(s);
-  const ns = document.createElement("noscript");
-  ns.innerHTML = `<div><img src="https://mc.yandex.ru/watch/${id}" style="position:absolute;left:-9999px" alt="" /></div>`;
-  document.body.appendChild(ns);
-}
-
 async function boot() {
   $("#year").textContent = new Date().getFullYear();
   buildShowcase();
-  injectMetrika(CONFIG.metrikaId);
 
   const m = location.hash.match(/^#s=(.+)$/);
   if (m) {
