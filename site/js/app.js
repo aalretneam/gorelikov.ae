@@ -4,8 +4,16 @@ const CONFIG = {
   abacusNs: "gorelikov.ae",
   donateUrl: "",
   donateEmail: "artem@gorelikov.ae",
+  // Номер счётчика с https://metrika.yandex.ru/ — без него сбор не стартует.
   metrikaId: 0
 };
+
+function isProdHost() {
+  return /^(www\.)?gorelikov\.ae$/i.test(location.hostname);
+}
+function fmtCount(n) {
+  return Number(n).toLocaleString("ru-RU");
+}
 
 const THEMES = [
   { id: "y2k",      name: "Y2K",           sw: ["#ffd6f5", "#ff2fb3", "#7b2ff7"], decor: "✦" },
@@ -204,6 +212,7 @@ function subjectCat(raw) {
 }
 
 async function counterHit(action) {
+  if (!isProdHost()) return counterGet(action);
   try {
     const r = await fetch(`https://abacus.jasoncameron.dev/hit/${encodeURIComponent(CONFIG.abacusNs)}/${encodeURIComponent(action)}`, { cache: "no-store" });
     const j = await r.json();
@@ -216,6 +225,32 @@ async function counterGet(action) {
     const j = await r.json();
     return Number(j.value) || 0;
   } catch { return null; }
+}
+function setCreatedStat(n) {
+  const el = $("#statCreated");
+  if (!el || n == null || Number.isNaN(Number(n))) return;
+  el.textContent = fmtCount(n);
+}
+function setVisitsStat(n) {
+  if (!n) {
+    $("#statVisits").textContent = "live";
+    return;
+  }
+  $("#statVisits").textContent = fmtCount(n);
+  const created = $("#statCreated")?.textContent;
+  const createdBit = created && created !== "…" && created !== "0" ? ` · ${created} расписаний` : "";
+  $("#statFooter").textContent = `${fmtCount(n)} заходов${createdBit}`;
+}
+async function markScheduleCreated(source) {
+  metrikaGoal("schedule_created", { source });
+  try {
+    if (sessionStorage.getItem("rc")) return;
+  } catch {}
+  const n = await counterHit("created");
+  if (n) {
+    try { sessionStorage.setItem("rc", String(n)); } catch {}
+    setCreatedStat(n);
+  }
 }
 
 const sheet = $("#sheet");
@@ -788,6 +823,8 @@ async function downloadPng() {
     a.click();
     toast("Готово — картинка в загрузках");
     counterHit("download");
+    metrikaGoal("download");
+    markScheduleCreated("download");
   } catch (err) {
     console.error(err);
     toast("Не получилось. Проверь интернет и попробуй ещё раз");
@@ -809,6 +846,8 @@ async function copyPng() {
       }
       toast("Картинка в буфере — вставляй в Telegram");
       counterHit("download");
+      metrikaGoal("download");
+      markScheduleCreated("copy");
       return;
     }
     throw new Error("no clipboard");
@@ -869,6 +908,8 @@ async function shareSchedule() {
     const token = await encodeShare();
     const url = `${location.origin}${location.pathname}#s=${token}`;
     counterHit("share");
+    metrikaGoal("share");
+    markScheduleCreated("share");
     if (navigator.share) {
       try {
         await navigator.share({ title: "Моё расписание", text: "Смотри, какое расписание я собрал(а) в Расписалке:", url });
@@ -929,6 +970,7 @@ function openEditor() {
   history.replaceState(null, "", "#edit");
   renderControls(); renderSheet();
   window.scrollTo(0, 0);
+  metrikaGoal("editor_open");
 }
 function openLanding() {
   document.body.classList.remove("mode-edit");
@@ -949,6 +991,7 @@ function donateHref() {
 }
 function openDonate(e) {
   if (e) e.preventDefault();
+  metrikaGoal("donate_open");
   const url = donateHref();
   const go = $("#donateGo");
   const mail = $("#donateMail");
@@ -968,11 +1011,25 @@ $("#donateModal").addEventListener("click", (e) => {
 });
 document.querySelectorAll("[data-donate]").forEach((b) => { b.addEventListener("click", openDonate); });
 
+function metrikaGoal(name, params) {
+  const id = CONFIG.metrikaId;
+  if (!id || !isProdHost()) return;
+  try {
+    if (typeof window.ym === "function") window.ym(id, "reachGoal", name, params);
+  } catch {}
+}
+
 function injectMetrika(id) {
-  if (!id) return;
+  if (!id || !isProdHost()) return;
   window.ym = window.ym || function () { (window.ym.a = window.ym.a || []).push(arguments); };
   window.ym.l = Date.now();
-  window.ym(id, "init", { clickmap: true, trackLinks: true, accurateTrackBounce: true, webvisor: true });
+  window.ym(id, "init", {
+    clickmap: true,
+    trackLinks: true,
+    accurateTrackBounce: true,
+    webvisor: true,
+    trackHash: true
+  });
   const s = document.createElement("script");
   s.async = true;
   s.src = "https://mc.yandex.ru/metrika/tag.js";
@@ -1011,16 +1068,9 @@ async function boot() {
   } else {
     visits = Number(cached);
   }
-  const downloads = await counterGet("download");
-  if (visits) {
-    $("#statVisits").textContent = visits.toLocaleString("ru-RU");
-    $("#statFooter").textContent = `${visits.toLocaleString("ru-RU")} заходов`;
-  } else {
-    $("#statVisits").textContent = "live";
-  }
-  if (downloads) {
-    $("#statDl").textContent = downloads.toLocaleString("ru-RU");
-    $("#statDl").parentElement.querySelector("span").textContent = "скачанных расписаний";
-  }
+  const created = await counterGet("created");
+  if (created != null) setCreatedStat(created);
+  else $("#statCreated").textContent = "0";
+  setVisitsStat(visits);
 }
 boot();

@@ -56,14 +56,26 @@ bash /opt/gorelikov.ae/deploy/setup-ssl.sh
 
 Проверка: https://gorelikov.ae/
 
-## Перед продом — 2 правки в `site/js/app.js`
+## Перед продом — донат и Метрика
 
-`const CONFIG = {`
+В `site/js/app.js`, объект `CONFIG`:
 
 1. **Донат.** `donateUrl: ""` — CloudTips / Boosty / Tribute. Пока пусто — кнопка открывает почту `artem@gorelikov.ae`.
-2. **Яндекс.Метрика.** `metrikaId: 0` — id счётчика с metrika.yandex.ru.
+2. **Яндекс.Метрика.** `metrikaId` — номер счётчика с [metrika.yandex.ru](https://metrika.yandex.ru/). Пока `0`, тег на прод не вставляется.
 
-Живой счётчик на главной (abacus) работает без этого.
+После вставки id сайт сам шлёт цели:
+
+| Цель | Когда |
+|---|---|
+| `editor_open` | открыли редактор |
+| `download` | скачали PNG или скопировали в Telegram |
+| `share` | поделились ссылкой |
+| `schedule_created` | первое готовое расписание в сессии (скачать / копия / ссылка) |
+| `donate_open` | открыли окно доната |
+
+Включён webvisor, карта кликов и `trackHash` (переход на `#edit`). Сбор и hit-ы счётчиков только с `gorelikov.ae`, не с localhost.
+
+Живые цифры на главной: заходы и «создано расписаний» (abacus). Второе растёт один раз за сессию, когда человек сохранил или отправил расписание.
 
 ## Локально
 
