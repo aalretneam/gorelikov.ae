@@ -1,0 +1,25 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Publish to VPS
+        uses: easingthemes/ssh-deploy@v5.0.3
+        with:
+          SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_KEY }}
+          REMOTE_HOST: ${{ secrets.VPS_HOST }}
+          REMOTE_USER: ${{ secrets.VPS_USER }}
+          REMOTE_PORT: "22"
+          SOURCE: "./"
+          TARGET: "/opt/gorelikov.ae/"
+          EXCLUDE: "/.git, /.github, /.DS_Store, /raspisanie-editor.html"
+          SCRIPT_BEFORE: mkdir -p /opt/gorelikov.ae /var/www/gorelikov.ae
+          SCRIPT_AFTER: bash /opt/gorelikov.ae/deploy/install.sh

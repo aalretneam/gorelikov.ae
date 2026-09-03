@@ -2,672 +2,107 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Расписалка — красивое расписание уроков и пар за минуту</title>
-<meta name="description" content="Бесплатный конструктор расписания для школы и универа: 9 стилей + свой дизайн, экспорт на обои телефона, в сторис и на печать А4. Без регистрации." />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Расписалка — красивое расписание для школы и универа</title>
+<meta name="description" content="Бесплатный конструктор расписания: 10 стилей + свой дизайн. Обои на телефон, сторис, пост, печать А4. Школа и универ, две недели. Без регистрации." />
+<meta name="theme-color" content="#0a0c13" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-title" content="Расписалка" />
+<link rel="canonical" href="https://gorelikov.ae/" />
+<link rel="manifest" href="manifest.webmanifest" />
 <meta property="og:title" content="Расписалка — расписание, которое не стыдно поставить на обои" />
-<meta property="og:description" content="Собери за минуту: Y2K, неон, kawaii, брутализм и свой стиль. Скачай на телефон, в сторис или на печать. Бесплатно." />
+<meta property="og:description" content="Собери за минуту: Y2K, неон, kawaii, брутализм, vaporwave и свой стиль. Скачай или кинь в Telegram. Бесплатно." />
 <meta property="og:type" content="website" />
+<meta property="og:locale" content="ru_RU" />
 <meta property="og:url" content="https://gorelikov.ae/" />
 <meta property="og:image" content="https://gorelikov.ae/og.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
 <meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Расписалка — расписание на обои" />
+<meta name="twitter:description" content="10 стилей + свой. Школа и универ. Бесплатно, без регистрации." />
+<meta name="twitter:image" content="https://gorelikov.ae/og.png" />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%238b5cf6'/%3E%3Cstop offset='1' stop-color='%2322d3ee'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='url(%23g)'/%3E%3Ctext x='32' y='44' font-size='34' text-anchor='middle' fill='white'%3E✦%3C/text%3E%3C/svg%3E" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Unbounded:wght@500;700;900&family=Space+Grotesk:wght@500;700&family=Caveat:wght@600;700&family=Cormorant+Garamond:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet" />
-<style>
-/* ============================================================
-   APP CHROME (тёмный интерфейс редактора и лендинга)
-============================================================ */
-:root {
-  --bg: #0a0c13;
-  --p1: #11141f;
-  --p2: #181c2b;
-  --line: rgba(255,255,255,.09);
-  --tx: #edf0f9;
-  --tx2: #8e96ac;
-  --br1: #8b5cf6;
-  --br2: #22d3ee;
-  --hot: #ff4d8d;
-  --ok: #34d399;
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "Расписалка",
+  "url": "https://gorelikov.ae/",
+  "applicationCategory": "EducationalApplication",
+  "operatingSystem": "Any",
+  "inLanguage": "ru",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "description": "Конструктор красивого расписания для школы и университета с экспортом в PNG."
 }
-* { box-sizing: border-box; }
-html, body { margin: 0; padding: 0; }
-body {
-  background: var(--bg);
-  color: var(--tx);
-  font-family: Manrope, system-ui, -apple-system, sans-serif;
-  -webkit-font-smoothing: antialiased;
-}
-button { font: inherit; cursor: pointer; border: 0; }
-a { color: inherit; }
-::selection { background: rgba(139,92,246,.4); }
-
-.btn {
-  display: inline-flex; align-items: center; gap: 8px;
-  padding: 11px 18px; border-radius: 14px;
-  font-weight: 700; font-size: .92rem;
-  background: var(--p2); color: var(--tx);
-  border: 1px solid var(--line);
-  transition: transform .15s, filter .15s, border-color .15s;
-}
-.btn:hover { transform: translateY(-1px); border-color: rgba(255,255,255,.22); }
-.btn:active { transform: translateY(0); }
-.btn.primary {
-  background: linear-gradient(135deg, var(--br1), #6d3ef0 55%, var(--br2));
-  border: 0; color: #fff;
-  box-shadow: 0 8px 28px rgba(139,92,246,.35);
-}
-.btn.hot {
-  background: linear-gradient(135deg, var(--hot), #ff7a45);
-  border: 0; color: #fff;
-}
-.btn.sm { padding: 8px 13px; border-radius: 11px; font-size: .84rem; }
-.btn.ghost { background: transparent; }
-
-/* ============================================================
-   ЛЕНДИНГ
-============================================================ */
-#landing { min-height: 100dvh; overflow-x: hidden; position: relative; }
-.blob { position: absolute; border-radius: 50%; filter: blur(90px); opacity: .5; pointer-events: none; z-index: 0; }
-.blob.b1 { width: 480px; height: 480px; background: #6d3ef0; top: -160px; left: -120px; }
-.blob.b2 { width: 420px; height: 420px; background: #0e7490; top: 60px; right: -140px; }
-.blob.b3 { width: 380px; height: 380px; background: #9d174d; top: 640px; left: 40%; opacity: .35; }
-
-.wrap { max-width: 1100px; margin: 0 auto; padding: 0 20px; position: relative; z-index: 1; }
-
-.nav {
-  display: flex; align-items: center; gap: 14px;
-  padding: 18px 0;
-}
-.logo {
-  display: inline-flex; align-items: center; gap: 9px;
-  font-family: Unbounded, sans-serif; font-weight: 700; font-size: 1.02rem;
-  letter-spacing: .02em; text-decoration: none;
-}
-.logo .ic {
-  width: 32px; height: 32px; border-radius: 9px; display: grid; place-items: center;
-  background: linear-gradient(135deg, var(--br1), var(--br2));
-  font-size: 1rem; color: #fff;
-}
-.nav .spacer { flex: 1; }
-
-.hero { padding: 56px 0 30px; text-align: center; }
-.hero .pill {
-  display: inline-flex; align-items: center; gap: 8px;
-  padding: 7px 14px; border-radius: 999px; font-size: .8rem; font-weight: 700;
-  background: rgba(139,92,246,.14); border: 1px solid rgba(139,92,246,.35);
-  color: #c4b5fd; margin-bottom: 22px;
-}
-.hero h1 {
-  font-family: Unbounded, sans-serif; font-weight: 900;
-  font-size: clamp(1.9rem, 5.4vw, 3.6rem);
-  line-height: 1.12; margin: 0 0 18px; letter-spacing: -.01em;
-}
-.hero h1 .grad {
-  background: linear-gradient(92deg, #a78bfa 5%, #22d3ee 50%, #ff4d8d 95%);
-  -webkit-background-clip: text; background-clip: text; color: transparent;
-}
-.hero p.sub {
-  color: var(--tx2); font-size: clamp(1rem, 2vw, 1.18rem);
-  max-width: 640px; margin: 0 auto 30px; line-height: 1.55;
-}
-.hero .cta-row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
-.hero .btn.primary { padding: 15px 28px; font-size: 1.02rem; border-radius: 16px; }
-
-.stats {
-  display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;
-  margin-top: 34px;
-}
-.stat {
-  min-width: 150px; padding: 14px 20px; border-radius: 16px;
-  background: rgba(255,255,255,.04); border: 1px solid var(--line);
-  backdrop-filter: blur(6px);
-}
-.stat b { display: block; font-family: Unbounded, sans-serif; font-size: 1.3rem; }
-.stat span { color: var(--tx2); font-size: .8rem; font-weight: 600; }
-
-.section-title {
-  font-family: Unbounded, sans-serif; font-weight: 700;
-  font-size: clamp(1.2rem, 3vw, 1.7rem); text-align: center;
-  margin: 70px 0 8px;
-}
-.section-sub { text-align: center; color: var(--tx2); margin: 0 0 30px; }
-
-.showcase {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 16px; padding-bottom: 10px;
-}
-.mini-card {
-  border-radius: 18px; border: 1px solid var(--line);
-  background: var(--p1); overflow: hidden; cursor: pointer;
-  transition: transform .18s, border-color .18s, box-shadow .18s;
-  text-align: left; padding: 0;
-}
-.mini-card:hover {
-  transform: translateY(-4px);
-  border-color: rgba(139,92,246,.55);
-  box-shadow: 0 16px 40px rgba(0,0,0,.45);
-}
-.mini-clip { height: 190px; overflow: hidden; position: relative; pointer-events: none; }
-.mini-clip .sheet {
-  transform: scale(.36); transform-origin: top left;
-  position: absolute; top: 12px; left: 12px;
-  width: 700px !important; min-height: 0 !important;
-}
-.mini-meta { padding: 12px 14px; display: flex; align-items: center; gap: 8px; }
-.mini-meta b { font-size: .92rem; }
-.mini-meta span { color: var(--tx2); font-size: .78rem; margin-left: auto; }
-
-.steps {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 16px;
-}
-.step {
-  padding: 22px; border-radius: 18px;
-  background: var(--p1); border: 1px solid var(--line);
-}
-.step .n {
-  width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center;
-  font-family: Unbounded, sans-serif; font-weight: 700; color: #fff;
-  background: linear-gradient(135deg, var(--br1), var(--br2)); margin-bottom: 14px;
-}
-.step b { display: block; margin-bottom: 6px; font-size: 1.02rem; }
-.step p { margin: 0; color: var(--tx2); font-size: .9rem; line-height: 1.5; }
-
-.donate-band {
-  margin: 70px 0 0; padding: 30px; border-radius: 22px; text-align: center;
-  background: linear-gradient(135deg, rgba(255,77,141,.13), rgba(255,122,69,.1));
-  border: 1px solid rgba(255,77,141,.3);
-}
-.donate-band b { font-family: Unbounded, sans-serif; font-size: 1.15rem; display: block; margin-bottom: 8px; }
-.donate-band p { color: var(--tx2); margin: 0 0 18px; }
-
-footer.site {
-  margin-top: 60px; padding: 26px 0 40px;
-  border-top: 1px solid var(--line);
-  display: flex; flex-wrap: wrap; gap: 12px; align-items: center;
-  color: var(--tx2); font-size: .86rem;
-}
-footer.site .spacer { flex: 1; }
-
-/* ============================================================
-   РЕДАКТОР
-============================================================ */
-#editor { display: flex; flex-direction: column; height: 100dvh; }
-.topbar {
-  display: flex; align-items: center; gap: 10px;
-  padding: 10px 16px; border-bottom: 1px solid var(--line);
-  background: rgba(13,16,26,.85); backdrop-filter: blur(10px);
-  flex-wrap: wrap;
-}
-.topbar .logo { font-size: .92rem; }
-.topbar .spacer { flex: 1; }
-
-.workspace { flex: 1; display: grid; grid-template-columns: 330px 1fr; min-height: 0; }
-.side {
-  overflow-y: auto; padding: 16px; border-right: 1px solid var(--line);
-  background: var(--p1);
-}
-.grp { margin-bottom: 22px; }
-.grp > label {
-  display: block; font-size: .7rem; font-weight: 800;
-  letter-spacing: .12em; text-transform: uppercase; color: var(--tx2);
-  margin-bottom: 10px;
-}
-.seg { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-.seg button {
-  padding: 10px; border-radius: 12px; font-weight: 700; font-size: .88rem;
-  background: var(--p2); color: var(--tx2); border: 1px solid var(--line);
-}
-.seg button.active {
-  background: linear-gradient(135deg, var(--br1), #6d3ef0);
-  color: #fff; border-color: transparent;
-}
-.chips { display: flex; flex-wrap: wrap; gap: 6px; }
-.chip {
-  padding: 8px 12px; border-radius: 999px; font-weight: 700; font-size: .82rem;
-  background: var(--p2); color: var(--tx2); border: 1px solid var(--line);
-}
-.chip.on { background: rgba(34,211,238,.16); border-color: rgba(34,211,238,.5); color: #67e8f9; }
-.stepper { display: flex; align-items: center; gap: 10px; }
-.stepper button {
-  width: 38px; height: 38px; border-radius: 12px; font-size: 1.1rem; font-weight: 800;
-  background: var(--p2); color: var(--tx); border: 1px solid var(--line);
-}
-.stepper b { font-family: Unbounded, sans-serif; min-width: 30px; text-align: center; }
-.stepper span { color: var(--tx2); font-size: .8rem; }
-.hint { color: var(--tx2); font-size: .78rem; line-height: 1.45; margin-top: 8px; }
-.check {
-  display: flex; align-items: center; gap: 10px; font-size: .88rem; font-weight: 600;
-  padding: 6px 0; cursor: pointer;
-}
-.check input { width: 17px; height: 17px; accent-color: var(--br1); }
-
-.theme-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.tbtn {
-  padding: 11px 12px; border-radius: 13px; text-align: left;
-  background: var(--p2); border: 1px solid var(--line); color: var(--tx);
-  display: flex; flex-direction: column; gap: 7px;
-  transition: border-color .15s, transform .15s;
-}
-.tbtn:hover { transform: translateY(-1px); }
-.tbtn.active { border-color: var(--br1); box-shadow: 0 0 0 1px var(--br1); }
-.tbtn .nm { font-weight: 700; font-size: .84rem; }
-.tbtn .sw { display: flex; gap: 4px; }
-.tbtn .sw i { width: 14px; height: 14px; border-radius: 5px; border: 1px solid rgba(255,255,255,.15); }
-
-.custom-panel {
-  border: 1px dashed rgba(139,92,246,.5); border-radius: 14px; padding: 12px;
-  display: none; background: rgba(139,92,246,.05);
-}
-.custom-panel.show { display: block; }
-.crow { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; padding: 5px 0; font-size: .85rem; font-weight: 600; }
-.crow input[type=color] {
-  width: 44px; height: 30px; border-radius: 8px; border: 1px solid var(--line);
-  background: none; padding: 2px; cursor: pointer;
-}
-.crow select, .crow input[type=text] {
-  background: var(--p2); border: 1px solid var(--line); color: var(--tx);
-  border-radius: 9px; padding: 7px 9px; font: inherit; font-size: .84rem; max-width: 150px;
-}
-.crow input[type=range] { width: 140px; accent-color: var(--br1); }
-
-.side select.wide {
-  width: 100%; background: var(--p2); border: 1px solid var(--line); color: var(--tx);
-  border-radius: 12px; padding: 10px 12px; font: inherit; font-size: .88rem;
-}
-.side .btn { width: 100%; justify-content: center; margin-top: 8px; }
-
-.stage {
-  overflow: auto; padding: 30px 24px 60px;
-  display: flex; flex-direction: column; align-items: center; gap: 14px;
-  background:
-    radial-gradient(circle at 1px 1px, rgba(255,255,255,.05) 1px, transparent 0) 0 0 / 26px 26px,
-    var(--bg);
-}
-.week-tabs { display: none; gap: 8px; }
-.week-tabs.show { display: flex; }
-.week-tabs button {
-  padding: 9px 16px; border-radius: 999px; font-weight: 700; font-size: .84rem;
-  background: var(--p2); color: var(--tx2); border: 1px solid var(--line);
-}
-.week-tabs button.active { background: rgba(34,211,238,.16); border-color: rgba(34,211,238,.55); color: #67e8f9; }
-
-/* ============================================================
-   ЛИСТ РАСПИСАНИЯ (общая база)
-============================================================ */
-.sheet {
-  --s-bg: #f7f7f8;
-  --s-card: #ffffff;
-  --s-ink: #16181d;
-  --s-mut: #6b7280;
-  --s-acc: #6366f1;
-  --s-line: rgba(22,24,29,.1);
-  --s-rad: 18px;
-  --s-hfont: Manrope, sans-serif;
-  --s-font: Manrope, sans-serif;
-  width: 780px;
-  background: var(--s-bg);
-  color: var(--s-ink);
-  font-family: var(--s-font);
-  border-radius: 26px;
-  padding: 30px;
-  display: flex; flex-direction: column; gap: 18px;
-  position: relative; overflow: hidden;
-  box-shadow: 0 24px 70px rgba(0,0,0,.5);
-  flex-shrink: 0;
-}
-.s-head { position: relative; z-index: 2; }
-.s-tagrow { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
-.s-tag {
-  font-size: .68rem; font-weight: 800; letter-spacing: .22em; text-transform: uppercase;
-  color: var(--s-acc);
-}
-.s-badge {
-  font-size: .64rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase;
-  padding: 3px 9px; border-radius: 999px;
-  background: var(--s-acc); color: var(--s-bg);
-}
-.s-title {
-  font-family: var(--s-hfont); font-weight: 800; font-size: 2rem;
-  margin: 0; line-height: 1.1; outline: none;
-}
-.s-sub { color: var(--s-mut); font-size: .92rem; margin-top: 5px; outline: none; }
-.s-grid {
-  display: grid; gap: 7px; position: relative; z-index: 2;
-}
-.s-corner {
-  display: grid; place-items: center;
-  font-size: .62rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase;
-  color: var(--s-mut);
-}
-.s-dayh {
-  padding: 10px 4px; text-align: center;
-  font-weight: 800; font-size: .78rem; letter-spacing: .07em; text-transform: uppercase;
-  color: var(--s-acc);
-  background: var(--s-dayh-bg, transparent);
-  border-radius: calc(var(--s-rad) * .55);
-}
-.s-num {
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
-  color: var(--s-mut);
-}
-.s-num b { font-family: var(--s-hfont); font-size: 1rem; color: var(--s-ink); }
-.s-time { font-size: .66rem; font-weight: 700; outline: none; white-space: nowrap; }
-.s-cell {
-  background: var(--s-card);
-  border: 1px solid var(--s-line);
-  border-radius: calc(var(--s-rad) * .55);
-  padding: 10px 12px; min-height: 46px;
-  font-size: .9rem; font-weight: 600; line-height: 1.3;
-  outline: none;
-  transition: box-shadow .12s;
-  word-break: break-word;
-}
-.s-cell:focus, .s-title:focus, .s-sub:focus, .s-time:focus {
-  box-shadow: 0 0 0 2px var(--s-acc);
-  border-radius: calc(var(--s-rad) * .55);
-}
-.s-cell:empty::before { content: "+"; color: var(--s-mut); opacity: .35; font-weight: 800; }
-.exporting .s-cell:empty::before { content: ""; }
-.exporting .s-cell:focus, .exporting .s-title:focus, .exporting .s-sub:focus, .exporting .s-time:focus { box-shadow: none; }
-.s-foot {
-  display: flex; justify-content: flex-end; position: relative; z-index: 2;
-  font-size: .68rem; font-weight: 700; color: var(--s-mut); opacity: .8;
-}
-.sheet.no-wm .s-foot { display: none; }
-.s-decor { position: absolute; inset: 0; pointer-events: none; z-index: 1; font-size: 1.4rem; }
-.s-decor i { position: absolute; font-style: normal; opacity: .9; }
-.s-decor i:nth-child(1) { top: 22px; right: 28px; }
-.s-decor i:nth-child(2) { bottom: 48px; left: 20px; transform: rotate(-14deg); font-size: 1.1rem; }
-.s-decor i:nth-child(3) { top: 46%; right: 12px; transform: rotate(12deg); font-size: .9rem; opacity: .5; }
-
-/* ---- ФОРМАТЫ ЭКСПОРТА ---- */
-.sheet.fmt-phone { width: 430px; min-height: 932px; justify-content: center; padding: 26px 20px; }
-.sheet.fmt-phone .s-cell { font-size: .68rem; padding: 7px 6px; min-height: 38px; }
-.sheet.fmt-phone .s-dayh { font-size: .6rem; padding: 8px 2px; letter-spacing: .03em; }
-.sheet.fmt-phone .s-title { font-size: 1.5rem; }
-.sheet.fmt-phone .s-time { font-size: .56rem; }
-.sheet.fmt-phone .s-grid { gap: 5px; }
-.sheet.fmt-story { width: 540px; min-height: 960px; justify-content: center; }
-.sheet.fmt-story .s-cell { font-size: .78rem; padding: 8px 8px; }
-.sheet.fmt-story .s-dayh { font-size: .66rem; }
-.sheet.fmt-post { width: 540px; min-height: 675px; justify-content: center; }
-.sheet.fmt-post .s-cell { font-size: .76rem; padding: 8px 8px; min-height: 40px; }
-.sheet.fmt-post .s-dayh { font-size: .66rem; }
-.sheet.fmt-a4 { width: 794px; min-height: 1123px; border-radius: 0; justify-content: center; }
-
-/* ============================================================
-   ТЕМЫ
-============================================================ */
-
-/* — Минимал — */
-.th-minimal { /* базовые переменные уже минимал */ }
-
-/* — Y2K — */
-.th-y2k {
-  --s-bg: linear-gradient(135deg, #ffd6f5 0%, #e3d4ff 45%, #cfe6ff 100%);
-  --s-card: rgba(255,255,255,.72);
-  --s-ink: #3b1d4f;
-  --s-mut: #8a6aa5;
-  --s-acc: #ff2fb3;
-  --s-line: rgba(255,47,179,.28);
-  --s-rad: 20px;
-  --s-hfont: Unbounded, sans-serif;
-  --s-dayh-bg: rgba(255,255,255,.5);
-  background: var(--s-bg);
-}
-.th-y2k .s-title {
-  background: linear-gradient(180deg, #7b2ff7, #ff2fb3);
-  -webkit-background-clip: text; background-clip: text; color: transparent;
-}
-.th-y2k .s-cell { backdrop-filter: blur(4px); border-width: 1.5px; }
-.th-y2k .s-badge { color: #fff; }
-
-/* — Неон — */
-.th-neon {
-  --s-bg: #0b0614;
-  --s-card: rgba(255,255,255,.045);
-  --s-ink: #eafffa;
-  --s-mut: #7d8aa3;
-  --s-acc: #00ffc8;
-  --s-line: rgba(0,255,200,.3);
-  --s-rad: 14px;
-  --s-hfont: "Space Grotesk", sans-serif;
-  --s-font: "Space Grotesk", sans-serif;
-  background:
-    radial-gradient(ellipse 60% 40% at 80% 0%, rgba(176,38,255,.25), transparent 60%),
-    radial-gradient(ellipse 50% 35% at 10% 100%, rgba(0,255,200,.14), transparent 60%),
-    #0b0614;
-}
-.th-neon .s-title { color: #00ffc8; text-shadow: 0 0 22px rgba(0,255,200,.55); }
-.th-neon .s-dayh { text-shadow: 0 0 14px rgba(0,255,200,.5); }
-.th-neon .s-cell { box-shadow: inset 0 0 18px rgba(176,38,255,.07); }
-.th-neon .s-badge { color: #0b0614; }
-
-/* — Kawaii — */
-.th-kawaii {
-  --s-bg: #fff0f6;
-  --s-card: #ffffff;
-  --s-ink: #5b3a4a;
-  --s-mut: #b98da0;
-  --s-acc: #ff7fab;
-  --s-line: rgba(255,127,171,.3);
-  --s-rad: 24px;
-  --s-dayh-bg: #ffe1ec;
-  background:
-    radial-gradient(circle at 12% 18%, rgba(255,209,232,.8) 0 42px, transparent 43px),
-    radial-gradient(circle at 88% 8%, rgba(209,231,255,.8) 0 34px, transparent 35px),
-    radial-gradient(circle at 92% 78%, rgba(255,244,199,.9) 0 38px, transparent 39px),
-    #fff0f6;
-}
-.th-kawaii .s-dayh:nth-of-type(2n) { background: #dcefff; color: #4d7fb5; }
-.th-kawaii .s-dayh:nth-of-type(3n) { background: #fff3cd; color: #ad8b2d; }
-.th-kawaii .s-cell { border-width: 2px; border-style: dashed; }
-.th-kawaii .s-badge { color: #fff; }
-
-/* — Тетрадь — */
-.th-notebook {
-  --s-bg: #fdfcf5;
-  --s-card: transparent;
-  --s-ink: #1e3a8a;
-  --s-mut: #7c8db0;
-  --s-acc: #d23c3c;
-  --s-line: rgba(30,58,138,.35);
-  --s-rad: 4px;
-  --s-hfont: Caveat, cursive;
-  --s-font: Caveat, cursive;
-  background:
-    linear-gradient(rgba(96,165,250,.18) 1px, transparent 1px) 0 0 / 100% 24px,
-    linear-gradient(90deg, rgba(96,165,250,.18) 1px, transparent 1px) 0 0 / 24px 100%,
-    linear-gradient(90deg, transparent 54px, rgba(210,60,60,.5) 54px 55px, transparent 55px),
-    #fdfcf5;
-}
-.th-notebook .s-title { font-size: 2.5rem; font-weight: 700; }
-.th-notebook .s-sub, .th-notebook .s-cell { font-size: 1.18rem; font-weight: 600; line-height: 1.15; }
-.th-notebook .s-cell { border: none; border-bottom: 2px solid rgba(30,58,138,.3); border-radius: 0; }
-.th-notebook .s-dayh { font-family: Caveat, cursive; font-size: 1.25rem; text-transform: none; letter-spacing: 0; }
-.th-notebook .s-time { font-size: .9rem; }
-.th-notebook .s-badge { color: #fff; }
-
-/* — Брутализм — */
-.th-brutal {
-  --s-bg: #f4f1ea;
-  --s-card: #ffffff;
-  --s-ink: #0a0a0a;
-  --s-mut: #555;
-  --s-acc: #ff3b00;
-  --s-line: #0a0a0a;
-  --s-rad: 0px;
-  --s-hfont: Unbounded, sans-serif;
-  --s-font: "Space Grotesk", sans-serif;
-  border: 3px solid #0a0a0a;
-  border-radius: 0;
-}
-.th-brutal .s-cell { border-width: 2px; box-shadow: 3px 3px 0 #0a0a0a; }
-.th-brutal .s-dayh { background: #0a0a0a; color: #f4f1ea; border-radius: 0; }
-.th-brutal .s-title { text-transform: uppercase; }
-.th-brutal .s-badge { border-radius: 0; color: #fff; }
-
-/* — Dark Academia — */
-.th-academia {
-  --s-bg: #efe5cf;
-  --s-card: #f8f1de;
-  --s-ink: #382a1e;
-  --s-mut: #8a7a64;
-  --s-acc: #7a2020;
-  --s-line: rgba(56,42,30,.22);
-  --s-rad: 8px;
-  --s-hfont: "Cormorant Garamond", serif;
-  --s-font: "Cormorant Garamond", serif;
-  background:
-    radial-gradient(ellipse 90% 70% at 50% 0%, rgba(122,32,32,.06), transparent 70%),
-    #efe5cf;
-  border: 1px solid rgba(56,42,30,.35);
-  outline: 1px solid rgba(56,42,30,.35);
-  outline-offset: -8px;
-}
-.th-academia .s-title { font-size: 2.4rem; font-style: italic; font-weight: 600; }
-.th-academia .s-cell { font-size: 1.02rem; font-weight: 600; }
-.th-academia .s-dayh { font-size: .9rem; letter-spacing: .14em; }
-.th-academia .s-badge { color: #efe5cf; }
-
-/* — Градиент-glass — */
-.th-glass {
-  --s-bg: linear-gradient(130deg, #5b21b6, #2563eb 48%, #db2777);
-  --s-card: rgba(255,255,255,.14);
-  --s-ink: #ffffff;
-  --s-mut: rgba(255,255,255,.65);
-  --s-acc: #fde68a;
-  --s-line: rgba(255,255,255,.25);
-  --s-rad: 20px;
-  background: linear-gradient(130deg, #5b21b6, #2563eb 48%, #db2777);
-}
-.th-glass .s-cell { backdrop-filter: blur(8px); }
-.th-glass .s-badge { color: #5b21b6; }
-
-/* — Стикеры/мем — */
-.th-sticker {
-  --s-bg: #fef9c3;
-  --s-card: #ffffff;
-  --s-ink: #1f2937;
-  --s-mut: #92890f;
-  --s-acc: #16a34a;
-  --s-line: #1f2937;
-  --s-rad: 14px;
-  --s-hfont: Unbounded, sans-serif;
-  background:
-    radial-gradient(circle at 1.5px 1.5px, rgba(31,41,55,.16) 1.5px, transparent 0) 0 0 / 20px 20px,
-    #fef9c3;
-}
-.th-sticker .s-cell { border-width: 2px; box-shadow: 2px 3px 0 rgba(31,41,55,.9); transform: rotate(-.3deg); }
-.th-sticker .s-cell:nth-child(2n) { transform: rotate(.4deg); }
-.th-sticker .s-dayh { background: #1f2937; color: #fef9c3; border-radius: 999px; }
-.th-sticker .s-badge { color: #fff; }
-
-/* — Свой стиль: паттерны — */
-.pat-dots { background-image: radial-gradient(circle at 1.5px 1.5px, var(--s-line) 1.5px, transparent 0) !important; background-size: 22px 22px !important; background-color: var(--s-bg-c, #fff) !important; }
-.pat-grid { background-image: linear-gradient(var(--s-line) 1px, transparent 1px), linear-gradient(90deg, var(--s-line) 1px, transparent 1px) !important; background-size: 24px 24px !important; background-color: var(--s-bg-c, #fff) !important; }
-.pat-lines { background-image: linear-gradient(var(--s-line) 1px, transparent 1px) !important; background-size: 100% 26px !important; background-color: var(--s-bg-c, #fff) !important; }
-
-/* ============================================================
-   ТОСТ И МОДАЛКА
-============================================================ */
-#toast {
-  position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%) translateY(80px);
-  background: #1c2233; color: var(--tx); border: 1px solid var(--line);
-  padding: 13px 22px; border-radius: 14px; font-weight: 700; font-size: .9rem;
-  box-shadow: 0 16px 50px rgba(0,0,0,.5); z-index: 90;
-  transition: transform .25s ease; pointer-events: none; max-width: 90vw; text-align: center;
-}
-#toast.show { transform: translateX(-50%) translateY(0); }
-
-/* ============================================================
-   МОБИЛЬНАЯ ВЕРСИЯ
-============================================================ */
-@media (max-width: 940px) {
-  .workspace { display: flex; flex-direction: column; overflow: visible; }
-  .side { border-right: 0; border-top: 1px solid var(--line); order: 2; overflow: visible; }
-  .stage { order: 1; padding: 18px 10px 30px; overflow: visible; }
-  .stage .sheet { max-width: 100%; }
-  .sheet { width: 100% !important; padding: 18px 12px; }
-  .sheet .s-cell { font-size: .68rem; padding: 6px 5px; min-height: 36px; }
-  .sheet .s-dayh { font-size: .58rem; letter-spacing: .02em; padding: 7px 2px; }
-  .sheet .s-title { font-size: 1.4rem; }
-  .sheet .s-time { font-size: .54rem; }
-  .sheet .s-grid { gap: 4px; }
-  #editor { height: auto; min-height: 100dvh; }
-  .topbar { position: sticky; top: 0; z-index: 50; }
-  .topbar .btn span.lbl { display: none; }
-  .nav { gap: 8px; }
-  .nav .btn { padding: 8px 11px; font-size: .78rem; border-radius: 10px; }
-  .nav .logo { font-size: .88rem; }
-}
-</style>
+</script>
+<link rel="stylesheet" href="css/app.css" />
 </head>
 <body>
 
-<!-- ================= ЛЕНДИНГ ================= -->
 <div id="landing">
   <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
   <div class="wrap">
     <nav class="nav">
-      <a class="logo" href="#"><span class="ic">✦</span>расписалка</a>
+      <a class="logo" href="/"><span class="ic">✦</span>расписалка</a>
       <div class="spacer"></div>
-      <a class="btn sm hot" id="donateNav" href="#" target="_blank" rel="noopener">☕ Поддержать</a>
-      <button class="btn sm primary" data-open-editor>Создать</button>
+      <button class="btn sm hot" type="button" data-donate>Поддержать</button>
+      <button class="btn sm primary" type="button" data-open-editor>Создать</button>
     </nav>
 
     <section class="hero">
-      <div class="pill">⚡ бесплатно · без регистрации · 1 минута</div>
+      <div class="pill">бесплатно · без регистрации · за минуту</div>
       <h1>Расписание, которое<br /><span class="grad">не стыдно поставить на обои</span></h1>
-      <p class="sub">Собери расписание для школы или универа, выбери стиль — Y2K, неон, kawaii, брутализм — или сделай свой. Скачай как обои на телефон, в сторис или на печать.</p>
+      <p class="sub">Собери расписание для школы или универа, выбери стиль — Y2K, неон, kawaii, брутализм, vaporwave — или сделай свой. Скачай на телефон, кинь в сторис или в чат класса.</p>
       <div class="cta-row">
-        <button class="btn primary" data-open-editor>Собрать расписание →</button>
+        <button class="btn primary" type="button" data-open-editor>Собрать расписание →</button>
         <a class="btn" href="#styles">Посмотреть стили</a>
       </div>
       <div class="stats">
         <div class="stat"><b id="statVisits">…</b><span>заходов на сайт</span></div>
-        <div class="stat"><b>9 + ∞</b><span>стилей (свой — без границ)</span></div>
+        <div class="stat"><b id="statDl">10 + ∞</b><span>стилей, включая свой</span></div>
         <div class="stat"><b>4</b><span>формата: обои · сторис · пост · А4</span></div>
       </div>
     </section>
 
     <h2 class="section-title" id="styles">Выбери свой вайб</h2>
-    <p class="section-sub">Нажми на стиль — сразу откроется редактор</p>
+    <p class="section-sub">Нажми на стиль — сразу откроется редактор с примером</p>
     <div class="showcase" id="showcase"></div>
 
     <h2 class="section-title">Как это работает</h2>
     <div class="steps">
-      <div class="step"><div class="n">1</div><b>Заполни прямо в таблице</b><p>Кликай по ячейкам и пиши предметы. Время, название класса, дни недели — всё меняется на месте.</p></div>
-      <div class="step"><div class="n">2</div><b>Выбери или собери стиль</b><p>9 готовых тем или конструктор: свои цвета, шрифт, фон и стикеры. Твоё расписание — твои правила.</p></div>
-      <div class="step"><div class="n">3</div><b>Скачай и поставь</b><p>PNG под обои телефона, сторис, пост или печать А4. Или скинь другу ссылку — у него откроется твоё расписание.</p></div>
+      <div class="step"><div class="n">1</div><b>Заполни прямо в таблице</b><p>Кликай по ячейкам и пиши предметы — название остаётся жирным, даже если не влезло. Нижняя строка мелким — кабинет или учитель.</p></div>
+      <div class="step"><div class="n">2</div><b>Выбери или собери стиль</b><p>10 готовых тем или конструктор: свои цвета, шрифт, фон и стикеры. Предметы сами красятся по смыслу.</p></div>
+      <div class="step"><div class="n">3</div><b>Скачай и поставь</b><p>PNG под обои, сторис, пост или печать А4. Или копируй картинку в Telegram одной кнопкой. Ссылка откроет расписание у друга.</p></div>
     </div>
 
     <div class="donate-band">
       <b>Расписалка бесплатна и без рекламы</b>
-      <p>Если она сэкономила тебе вечер — можно закинуть на кофе разработчику 🖤</p>
-      <a class="btn hot" id="donateBand" href="#" target="_blank" rel="noopener">☕ Поддержать проект</a>
+      <p>Если она сэкономила тебе вечер перед 1 сентября — можно закинуть на кофе</p>
+      <button class="btn hot" type="button" data-donate>Поддержать проект</button>
     </div>
 
     <footer class="site">
       <span>© <span id="year"></span> gorelikov.ae · сделано с ✦</span>
       <div class="spacer"></div>
       <span id="statFooter"></span>
+      <button class="btn sm ghost" type="button" data-donate>донат</button>
     </footer>
   </div>
 </div>
 
-<!-- ================= РЕДАКТОР ================= -->
-<div id="editor" hidden>
+<div id="editor">
   <div class="topbar">
-    <button class="btn sm ghost" id="backBtn">←</button>
-    <a class="logo" href="#" onclick="return false"><span class="ic">✦</span>расписалка</a>
+    <button class="btn sm ghost" id="backBtn" type="button">←</button>
+    <a class="logo" href="/" id="logoHome"><span class="ic">✦</span>расписалка</a>
     <div class="spacer"></div>
-    <a class="btn sm hot" id="donateTop" href="#" target="_blank" rel="noopener">☕<span class="lbl"> Донат</span></a>
-    <button class="btn sm" id="shareBtn">🔗<span class="lbl"> Поделиться</span></button>
-    <button class="btn sm primary" id="dlBtn">⬇️<span class="lbl"> Скачать PNG</span></button>
+    <button class="btn sm hot" type="button" data-donate>донат</button>
+    <button class="btn sm" id="copyBtn" type="button">в Telegram</button>
+    <button class="btn sm" id="shareBtn" type="button">ссылка</button>
+    <button class="btn sm primary" id="dlBtn" type="button">скачать PNG</button>
   </div>
 
   <div class="workspace">
@@ -675,10 +110,19 @@ footer.site .spacer { flex: 1; }
       <div class="grp">
         <label>Режим</label>
         <div class="seg" id="modeSeg">
-          <button data-mode="school">🎒 Школа</button>
-          <button data-mode="uni">🎓 Универ</button>
+          <button type="button" data-mode="school">Школа</button>
+          <button type="button" data-mode="uni">Универ</button>
         </div>
         <label class="check" style="margin-top:10px"><input type="checkbox" id="dualChk" /> Две недели (числитель / знаменатель)</label>
+      </div>
+
+      <div class="grp">
+        <label>Шаблон</label>
+        <div class="chips" id="tplChips">
+          <button type="button" class="chip" data-tpl="school">пример школы</button>
+          <button type="button" class="chip" data-tpl="uni">пример универа</button>
+          <button type="button" class="chip" data-tpl="empty">пустое</button>
+        </div>
       </div>
 
       <div class="grp">
@@ -687,14 +131,32 @@ footer.site .spacer { flex: 1; }
       </div>
 
       <div class="grp">
-        <label id="rowsLabel">Уроков в день</label>
-        <div class="stepper">
-          <button id="rowMinus">−</button>
-          <b id="rowCount">7</b>
-          <button id="rowPlus">+</button>
-          <span>строк</span>
+        <label>Верхний блок</label>
+        <label class="check"><input type="checkbox" id="infoChk" /> Важная информация и учителя</label>
+        <div id="infoFields" hidden>
+          <textarea id="infoText" class="wide" placeholder="Каждый пункт с новой строки&#10;К 8:10 все в школе&#10;Если заболел — напишите до 8:10"></textarea>
+          <div class="hint" style="margin-top:12px">Доп. предметы, ФИО учителей и кабинеты</div>
+          <div id="teacherList"></div>
+          <button class="btn sm" id="addTeacher" type="button">+ предмет / учитель</button>
         </div>
-        <div class="hint">Время, название и предметы правятся <b>прямо в таблице</b> — просто кликни и пиши.</div>
+      </div>
+
+      <div class="grp">
+        <label id="rowsLabel">Строки расписания</label>
+        <div class="stepper">
+          <button type="button" id="rowMinus">−</button>
+          <b id="rowCount">7</b>
+          <button type="button" id="rowPlus">+</button>
+          <span>уроков</span>
+        </div>
+        <div class="slot-btns">
+          <button class="btn sm" type="button" data-add-slot="break">+ перемена</button>
+          <button class="btn sm" type="button" data-add-slot="breakfast">+ завтрак</button>
+          <button class="btn sm" type="button" data-add-slot="lunch">+ обед</button>
+          <button class="btn sm" type="button" data-add-slot="walk">+ прогулка</button>
+        </div>
+        <div class="hint">Потяни строку за ⋮⋮ — пальцем или мышкой. Перемена, завтрак и обед идут на всю ширину.</div>
+        <div class="slot-list" id="slotList"></div>
       </div>
 
       <div class="grp">
@@ -727,36 +189,39 @@ footer.site .spacer { flex: 1; }
               <option value="pat-lines">Линейка</option>
             </select>
           </div>
-          <div class="crow"><span>Стикеры</span><input type="text" id="cEmoji" placeholder="✦ ⭐ 🍓" maxlength="12" /></div>
+          <div class="crow"><span>Стикеры</span><input type="text" id="cEmoji" placeholder="✦ ★" maxlength="12" /></div>
         </div>
       </div>
 
       <div class="grp">
         <label>Экспорт</label>
         <select class="wide" id="fmtSel">
-          <option value="auto">🖥️ Обычный (широкий)</option>
-          <option value="phone">📱 Обои на телефон</option>
-          <option value="story">🎬 Сторис (9:16)</option>
-          <option value="post">🖼️ Пост (4:5)</option>
-          <option value="a4">🖨️ Печать А4</option>
+          <option value="auto">Обычный (альбом А4/А5)</option>
+          <option value="phone">Обои на телефон</option>
+          <option value="story">Сторис 9:16</option>
+          <option value="post">Пост 4:5</option>
+          <option value="a4">Печать А4 книжная</option>
         </select>
+        <div class="hint">Широкий лист — как альбомный А4 или А5, без пустых полей. Остальные форматы как были.</div>
         <label class="check" style="margin-top:8px"><input type="checkbox" id="wmChk" checked /> Подпись «расписалка» на картинке</label>
-        <button class="btn primary" id="dlBtn2">⬇️ Скачать PNG</button>
-        <button class="btn" id="shareBtn2">🔗 Ссылка на расписание</button>
-        <div class="hint">По ссылке у друга откроется твоё расписание — он сможет сохранить себе или переделать под свой вкус.</div>
+        <button class="btn primary" id="dlBtn2" type="button">Скачать PNG</button>
+        <button class="btn" id="copyBtn2" type="button">Копировать в Telegram</button>
+        <button class="btn" id="printBtn" type="button">Печать / PDF</button>
+        <button class="btn" id="shareBtn2" type="button">Ссылка на расписание</button>
+        <div class="hint">По ссылке у друга откроется твоё расписание — он сможет сохранить или переделать.</div>
       </div>
 
       <div class="grp">
         <label>Поддержка</label>
-        <a class="btn hot" id="donateSide" href="#" target="_blank" rel="noopener" style="display:flex">☕ Закинуть на кофе</a>
-        <button class="btn ghost" id="resetBtn" style="color:#f87171">🗑️ Очистить всё</button>
+        <button class="btn hot" type="button" data-donate style="display:flex">Закинуть на кофе</button>
+        <button class="btn ghost" id="resetBtn" type="button" style="color:#f87171">Очистить всё</button>
       </div>
     </aside>
 
     <main class="stage">
       <div class="week-tabs" id="weekTabs">
-        <button data-g="0">Неделя Ⅰ · числитель</button>
-        <button data-g="1">Неделя Ⅱ · знаменатель</button>
+        <button type="button" data-g="0">Неделя I · числитель</button>
+        <button type="button" data-g="1">Неделя II · знаменатель</button>
       </div>
       <div class="sheet" id="sheet"></div>
     </main>
@@ -765,518 +230,15 @@ footer.site .spacer { flex: 1; }
 
 <div id="toast"></div>
 
-<!-- Яндекс.Метрика: создай счётчик на metrika.yandex.ru и вставь сюда его код -->
-<!-- METRIKA_PLACEHOLDER -->
-
-<script>
-"use strict";
-/* ============================================================
-   КОНФИГ — поменяй под себя
-============================================================ */
-const CONFIG = {
-  site: "gorelikov.ae",
-  // счётчик охвата (counterapi.com — бесплатно, без регистрации)
-  counterNs: "gorelikov-ae-raspisalka",
-  // ЗАМЕНИ на свою ссылку доната: CloudTips / Boosty / Buy Me a Coffee / Tribute
-  donateUrl: "https://pay.cloudtips.ru/p/REPLACE_ME",
-};
-
-/* ============================================================
-   ТЕМЫ
-============================================================ */
-const THEMES = [
-  { id: "y2k",      name: "Y2K",           sw: ["#ffd6f5", "#ff2fb3", "#7b2ff7"], decor: "✦𖤐✧" },
-  { id: "neon",     name: "Неон",          sw: ["#0b0614", "#00ffc8", "#b026ff"], decor: "" },
-  { id: "kawaii",   name: "Kawaii",        sw: ["#fff0f6", "#ff7fab", "#dcefff"], decor: "🎀🍓⭐" },
-  { id: "minimal",  name: "Минимал",       sw: ["#f7f7f8", "#6366f1", "#ffffff"], decor: "" },
-  { id: "notebook", name: "Тетрадь",       sw: ["#fdfcf5", "#1e3a8a", "#d23c3c"], decor: "" },
-  { id: "brutal",   name: "Брутализм",     sw: ["#f4f1ea", "#0a0a0a", "#ff3b00"], decor: "" },
-  { id: "academia", name: "Dark Academia", sw: ["#efe5cf", "#7a2020", "#382a1e"], decor: "" },
-  { id: "glass",    name: "Градиент",      sw: ["#5b21b6", "#2563eb", "#db2777"], decor: "" },
-  { id: "sticker",  name: "Стикеры",       sw: ["#fef9c3", "#16a34a", "#1f2937"], decor: "⚡🔥" },
-  { id: "custom",   name: "Свой стиль ✨", sw: ["#101322", "#ffd166", "#1c2136"], decor: "" },
-];
-const DAY_NAMES = ["пн", "вт", "ср", "чт", "пт", "сб", "вс"];
-const DAY_FULL = ["понедельник", "вторник", "среда", "четверг", "пятница", "суббота", "воскресенье"];
-const SCHOOL_TIMES = ["8:30", "9:25", "10:20", "11:20", "12:20", "13:15", "14:10", "15:05", "16:00", "16:55"];
-const UNI_TIMES = ["9:00", "10:40", "12:20", "14:30", "16:10", "17:50", "19:30", "21:00", "21:30", "22:00"];
-
-/* ============================================================
-   СОСТОЯНИЕ
-============================================================ */
-const LS_KEY = "raspisalka-v2";
-
-function defaultState(mode = "school") {
-  const uni = mode === "uni";
-  const rows = uni ? 4 : 7;
-  const times = (uni ? UNI_TIMES : SCHOOL_TIMES).slice(0, rows);
-  return {
-    v: 2,
-    mode,
-    theme: "y2k",
-    title: uni ? "ПИ-231" : "7 «Б»",
-    sub: uni ? "осенний семестр · 2026/27" : "2026/27 учебный год",
-    days: uni ? [1, 1, 1, 1, 1, 1, 0] : [1, 1, 1, 1, 1, 0, 0],
-    rows,
-    times,
-    dual: false,
-    activeGrid: 0,
-    cells: [emptyGrid(), emptyGrid()],
-    custom: {
-      bg: "#101322", card: "#1c2136", ink: "#f2f4ff", acc: "#ffd166",
-      font: "Manrope, sans-serif", rad: 16, pat: "", emoji: "✦",
-    },
-    wm: true,
-    fmt: "auto",
-  };
-}
-function emptyGrid() {
-  return Array.from({ length: 10 }, () => Array(7).fill(""));
-}
-
-let state = loadState();
-
-function loadState() {
-  try {
-    const raw = localStorage.getItem(LS_KEY);
-    if (!raw) return defaultState();
-    const s = JSON.parse(raw);
-    if (!s || s.v !== 2) return defaultState();
-    return Object.assign(defaultState(s.mode), s);
-  } catch { return defaultState(); }
-}
-function save() {
-  try { localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch {}
-}
-
-/* ============================================================
-   УТИЛИТЫ
-============================================================ */
-const $ = (sel) => document.querySelector(sel);
-const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-
-let toastTimer;
-function toast(msg) {
-  const t = $("#toast");
-  t.textContent = msg;
-  t.classList.add("show");
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove("show"), 2600);
-}
-
-/* ============================================================
-   СЧЁТЧИК ОХВАТА (counterapi.com)
-============================================================ */
-async function counterHit(action) {
-  try {
-    const r = await fetch(`https://counterapi.com/api/${CONFIG.counterNs}/${action}/site`, { cache: "no-store" });
-    const j = await r.json();
-    return j.value;
-  } catch { return null; }
-}
-
-/* ============================================================
-   РЕНДЕР ЛИСТА
-============================================================ */
-const sheet = $("#sheet");
-
-function activeDayIdx() {
-  return state.days.map((on, i) => (on ? i : -1)).filter((i) => i >= 0);
-}
-function grid() {
-  return state.cells[state.dual ? state.activeGrid : 0];
-}
-
-function renderSheet() {
-  const days = activeDayIdx();
-  const uni = state.mode === "uni";
-  const th = THEMES.find((t) => t.id === state.theme) || THEMES[0];
-
-  // классы и кастомные переменные
-  sheet.className = `sheet th-${state.theme} fmt-${state.fmt}` + (state.wm ? "" : " no-wm");
-  sheet.removeAttribute("style");
-  let decor = th.decor;
-  if (state.theme === "custom") {
-    const c = state.custom;
-    if (c.pat) sheet.classList.add(c.pat);
-    sheet.style.setProperty("--s-bg", c.bg);
-    sheet.style.setProperty("--s-bg-c", c.bg);
-    sheet.style.setProperty("--s-card", c.card);
-    sheet.style.setProperty("--s-ink", c.ink);
-    sheet.style.setProperty("--s-mut", c.ink + "99");
-    sheet.style.setProperty("--s-acc", c.acc);
-    sheet.style.setProperty("--s-line", c.ink + "26");
-    sheet.style.setProperty("--s-rad", c.rad + "px");
-    sheet.style.setProperty("--s-hfont", c.font);
-    sheet.style.setProperty("--s-font", c.font);
-    if (!c.pat) sheet.style.background = c.bg;
-    decor = c.emoji;
-  }
-
-  const badge = state.dual
-    ? `<span class="s-badge">${state.activeGrid === 0 ? "числитель" : "знаменатель"}</span>` : "";
-  const decorHtml = decor
-    ? `<div class="s-decor">${[...decor].slice(0, 3).map((e) => `<i>${esc(e)}</i>`).join("")}</div>` : "";
-
-  let html = decorHtml + `
-    <header class="s-head">
-      <div class="s-tagrow"><span class="s-tag">расписание</span>${badge}</div>
-      <h2 class="s-title" contenteditable="true" spellcheck="false" data-bind="title">${esc(state.title)}</h2>
-      <div class="s-sub" contenteditable="true" spellcheck="false" data-bind="sub">${esc(state.sub)}</div>
-    </header>
-    <div class="s-grid" style="grid-template-columns:52px repeat(${days.length},1fr)">
-      <div class="s-corner">${uni ? "пара" : "урок"}</div>`;
-
-  for (const d of days) html += `<div class="s-dayh">${DAY_NAMES[d]}</div>`;
-
-  const g = grid();
-  for (let r = 0; r < state.rows; r++) {
-    html += `<div class="s-num"><b>${r + 1}</b><span class="s-time" contenteditable="true" spellcheck="false" data-time="${r}">${esc(state.times[r] || "")}</span></div>`;
-    for (const d of days) {
-      html += `<div class="s-cell" contenteditable="true" spellcheck="false" data-r="${r}" data-d="${d}">${esc(g[r][d])}</div>`;
-    }
-  }
-  html += `</div><footer class="s-foot">✦ расписалка · ${CONFIG.site}</footer>`;
-  sheet.innerHTML = html;
-}
-
-/* правки прямо в листе — без перерисовки, чтобы не терять фокус */
-sheet.addEventListener("input", (e) => {
-  const el = e.target;
-  if (el.dataset.bind) state[el.dataset.bind] = el.innerText.trim();
-  else if (el.dataset.time !== undefined) state.times[+el.dataset.time] = el.innerText.trim();
-  else if (el.dataset.r !== undefined) grid()[+el.dataset.r][+el.dataset.d] = el.innerText.replace(/\n+$/, "");
-  save();
-});
-/* вставка только текстом */
-sheet.addEventListener("paste", (e) => {
-  e.preventDefault();
-  const text = (e.clipboardData || window.clipboardData).getData("text/plain");
-  document.execCommand("insertText", false, text);
-});
-/* Enter в заголовке/времени = снять фокус */
-sheet.addEventListener("keydown", (e) => {
-  if (e.key === "Enter" && (e.target.dataset.bind || e.target.dataset.time !== undefined)) {
-    e.preventDefault();
-    e.target.blur();
-  }
-});
-
-/* ============================================================
-   ПАНЕЛЬ УПРАВЛЕНИЯ
-============================================================ */
-function renderControls() {
-  // режим
-  document.querySelectorAll("#modeSeg button").forEach((b) =>
-    b.classList.toggle("active", b.dataset.mode === state.mode));
-  $("#rowsLabel").textContent = state.mode === "uni" ? "Пар в день" : "Уроков в день";
-  // дни
-  const chips = $("#dayChips");
-  chips.innerHTML = "";
-  DAY_NAMES.forEach((n, i) => {
-    const b = document.createElement("button");
-    b.className = "chip" + (state.days[i] ? " on" : "");
-    b.textContent = n;
-    b.title = DAY_FULL[i];
-    b.onclick = () => {
-      if (state.days[i] && activeDayIdx().length === 1) return toast("Хотя бы один день оставь 🙂");
-      state.days[i] = state.days[i] ? 0 : 1;
-      save(); renderControls(); renderSheet();
-    };
-    chips.appendChild(b);
-  });
-  // строки
-  $("#rowCount").textContent = state.rows;
-  // dual
-  $("#dualChk").checked = !!state.dual;
-  $("#weekTabs").classList.toggle("show", !!state.dual);
-  document.querySelectorAll("#weekTabs button").forEach((b) =>
-    b.classList.toggle("active", +b.dataset.g === state.activeGrid));
-  // темы
-  const tg = $("#themeGrid");
-  tg.innerHTML = "";
-  THEMES.forEach((t) => {
-    const b = document.createElement("button");
-    b.className = "tbtn" + (state.theme === t.id ? " active" : "");
-    b.innerHTML = `<span class="nm">${t.name}</span><span class="sw">${t.sw.map((c) => `<i style="background:${c}"></i>`).join("")}</span>`;
-    b.onclick = () => {
-      state.theme = t.id;
-      save(); renderControls(); renderSheet();
-    };
-    tg.appendChild(b);
-  });
-  // кастом-панель
-  $("#customPanel").classList.toggle("show", state.theme === "custom");
-  const c = state.custom;
-  $("#cBg").value = c.bg; $("#cCard").value = c.card; $("#cInk").value = c.ink; $("#cAcc").value = c.acc;
-  $("#cFont").value = c.font; $("#cRad").value = c.rad; $("#cPat").value = c.pat; $("#cEmoji").value = c.emoji;
-  // экспорт
-  $("#fmtSel").value = state.fmt;
-  $("#wmChk").checked = !!state.wm;
-}
-
-$("#modeSeg").addEventListener("click", (e) => {
-  const b = e.target.closest("button");
-  if (!b || b.dataset.mode === state.mode) return;
-  const mode = b.dataset.mode;
-  const empty = state.cells.every((g) => g.every((row) => row.every((c) => !c)));
-  if (empty) {
-    const keep = { theme: state.theme, custom: state.custom, wm: state.wm, fmt: state.fmt };
-    state = Object.assign(defaultState(mode), keep);
-  } else {
-    state.mode = mode;
-  }
-  save(); renderControls(); renderSheet();
-});
-
-$("#dualChk").addEventListener("change", (e) => {
-  state.dual = e.target.checked;
-  if (!state.dual) state.activeGrid = 0;
-  save(); renderControls(); renderSheet();
-  if (state.dual) toast("Вверху появились вкладки недель Ⅰ и Ⅱ");
-});
-$("#weekTabs").addEventListener("click", (e) => {
-  const b = e.target.closest("button");
-  if (!b) return;
-  state.activeGrid = +b.dataset.g;
-  save(); renderControls(); renderSheet();
-});
-
-$("#rowPlus").onclick = () => {
-  if (state.rows >= 10) return;
-  state.rows++;
-  if (!state.times[state.rows - 1]) {
-    state.times[state.rows - 1] = (state.mode === "uni" ? UNI_TIMES : SCHOOL_TIMES)[state.rows - 1] || "";
-  }
-  save(); renderControls(); renderSheet();
-};
-$("#rowMinus").onclick = () => {
-  if (state.rows <= 1) return;
-  state.rows--;
-  save(); renderControls(); renderSheet();
-};
-
-/* кастомный стиль */
-function bindCustom(id, key, transform = (v) => v) {
-  $(id).addEventListener("input", (e) => {
-    state.custom[key] = transform(e.target.value);
-    save(); renderSheet();
-  });
-}
-bindCustom("#cBg", "bg"); bindCustom("#cCard", "card"); bindCustom("#cInk", "ink"); bindCustom("#cAcc", "acc");
-bindCustom("#cFont", "font"); bindCustom("#cRad", "rad", Number); bindCustom("#cPat", "pat"); bindCustom("#cEmoji", "emoji");
-
-$("#fmtSel").addEventListener("change", (e) => { state.fmt = e.target.value; save(); renderSheet(); });
-$("#wmChk").addEventListener("change", (e) => { state.wm = e.target.checked; save(); renderSheet(); });
-
-$("#resetBtn").onclick = () => {
-  if (!confirm("Точно очистить всё расписание?")) return;
-  state = defaultState(state.mode);
-  save(); renderControls(); renderSheet();
-  toast("Начали с чистого листа ✨");
-};
-
-/* ============================================================
-   ЭКСПОРТ PNG
-============================================================ */
-const FMT_TARGET = { auto: 2, phone: 1170 / 430, story: 1080 / 540, post: 1080 / 540, a4: 2480 / 794 };
-
-function loadHtml2Canvas() {
-  if (window.html2canvas) return Promise.resolve();
-  return new Promise((res, rej) => {
-    const s = document.createElement("script");
-    s.src = "https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js";
-    s.onload = res; s.onerror = () => rej(new Error("html2canvas load failed"));
-    document.head.appendChild(s);
-  });
-}
-
-async function downloadPng() {
-  const btns = [$("#dlBtn"), $("#dlBtn2")];
-  btns.forEach((b) => { b.disabled = true; });
-  toast("Рисую картинку…");
-  try {
-    await loadHtml2Canvas();
-    if (document.fonts?.ready) { try { await document.fonts.ready; } catch {} }
-    document.activeElement?.blur?.();
-    sheet.classList.add("exporting");
-    const canvas = await window.html2canvas(sheet, {
-      scale: FMT_TARGET[state.fmt] || 2,
-      backgroundColor: null,
-      useCORS: true,
-      logging: false,
-    });
-    sheet.classList.remove("exporting");
-    const a = document.createElement("a");
-    const suffix = state.dual ? (state.activeGrid === 0 ? "-nedelya1" : "-nedelya2") : "";
-    a.download = `raspisanie-${state.theme}${suffix}.png`;
-    a.href = canvas.toDataURL("image/png");
-    a.click();
-    toast("Готово! Картинка в загрузках ⬇️");
-    counterHit("download");
-  } catch (err) {
-    sheet.classList.remove("exporting");
-    console.error(err);
-    toast("Не получилось 😔 Проверь интернет и попробуй ещё раз");
-  } finally {
-    btns.forEach((b) => { b.disabled = false; });
-  }
-}
-$("#dlBtn").onclick = downloadPng;
-$("#dlBtn2").onclick = downloadPng;
-
-/* ============================================================
-   ШЕРИНГ-ССЫЛКА (расписание внутри URL)
-============================================================ */
-function bytesToB64url(bytes) {
-  let bin = "";
-  bytes.forEach((b) => (bin += String.fromCharCode(b)));
-  return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-}
-function b64urlToBytes(str) {
-  const b64 = str.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((str.length + 3) % 4);
-  return Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
-}
-async function encodeShare() {
-  const json = JSON.stringify(state);
-  const raw = new TextEncoder().encode(json);
-  if (typeof CompressionStream === "function") {
-    const stream = new Blob([raw]).stream().pipeThrough(new CompressionStream("gzip"));
-    const buf = new Uint8Array(await new Response(stream).arrayBuffer());
-    return "z." + bytesToB64url(buf);
-  }
-  return "p." + bytesToB64url(raw);
-}
-async function decodeShare(token) {
-  const dot = token.indexOf(".");
-  const kind = token.slice(0, dot);
-  const bytes = b64urlToBytes(token.slice(dot + 1));
-  let raw = bytes;
-  if (kind === "z") {
-    const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"));
-    raw = new Uint8Array(await new Response(stream).arrayBuffer());
-  }
-  return JSON.parse(new TextDecoder().decode(raw));
-}
-async function shareSchedule() {
-  try {
-    const token = await encodeShare();
-    const url = `${location.origin}${location.pathname}#s=${token}`;
-    counterHit("share");
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: "Моё расписание ✦", text: "Смотри, какое расписание я собрал(а) в Расписалке:", url });
-        return;
-      } catch (e) { if (e.name === "AbortError") return; }
-    }
-    await navigator.clipboard.writeText(url);
-    toast("Ссылка скопирована! Кидай друзьям 🔗");
-  } catch (err) {
-    console.error(err);
-    toast("Не вышло создать ссылку 😔");
-  }
-}
-$("#shareBtn").onclick = shareSchedule;
-$("#shareBtn2").onclick = shareSchedule;
-
-/* ============================================================
-   ЛЕНДИНГ: витрина стилей
-============================================================ */
-const DEMO_CELLS = [
-  ["алгебра", "физика", "инглиш", "история", "физра"],
-  ["русский", "алгебра", "био", "инглиш", "общество"],
-  ["физра", "химия", "геометрия", "литра", "музыка"],
-  ["труд", "инглиш", "физика", "алгебра", "—"],
-];
-function buildShowcase() {
-  const wrap = $("#showcase");
-  THEMES.forEach((t) => {
-    const card = document.createElement("button");
-    card.className = "mini-card";
-    let mini = `<div class="mini-clip"><div class="sheet th-${t.id}">`;
-    if (t.decor) mini += `<div class="s-decor">${[...t.decor].slice(0, 3).map((e) => `<i>${e}</i>`).join("")}</div>`;
-    mini += `<header class="s-head"><div class="s-tagrow"><span class="s-tag">расписание</span></div>
-      <h2 class="s-title">7 «Б»</h2><div class="s-sub">2026/27 учебный год</div></header>
-      <div class="s-grid" style="grid-template-columns:52px repeat(5,1fr)">
-      <div class="s-corner">урок</div>`;
-    for (let d = 0; d < 5; d++) mini += `<div class="s-dayh">${DAY_NAMES[d]}</div>`;
-    for (let r = 0; r < 4; r++) {
-      mini += `<div class="s-num"><b>${r + 1}</b><span class="s-time">${SCHOOL_TIMES[r]}</span></div>`;
-      for (let d = 0; d < 5; d++) mini += `<div class="s-cell">${DEMO_CELLS[r][d]}</div>`;
-    }
-    mini += `</div></div></div><div class="mini-meta"><b>${t.name}</b><span>попробовать →</span></div>`;
-    card.innerHTML = mini;
-    card.onclick = () => {
-      state.theme = t.id;
-      save();
-      openEditor();
-    };
-    wrap.appendChild(card);
-  });
-}
-
-/* ============================================================
-   РОУТИНГ И СТАРТ
-============================================================ */
-function openEditor() {
-  $("#landing").hidden = true;
-  $("#editor").hidden = false;
-  history.replaceState(null, "", "#edit");
-  renderControls(); renderSheet();
-  window.scrollTo(0, 0);
-}
-function openLanding() {
-  $("#editor").hidden = true;
-  $("#landing").hidden = false;
-  history.replaceState(null, "", location.pathname);
-  window.scrollTo(0, 0);
-}
-$("#backBtn").onclick = openLanding;
-document.querySelectorAll("[data-open-editor]").forEach((b) => (b.onclick = () => openEditor()));
-
-async function boot() {
-  $("#year").textContent = new Date().getFullYear();
-  // донат
-  ["donateNav", "donateBand", "donateTop", "donateSide"].forEach((id) => {
-    const el = document.getElementById(id);
-    if (el) el.href = CONFIG.donateUrl;
-  });
-  buildShowcase();
-
-  // импорт из шеринг-ссылки
-  const m = location.hash.match(/^#s=(.+)$/);
-  if (m) {
-    try {
-      const shared = await decodeShare(decodeURIComponent(m[1]));
-      if (shared && shared.v === 2) {
-        state = Object.assign(defaultState(shared.mode), shared);
-        save();
-        openEditor();
-        toast("Расписание из ссылки загружено ✨ Оно теперь твоё");
-      }
-    } catch (e) { console.error("bad share link", e); }
-    history.replaceState(null, "", location.pathname + "#edit");
-  } else if (location.hash === "#edit") {
-    openEditor();
-  }
-
-  // охват: 1 хит за сессию, в рамках сессии показываем закэшированное число
-  let visits = null;
-  const cached = sessionStorage.getItem("rv");
-  if (!cached) {
-    visits = await counterHit("visit");
-    if (visits) { try { sessionStorage.setItem("rv", String(visits)); } catch {} }
-  } else {
-    visits = Number(cached);
-  }
-  if (visits) {
-    $("#statVisits").textContent = visits.toLocaleString("ru-RU");
-    $("#statFooter").textContent = `👀 ${visits.toLocaleString("ru-RU")} заходов`;
-  } else {
-    $("#statVisits").textContent = "🔥";
-  }
-}
-boot();
-</script>
+<div class="modal" id="donateModal" hidden>
+  <div class="modal-card">
+    <h3>Закинуть на кофе</h3>
+    <p>Расписалка без рекламы и регистрации. Если зашла — можно поддержать, чтобы стили и фичи не кончались.</p>
+    <a class="btn hot" id="donateGo" href="#" target="_blank" rel="noopener">Открыть донат</a>
+    <a class="btn" id="donateMail" href="mailto:artem@gorelikov.ae?subject=Расписалка">Написать на почту</a>
+    <button class="btn ghost" id="donateClose" type="button">Закрыть</button>
+  </div>
+</div>
+<script src="js/app.js" defer></script>
 </body>
 </html>

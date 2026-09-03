@@ -1,0 +1,10 @@
+.DS_Store
+*.log
+.idea/
+.vscode/
+*.swp
+.env
+.env.*
+id_rsa
+id_ed25519
+*.pem
