@@ -4,6 +4,7 @@ const CONFIG = {
   abacusNs: "gorelikov.ae",
   donateUrl: "",
   donateEmail: "artem@gorelikov.ae",
+  donateQr: "/img/donate-qr.png",
   metrikaId: 112279782
 };
 
@@ -1042,6 +1043,21 @@ function openDonate(e) {
   }
   $("#donateModal").hidden = false;
 }
+function bindDonateQr() {
+  const img = $("#donateQr");
+  const box = $("#donateQrBox");
+  const soon = $("#donateQrSoon");
+  if (!img || !box) return;
+  const ok = () => { box.hidden = false; if (soon) soon.hidden = true; };
+  const fail = () => { box.hidden = true; if (soon) soon.hidden = false; };
+  img.src = CONFIG.donateQr || "/img/donate-qr.png";
+  img.addEventListener("load", () => { if (img.naturalWidth > 16) ok(); else fail(); });
+  img.addEventListener("error", fail);
+  if (img.complete) {
+    if (img.naturalWidth > 16) ok();
+    else fail();
+  }
+}
 $("#donateClose").onclick = () => { $("#donateModal").hidden = true; };
 $("#donateModal").addEventListener("click", (e) => {
   if (e.target.id === "donateModal") $("#donateModal").hidden = true;
@@ -1059,6 +1075,7 @@ function metrikaGoal(name, params) {
 async function boot() {
   $("#year").textContent = new Date().getFullYear();
   buildShowcase();
+  bindDonateQr();
 
   const short = location.pathname.match(/^\/s\/([23456789abcdefghijkmnpqrstuvwxyz]{8,12})$/i);
   const m = location.hash.match(/^#s=(.+)$/);
