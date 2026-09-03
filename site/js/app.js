@@ -789,7 +789,7 @@ function loadHtml2Canvas() {
   if (window.html2canvas) return Promise.resolve();
   return new Promise((res, rej) => {
     const s = document.createElement("script");
-    s.src = "/js/vendor/html2canvas.min.js";
+    s.src = "/js/vendor/html2canvas-pro.min.js";
     s.onload = res; s.onerror = () => rej(new Error("html2canvas load failed"));
     document.head.appendChild(s);
   });
@@ -816,11 +816,18 @@ async function downloadPng() {
   toast("Рисую картинку…");
   try {
     const canvas = await renderCanvas();
+    const blob = await new Promise((resolve, reject) => {
+      canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("blob"))), "image/png");
+    });
+    const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     const suffix = state.dual ? (state.activeGrid === 0 ? "-nedelya1" : "-nedelya2") : "";
     a.download = `raspisanie-${state.theme}${suffix}.png`;
-    a.href = canvas.toDataURL("image/png");
+    a.href = url;
+    document.body.appendChild(a);
     a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2500);
     toast("Готово — картинка в загрузках");
     counterHit("download");
     metrikaGoal("download");
