@@ -54,6 +54,8 @@ bash /opt/gorelikov.ae/deploy/setup-ssl.sh
 
 Пуш в `main` → workflow **Deploy to VPS** → rsync в `/opt/gorelikov.ae` → `install.sh`.
 
+Короткие ссылки `https://gorelikov.ae/s/k4m2np8q` — gzip в `/var/lib/raspisalka/` (обычно 200–800 байт, одинаковые расписания не дублируются). Старые длинные `#s=...` открываются как раньше.
+
 Проверка: https://gorelikov.ae/
 
 ## Перед продом — донат и Метрика

@@ -1,0 +1,22 @@
+[Unit]
+Description=Raspisalka short share API
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+Environment=RASPISALKA_DATA=/var/lib/raspisalka
+Environment=RASPISALKA_HOST=127.0.0.1
+Environment=RASPISALKA_PORT=18765
+ExecStart=/usr/bin/python3 /opt/gorelikov.ae/deploy/share-api.py
+Restart=always
+RestartSec=2
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/raspisalka
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

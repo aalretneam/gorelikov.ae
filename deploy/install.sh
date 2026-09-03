@@ -29,7 +29,9 @@ if [[ ! -f "$SITE_SRC/index.html" ]]; then
   exit 1
 fi
 
-mkdir -p "$WEB_ROOT"
+mkdir -p "$WEB_ROOT" /var/lib/raspisalka/s
+chown -R www-data:www-data /var/lib/raspisalka
+chmod 750 /var/lib/raspisalka
 rsync -a --delete \
   --exclude '.DS_Store' \
   --exclude 'og.html' \
@@ -60,12 +62,25 @@ server {
     index index.html;
     error_page 404 /404.html;
     location /.well-known/acme-challenge/ { allow all; }
+    location /s/ { try_files /index.html =404; }
+    location /api/ {
+        proxy_pass http://127.0.0.1:18765;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        client_max_body_size 80k;
+    }
     location / { try_files \$uri \$uri/ =404; }
 }
 EOF
 fi
 
 ln -sf "$DEST" "$ENABLED"
+
+install -m 644 "$SRC_DIR/deploy/raspisalka-share.service" /etc/systemd/system/raspisalka-share.service
+systemctl daemon-reload
+systemctl enable --now raspisalka-share
+systemctl restart raspisalka-share
+
 nginx -t
 systemctl reload nginx
 echo "OK: ${DOMAIN} → ${WEB_ROOT}"

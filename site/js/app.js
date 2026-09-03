@@ -902,10 +902,48 @@ async function decodeShare(token) {
   }
   return JSON.parse(new TextDecoder().decode(raw));
 }
+function shareApiBase() {
+  const h = location.hostname;
+  if (h === "localhost" || h === "127.0.0.1") return "http://127.0.0.1:18765";
+  return "";
+}
+async function saveShareRemote(payload) {
+  const r = await fetch(`${shareApiBase()}/api/share`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+  if (!r.ok) throw new Error("save " + r.status);
+  const j = await r.json();
+  if (!j || !j.id) throw new Error("no id");
+  return j.id;
+}
+async function loadShareRemote(id) {
+  const r = await fetch(`${shareApiBase()}/api/share/${encodeURIComponent(id)}`);
+  if (r.status === 404) return null;
+  if (!r.ok) throw new Error("load " + r.status);
+  return r.json();
+}
+function applySharedState(shared) {
+  if (!shared || (shared.v !== 2 && shared.v !== 3 && shared.v !== 4)) return false;
+  state = Object.assign(defaultState(shared.mode), shared, { v: 4 });
+  save();
+  openEditor({ keepUrl: true });
+  toast("Расписание из ссылки загружено — теперь оно твоё");
+  return true;
+}
 async function shareSchedule() {
   try {
-    const token = await encodeShare();
-    const url = `${location.origin}${location.pathname}#s=${token}`;
+    let url;
+    try {
+      const id = await saveShareRemote(state);
+      url = `${location.origin}/s/${id}`;
+      history.replaceState(null, "", `/s/${id}`);
+    } catch (e) {
+      console.warn("short share failed, fallback to hash", e);
+      const token = await encodeShare();
+      url = `${location.origin}/#s=${token}`;
+    }
     counterHit("share");
     metrikaGoal("share");
     markScheduleCreated("share");
@@ -913,7 +951,7 @@ async function shareSchedule() {
       try {
         await navigator.share({ title: "Моё расписание", text: "Смотри, какое расписание я собрал(а) в Расписалке:", url });
         return;
-      } catch (e) { if (e.name === "AbortError") return; }
+      } catch (err) { if (err.name === "AbortError") return; }
     }
     await navigator.clipboard.writeText(url);
     toast("Ссылка скопирована — кидай друзьям");
@@ -962,11 +1000,11 @@ function buildShowcase() {
   });
 }
 
-function openEditor() {
+function openEditor(opts) {
   document.body.classList.add("mode-edit");
   $("#landing").setAttribute("aria-hidden", "true");
   $("#landing").inert = true;
-  history.replaceState(null, "", "#edit");
+  if (!opts || !opts.keepUrl) history.replaceState(null, "", "#edit");
   renderControls(); renderSheet();
   window.scrollTo(0, 0);
   metrikaGoal("editor_open");
@@ -975,7 +1013,7 @@ function openLanding() {
   document.body.classList.remove("mode-edit");
   $("#landing").removeAttribute("aria-hidden");
   $("#landing").inert = false;
-  history.replaceState(null, "", location.pathname);
+  history.replaceState(null, "", "/");
   window.scrollTo(0, 0);
 }
 $("#backBtn").onclick = openLanding;
@@ -1022,18 +1060,26 @@ async function boot() {
   $("#year").textContent = new Date().getFullYear();
   buildShowcase();
 
+  const short = location.pathname.match(/^\/s\/([23456789abcdefghijkmnpqrstuvwxyz]{8,12})$/i);
   const m = location.hash.match(/^#s=(.+)$/);
-  if (m) {
+  if (short) {
+    try {
+      const shared = await loadShareRemote(short[1].toLowerCase());
+      if (!applySharedState(shared)) toast("Этой ссылки уже нет — собери расписание заново");
+    } catch (e) {
+      console.error("bad short link", e);
+      toast("Не получилось открыть ссылку");
+    }
+  } else if (m) {
     try {
       const shared = await decodeShare(decodeURIComponent(m[1]));
-      if (shared && (shared.v === 2 || shared.v === 3 || shared.v === 4)) {
-        state = Object.assign(defaultState(shared.mode), shared, { v: 3 });
-        save();
-        openEditor();
-        toast("Расписание из ссылки загружено — теперь оно твоё");
+      if (applySharedState(shared)) {
+        try {
+          const id = await saveShareRemote(state);
+          history.replaceState(null, "", `/s/${id}`);
+        } catch {}
       }
     } catch (e) { console.error("bad share link", e); }
-    history.replaceState(null, "", location.pathname + "#edit");
   } else if (location.hash === "#edit") {
     openEditor();
   }
