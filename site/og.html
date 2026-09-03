@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@600;700;800&family=Unbounded:wght@700;900&display=swap" rel="stylesheet" />
+<style>
+* { margin: 0; box-sizing: border-box; }
+body {
+  width: 1200px; height: 630px; overflow: hidden;
+  background:
+    radial-gradient(ellipse 60% 70% at 8% 0%, rgba(109,62,240,.55), transparent 60%),
+    radial-gradient(ellipse 50% 60% at 95% 10%, rgba(14,116,144,.5), transparent 60%),
+    radial-gradient(ellipse 45% 50% at 75% 100%, rgba(157,23,77,.4), transparent 60%),
+    #0a0c13;
+  color: #edf0f9; font-family: Manrope, sans-serif;
+  display: flex; align-items: center; padding: 0 70px;
+  position: relative;
+}
+.left { width: 620px; position: relative; z-index: 2; }
+.logo {
+  display: inline-flex; align-items: center; gap: 12px;
+  font-family: Unbounded, sans-serif; font-weight: 700; font-size: 26px; margin-bottom: 36px;
+}
+.logo .ic {
+  width: 46px; height: 46px; border-radius: 13px; display: grid; place-items: center;
+  background: linear-gradient(135deg, #8b5cf6, #22d3ee); font-size: 24px;
+}
+h1 {
+  font-family: Unbounded, sans-serif; font-weight: 900; font-size: 54px; line-height: 1.12;
+  margin-bottom: 26px; letter-spacing: -0.5px;
+}
+h1 .grad {
+  background: linear-gradient(92deg, #a78bfa, #22d3ee 55%, #ff4d8d);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.sub { font-size: 24px; color: #aab2c8; font-weight: 600; line-height: 1.45; }
+.pill {
+  display: inline-block; margin-top: 34px; padding: 12px 24px; border-radius: 999px;
+  background: linear-gradient(135deg, #8b5cf6, #22d3ee); color: #fff;
+  font-weight: 800; font-size: 21px;
+}
+.cards { position: absolute; right: -30px; top: 50%; transform: translateY(-50%); z-index: 1; }
+.card {
+  width: 330px; border-radius: 20px; padding: 20px; position: absolute; right: 60px;
+  box-shadow: 0 30px 80px rgba(0,0,0,.55);
+}
+.card h3 { font-size: 20px; font-weight: 800; margin-bottom: 12px; }
+.row { display: grid; grid-template-columns: 30px 1fr 1fr; gap: 6px; margin-bottom: 6px; }
+.row div {
+  border-radius: 8px; padding: 8px 9px; font-size: 12px; font-weight: 700;
+}
+.c1 { top: -240px; right: 120px !important; transform: rotate(-6deg); background: linear-gradient(135deg, #ffd6f5, #cfe6ff); color: #3b1d4f; }
+.c1 h3 { font-family: Unbounded, sans-serif; background: linear-gradient(180deg,#7b2ff7,#ff2fb3); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.c1 .row div { background: rgba(255,255,255,.75); border: 1.5px solid rgba(255,47,179,.3); }
+.c2 { top: -110px; right: -10px !important; transform: rotate(4deg); background: #0b0614; color: #eafffa; border: 1px solid rgba(0,255,200,.4); }
+.c2 h3 { color: #00ffc8; text-shadow: 0 0 18px rgba(0,255,200,.6); font-family: Unbounded, sans-serif; }
+.c2 .row div { background: rgba(255,255,255,.05); border: 1px solid rgba(0,255,200,.3); }
+.c3 { top: 30px; right: 150px !important; transform: rotate(-3deg); background: #fef9c3; color: #1f2937; border: 2px solid #1f2937; }
+.c3 h3 { font-family: Unbounded, sans-serif; }
+.c3 .row div { background: #fff; border: 2px solid #1f2937; box-shadow: 2px 3px 0 rgba(31,41,55,.9); }
+</style>
+</head>
+<body>
+  <div class="left">
+    <div class="logo"><span class="ic">✦</span>расписалка</div>
+    <h1>Расписание,<br /><span class="grad">которое не стыдно</span><br />поставить на обои</h1>
+    <div class="sub">Школа и универ · 9 стилей + свой<br />Обои, сторис, печать — бесплатно</div>
+    <div class="pill">gorelikov.ae</div>
+  </div>
+  <div class="cards">
+    <div class="card c1"><h3>Y2K ✦</h3><div class="row"><div>1</div><div>алгебра</div><div>физика</div></div><div class="row"><div>2</div><div>русский</div><div>инглиш</div></div><div class="row"><div>3</div><div>физра</div><div>химия</div></div></div>
+    <div class="card c2"><h3>НЕОН</h3><div class="row"><div>1</div><div>матан</div><div>линал</div></div><div class="row"><div>2</div><div>прога</div><div>физика</div></div><div class="row"><div>3</div><div>англ</div><div>история</div></div></div>
+    <div class="card c3"><h3>СТИКЕРЫ ⚡</h3><div class="row"><div>1</div><div>биология</div><div>литра</div></div><div class="row"><div>2</div><div>геометрия</div><div>ИЗО</div></div><div class="row"><div>3</div><div>музыка</div><div>труд</div></div></div>
+  </div>
+</body>
+</html>
