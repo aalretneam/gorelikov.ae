@@ -789,7 +789,7 @@ function loadHtml2Canvas() {
   if (window.html2canvas) return Promise.resolve();
   return new Promise((res, rej) => {
     const s = document.createElement("script");
-    s.src = "https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js";
+    s.src = "/js/vendor/html2canvas.min.js";
     s.onload = res; s.onerror = () => rej(new Error("html2canvas load failed"));
     document.head.appendChild(s);
   });
