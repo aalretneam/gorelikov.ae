@@ -1058,7 +1058,7 @@ body.is-sorting * { cursor: grabbing !important; }
     display: flex !important;
     flex-direction: column; gap: 10px; width: 100%;
   }
-  body.mode-edit.compact:not(.preview-open):not(.capturing) #sheet {
+  body.mode-edit.compact:not(.preview-open):not(.capturing):not(.printing) #sheet {
     position: fixed !important;
     left: 0; top: 0;
     opacity: 0; pointer-events: none; z-index: -1;
@@ -1186,20 +1186,51 @@ body.is-sorting * { cursor: grabbing !important; }
     color-adjust: exact !important;
   }
   body { background: #fff !important; }
-  #landing, .topbar, .side, #toast, .modal, .week-tabs, #donateNudge { display: none !important; }
-  #editor, .workspace, .stage { display: block !important; height: auto !important; overflow: visible !important; background: transparent !important; padding: 0; }
+  #landing, .topbar, .side, #toast, .modal, .week-tabs, #donateNudge,
+  body.mode-edit.compact .topbar,
+  body.mode-edit.compact .side,
+  body.mode-edit.compact .compact-only,
+  body.mode-edit.compact .day-editor,
+  body.mode-edit.compact .preview-scrim,
+  .day-editor, .preview-scrim, .compact-only {
+    display: none !important;
+  }
+  body.mode-edit.compact #editor,
+  body.mode-edit.compact .workspace,
+  body.mode-edit.compact .stage,
+  #editor, .workspace, .stage {
+    display: block !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    background: transparent !important;
+    padding: 0 !important;
+  }
   .sheet {
     box-shadow: none !important; border-radius: 0; overflow: hidden !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
-  #sheet { opacity: 1 !important; position: relative !important; transform: none !important; left: auto !important; top: auto !important; z-index: 1 !important; }
-  .day-editor, .preview-scrim, .compact-only { display: none !important; }
+  body.mode-edit.compact #sheet,
+  body.mode-edit.compact:not(.preview-open):not(.capturing) #sheet,
+  body.mode-edit.compact.printing #sheet,
+  #sheet {
+    display: flex !important;
+    opacity: 1 !important;
+    position: relative !important;
+    transform: none !important;
+    left: auto !important;
+    top: auto !important;
+    z-index: 1 !important;
+    pointer-events: auto !important;
+  }
   .s-num .grip { display: none !important; }
+  body.mode-edit.compact #sheet.fmt-auto,
   .sheet.fmt-auto {
     width: 285mm !important; height: auto !important; min-height: 0 !important;
     box-shadow: none !important;
   }
+  body.mode-edit.compact #sheet.fmt-a4,
   .sheet.fmt-a4 {
     width: 198mm !important; min-height: 285mm !important; height: auto !important;
   }

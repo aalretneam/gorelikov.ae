@@ -1286,13 +1286,20 @@ function printSheet() {
   }
   const size = state.fmt === "a4" ? "A4 portrait" : "A4 landscape";
   tag.textContent = `@media print { @page { size: ${size}; margin: 6mm; } }`;
+  document.body.classList.add("printing");
   bakeSheetPaint(sheet);
   window.print();
 }
 onClick("#printBtn", printSheet);
 onClick("#printBtnTop", printSheet);
-window.addEventListener("beforeprint", () => bakeSheetPaint(sheet));
-window.addEventListener("afterprint", restoreSheetPaint);
+window.addEventListener("beforeprint", () => {
+  document.body.classList.add("printing");
+  bakeSheetPaint(sheet);
+});
+window.addEventListener("afterprint", () => {
+  document.body.classList.remove("printing");
+  restoreSheetPaint();
+});
 
 function bytesToB64url(bytes) {
   let bin = "";
