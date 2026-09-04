@@ -893,7 +893,8 @@ async function downloadPng() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     const suffix = state.dual ? (state.activeGrid === 0 ? "-nedelya1" : "-nedelya2") : "";
-    a.download = `raspisanie-${state.theme}${suffix}.png`;
+    const themeFile = state.theme === "minecraft" ? "pixel" : state.theme === "potter" ? "academy" : state.theme;
+    a.download = `raspisanie-${themeFile}${suffix}.png`;
     a.href = url;
     document.body.appendChild(a);
     a.click();
