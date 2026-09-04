@@ -11,7 +11,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Check deploy secrets
+        id: creds
+        env:
+          KEY: ${{ secrets.VPS_SSH_KEY }}
+          HOST: ${{ secrets.VPS_HOST }}
+          USER: ${{ secrets.VPS_USER }}
+        run: |
+          if [ -z "$KEY" ] || [ -z "$HOST" ] || [ -z "$USER" ]; then
+            echo "ready=no" >> "$GITHUB_OUTPUT"
+            echo "GitHub → VPS не настроен (нет VPS_SSH_KEY / VPS_HOST / VPS_USER)."
+            echo "Сайт на Beget обновляется вручную: git -C /opt/gorelikov.ae pull origin main && bash /opt/gorelikov.ae/deploy/install.sh"
+          else
+            echo "ready=yes" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Publish to VPS
+        if: steps.creds.outputs.ready == 'yes'
         uses: easingthemes/ssh-deploy@v5.0.3
         with:
           SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_KEY }}
