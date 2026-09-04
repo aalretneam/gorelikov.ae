@@ -9,6 +9,7 @@ Group=www-data
 Environment=RASPISALKA_DATA=/var/lib/raspisalka
 Environment=RASPISALKA_HOST=127.0.0.1
 Environment=RASPISALKA_PORT=18765
+EnvironmentFile=-/var/lib/raspisalka/telegram.env
 ExecStart=/usr/bin/python3 /opt/gorelikov.ae/deploy/share-api.py
 Restart=always
 RestartSec=2

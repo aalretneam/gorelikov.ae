@@ -76,6 +76,7 @@
     <nav class="nav">
       <a class="logo" href="/"><img class="logo-mark" src="/img/logo.png" width="32" height="32" alt="">расписалка</a>
       <div class="spacer"></div>
+      <button class="btn sm ghost" type="button" data-contact>Написать</button>
       <button class="btn sm hot" type="button" data-donate>Поддержать</button>
       <button class="btn sm primary" type="button" data-open-editor>Создать</button>
     </nav>
@@ -83,7 +84,7 @@
     <section class="hero">
       <div class="pill">бесплатно · без регистрации · за минуту</div>
       <h1>Расписание, которое<br /><span class="grad">не стыдно поставить на обои</span></h1>
-      <p class="sub">Собери расписание для школы или универа, выбери стиль — Y2K, неон, kawaii, брутализм, vaporwave — или сделай свой. Скачай на телефон, кинь в сторис или в чат класса.</p>
+      <p class="sub">Собери расписание для школы или универа, выбери готовый стиль или сделай свой. Скачай на телефон, распечатай, кинь в сторис или в чат класса.</p>
       <div class="cta-row">
         <button class="btn primary" type="button" data-open-editor>Собрать расписание →</button>
         <a class="btn" href="#styles">Посмотреть стили</a>
@@ -102,21 +103,25 @@
 
     <h2 class="section-title">Как это работает</h2>
     <div class="steps">
-      <div class="step"><div class="n">1</div><b>Заполни прямо в таблице</b><p>Кликай по ячейкам и пиши предметы — название остаётся жирным, даже если не влезло. Нижняя строка мелким — кабинет или учитель.</p></div>
+      <div class="step"><div class="n">1</div><b>Заполни прямо в таблице</b><p>Кликай по ячейкам и пиши предметы — верхняя строка название, нижняя — кабинет или учитель.</p></div>
       <div class="step"><div class="n">2</div><b>Выбери или собери стиль</b><p>10 готовых тем или конструктор: свои цвета, шрифт, фон и стикеры. Предметы сами красятся по смыслу.</p></div>
       <div class="step"><div class="n">3</div><b>Скачай и поставь</b><p>PNG под обои, сторис, пост или печать А4. Или копируй картинку в Telegram одной кнопкой. Ссылка откроет расписание у друга.</p></div>
     </div>
 
     <div class="donate-band">
       <b>Расписалка бесплатна и без рекламы</b>
-      <p>Если она сэкономила тебе вечер перед 1 сентября — можно закинуть на кофе</p>
-      <button class="btn hot" type="button" data-donate>Поддержать проект</button>
+      <p>Если она сэкономила тебе время — можно закинуть разработчику на кофе</p>
+      <div class="cta-row">
+        <button class="btn hot" type="button" data-donate>Поддержать проект</button>
+        <button class="btn" type="button" data-contact>Написать разработчику</button>
+      </div>
     </div>
 
     <footer class="site">
       <a class="logo foot-logo" href="/"><img class="logo-mark" src="/img/logo.png" width="28" height="28" alt=""><span>© <span id="year"></span> gorelikov.ae</span></a>
       <div class="spacer"></div>
       <span id="statFooter"></span>
+      <button class="btn sm ghost" type="button" data-contact>написать</button>
       <button class="btn sm ghost" type="button" data-donate>донат</button>
     </footer>
   </div>
@@ -127,6 +132,7 @@
     <button class="btn sm ghost" id="backBtn" type="button">←</button>
     <a class="logo" href="/" id="logoHome"><img class="logo-mark" src="/img/logo.png" width="32" height="32" alt="">расписалка</a>
     <div class="spacer"></div>
+    <button class="btn sm ghost" type="button" data-contact>написать</button>
     <button class="btn sm hot" type="button" data-donate>донат</button>
     <button class="btn sm" id="copyBtn" type="button">в Telegram</button>
     <button class="btn sm" id="shareBtn" type="button">ссылка</button>
@@ -242,6 +248,7 @@
       <div class="grp">
         <label>Поддержка</label>
         <button class="btn hot" type="button" data-donate style="display:flex">Закинуть на кофе</button>
+        <button class="btn" type="button" data-contact>Написать разработчику</button>
         <button class="btn ghost" id="resetBtn" type="button" style="color:#f87171">Очистить всё</button>
       </div>
     </aside>
@@ -261,14 +268,31 @@
 <div class="modal" id="donateModal" hidden>
   <div class="modal-card donate-card">
     <h3>Закинуть на кофе</h3>
-    <p>Расписалка без рекламы и регистрации. Если зашла — можно поддержать, чтобы стили и фичи не кончались.</p>
+    <p>Расписалка без рекламы и регистрации. Если зашла — можно поддержать, чтобы вдохновить на аналогичные проекты.</p>
     <div class="donate-qr" id="donateQrBox" hidden>
-      <img id="donateQr" src="/img/donate-qr.png" alt="QR для доната" width="220" height="220">
+      <img id="donateQr" src="/img/donate-qr.png" alt="QR для доната по СБП" width="220" height="220">
+      <span class="donate-qr-cap">СБП — отсканируй в приложении банка</span>
     </div>
-    <p class="donate-soon" id="donateQrSoon">QR появится здесь — пока можно написать на почту</p>
-    <a class="btn hot" id="donateGo" href="#" target="_blank" rel="noopener">Открыть донат</a>
-    <a class="btn" id="donateMail" href="mailto:artem@gorelikov.ae?subject=Расписалка">Написать на почту</a>
+    <a class="btn hot" id="donateGo" href="#" target="_blank" rel="noopener" hidden>Открыть донат</a>
     <button class="btn ghost" id="donateClose" type="button">Закрыть</button>
+  </div>
+</div>
+
+<div class="modal" id="contactModal" hidden>
+  <div class="modal-card contact-card">
+    <h3>Написать разработчику</h3>
+    <p>Имя и сообщение. Отвечу, когда смогу.</p>
+    <form id="contactForm">
+      <input type="text" name="company" id="contactHoney" tabindex="-1" autocomplete="off" aria-hidden="true">
+      <label>Имя
+        <input type="text" id="contactName" name="name" maxlength="80" required placeholder="Как к тебе обращаться" autocomplete="name">
+      </label>
+      <label>Сообщение
+        <textarea id="contactMsg" name="message" maxlength="2000" required placeholder="Что сломалось, чего не хватает, просто привет"></textarea>
+      </label>
+      <button class="btn primary" id="contactSend" type="submit">Отправить</button>
+      <button class="btn ghost" id="contactClose" type="button">Закрыть</button>
+    </form>
   </div>
 </div>
 <script src="/js/app.js" defer></script>

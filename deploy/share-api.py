@@ -13,7 +13,9 @@ import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from urllib.error import HTTPError, URLError
 from urllib.parse import urlparse
+from urllib.request import Request, urlopen
 
 ALPH = "23456789abcdefghijkmnpqrstuvwxyz"
 ID_RE = re.compile(r"^[23456789abcdefghijkmnpqrstuvwxyz]{8,12}$")
@@ -24,6 +26,7 @@ PORT = int(os.environ.get("RASPISALKA_PORT", "18765"))
 
 _post_hits: dict[str, list[float]] = {}
 _hits_lock = threading.Lock()
+MAX_CONTACT = 4 * 1024
 
 
 def id_from_digest(digest: bytes, length: int = 8) -> str:
@@ -104,20 +107,61 @@ def load_payload(share_id: str) -> dict | None:
     return obj
 
 
-def allow_post(ip: str) -> bool:
+def allow_post(ip: str, bucket: str = "share", limit: int = 30, window: int = 600) -> bool:
     now = time.time()
+    key = f"{bucket}:{ip}"
     with _hits_lock:
-        hits = [t for t in _post_hits.get(ip, []) if now - t < 600]
-        if len(hits) >= 30:
-            _post_hits[ip] = hits
+        hits = [t for t in _post_hits.get(key, []) if now - t < window]
+        if len(hits) >= limit:
+            _post_hits[key] = hits
             return False
         hits.append(now)
-        _post_hits[ip] = hits
+        _post_hits[key] = hits
         if len(_post_hits) > 4000:
-            stale = [k for k, v in _post_hits.items() if not v or now - v[-1] > 600]
+            stale = [k for k, v in _post_hits.items() if not v or now - v[-1] > window]
             for k in stale:
                 _post_hits.pop(k, None)
         return True
+
+
+def telegram_configured() -> bool:
+    return bool(os.environ.get("TELEGRAM_BOT_TOKEN", "").strip() and os.environ.get("TELEGRAM_CHAT_ID", "").strip())
+
+
+def send_telegram(name: str, message: str) -> None:
+    token = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
+    chat = os.environ.get("TELEGRAM_CHAT_ID", "").strip()
+    if not token or not chat:
+        raise RuntimeError("not_configured")
+    text = f"Расписалка\nИмя: {name}\n\n{message}"
+    payload = json.dumps({"chat_id": chat, "text": text[:3900], "disable_web_page_preview": True}, ensure_ascii=False).encode("utf-8")
+    req = Request(
+        f"https://api.telegram.org/bot{token}/sendMessage",
+        data=payload,
+        headers={"Content-Type": "application/json; charset=utf-8"},
+        method="POST",
+    )
+    try:
+        with urlopen(req, timeout=12) as resp:
+            raw = json.loads(resp.read().decode("utf-8"))
+    except (HTTPError, URLError, TimeoutError, json.JSONDecodeError) as exc:
+        raise RuntimeError("telegram") from exc
+    if not raw.get("ok"):
+        raise RuntimeError("telegram")
+
+
+def read_json_body(handler: BaseHTTPRequestHandler, max_len: int) -> dict:
+    try:
+        length = int(handler.headers.get("Content-Length", "0"))
+    except ValueError:
+        length = 0
+    if length <= 0 or length > max_len:
+        raise ValueError("too_large")
+    raw = handler.rfile.read(length)
+    obj = json.loads(raw.decode("utf-8"))
+    if not isinstance(obj, dict):
+        raise ValueError("bad_json")
+    return obj
 
 
 def client_ip(handler: BaseHTTPRequestHandler) -> str:
@@ -161,6 +205,9 @@ class Handler(BaseHTTPRequestHandler):
         if path in ("/api/share", "/health"):
             self._send_json(200, {"ok": True})
             return
+        if path == "/api/contact":
+            self._send_json(200, {"ok": True, "configured": telegram_configured()})
+            return
         prefix = "/api/share/"
         if path.startswith(prefix):
             share_id = path[len(prefix) :]
@@ -174,25 +221,52 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         path = urlparse(self.path).path.rstrip("/")
+        ip = client_ip(self)
+        if path == "/api/contact":
+            if not allow_post(ip, "contact", limit=8, window=600):
+                self._send_json(429, {"error": "rate_limit"})
+                return
+            try:
+                obj = read_json_body(self, MAX_CONTACT)
+            except ValueError as exc:
+                code = 413 if str(exc) == "too_large" else 400
+                self._send_json(code, {"error": str(exc)})
+                return
+            except (UnicodeDecodeError, json.JSONDecodeError):
+                self._send_json(400, {"error": "bad_json"})
+                return
+            if (obj.get("company") or obj.get("website")):
+                self._send_json(200, {"ok": True})
+                return
+            name = str(obj.get("name") or "").strip()[:80]
+            message = str(obj.get("message") or "").strip()[:2000]
+            if len(name) < 1 or len(message) < 2:
+                self._send_json(400, {"error": "empty"})
+                return
+            if not telegram_configured():
+                self._send_json(503, {"error": "not_configured"})
+                return
+            try:
+                send_telegram(name, message)
+            except RuntimeError:
+                self._send_json(502, {"error": "telegram"})
+                return
+            self._send_json(200, {"ok": True})
+            return
         if path != "/api/share":
             self._send_json(404, {"error": "not_found"})
             return
-        ip = client_ip(self)
-        if not allow_post(ip):
+        if not allow_post(ip, "share", limit=30, window=600):
             self._send_json(429, {"error": "rate_limit"})
             return
         try:
-            length = int(self.headers.get("Content-Length", "0"))
-        except ValueError:
-            length = 0
-        if length <= 0 or length > MAX_BODY:
-            self._send_json(413, {"error": "too_large"})
-            return
-        raw = self.rfile.read(length)
-        try:
-            obj = validate_payload(json.loads(raw.decode("utf-8")))
+            obj = validate_payload(read_json_body(self, MAX_BODY))
             share_id = save_payload(obj)
-        except (UnicodeDecodeError, json.JSONDecodeError, ValueError):
+        except ValueError as exc:
+            code = 413 if str(exc) == "too_large" else 400
+            self._send_json(code, {"error": str(exc)})
+            return
+        except (UnicodeDecodeError, json.JSONDecodeError):
             self._send_json(400, {"error": "bad_json"})
             return
         except Exception:

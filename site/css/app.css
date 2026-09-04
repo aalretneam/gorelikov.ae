@@ -774,7 +774,27 @@ body.is-sorting * { cursor: grabbing !important; }
   box-shadow: 0 8px 28px rgba(0,0,0,.28);
 }
 .donate-qr img { width: 100%; height: auto; aspect-ratio: 1; object-fit: contain; display: block; }
-.donate-soon { font-size: .88rem !important; }
+.donate-qr-cap {
+  display: block; margin-top: 8px; font-size: .72rem; font-weight: 700;
+  color: #4b5563; letter-spacing: .01em;
+}
+.donate-band .cta-row { margin-top: 0; }
+#contactHoney {
+  position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0;
+}
+.contact-card { text-align: left; }
+.contact-card h3, .contact-card > p { text-align: center; }
+.contact-card form { display: grid; gap: 12px; }
+.contact-card label {
+  display: grid; gap: 6px;
+  font-size: .82rem; font-weight: 700; color: var(--tx2);
+}
+.contact-card input[type=text], .contact-card textarea {
+  width: 100%; background: var(--p2); border: 1px solid var(--line); color: var(--tx);
+  border-radius: 12px; padding: 10px 12px; font: inherit; font-size: .92rem;
+}
+.contact-card textarea { min-height: 120px; resize: vertical; }
+.contact-card .btn { width: 100%; margin-top: 0; }
 
 @media (max-width: 940px) {
   .workspace { display: flex; flex-direction: column; overflow: auto; }

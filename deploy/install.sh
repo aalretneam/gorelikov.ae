@@ -32,6 +32,19 @@ fi
 mkdir -p "$WEB_ROOT" /var/lib/raspisalka/s
 chown -R www-data:www-data /var/lib/raspisalka
 chmod 750 /var/lib/raspisalka
+if [[ ! -f /var/lib/raspisalka/telegram.env ]]; then
+  cat > /var/lib/raspisalka/telegram.env <<'EOF'
+# Форма «написать разработчику» → Telegram-бот (токен не в git).
+# 1) @BotFather → /newbot → токен
+# 2) Напиши боту /start
+# 3) chat_id: curl -s "https://api.telegram.org/bot<TOKEN>/getUpdates"
+# 4) Раскомментируй строки и: systemctl restart raspisalka-share
+# TELEGRAM_BOT_TOKEN=123456:ABC...
+# TELEGRAM_CHAT_ID=123456789
+EOF
+  chown www-data:www-data /var/lib/raspisalka/telegram.env
+  chmod 640 /var/lib/raspisalka/telegram.env
+fi
 rsync -a --delete \
   --exclude '.DS_Store' \
   --exclude 'og.html' \
@@ -85,3 +98,6 @@ nginx -t
 systemctl reload nginx
 echo "OK: ${DOMAIN} → ${WEB_ROOT}"
 echo "Проверка: curl -sI -H 'Host: ${DOMAIN}' http://127.0.0.1/"
+if ! grep -qE '^TELEGRAM_BOT_TOKEN=' /var/lib/raspisalka/telegram.env 2>/dev/null; then
+  echo "Форма «написать»: заполни /var/lib/raspisalka/telegram.env и sudo systemctl restart raspisalka-share"
+fi

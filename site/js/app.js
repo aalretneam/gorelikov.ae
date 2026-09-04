@@ -1039,13 +1039,11 @@ function openDonate(e) {
   metrikaGoal("donate_open");
   const url = donateHref();
   const go = $("#donateGo");
-  const mail = $("#donateMail");
-  mail.href = `mailto:${CONFIG.donateEmail}?subject=${encodeURIComponent("Расписалка — донат")}`;
   if (url) {
     go.hidden = false;
     go.href = url;
     go.textContent = "Открыть страницу доната";
-  } else {
+  } else if (go) {
     go.hidden = true;
   }
   $("#donateModal").hidden = false;
@@ -1053,10 +1051,9 @@ function openDonate(e) {
 function bindDonateQr() {
   const img = $("#donateQr");
   const box = $("#donateQrBox");
-  const soon = $("#donateQrSoon");
   if (!img || !box) return;
-  const ok = () => { box.hidden = false; if (soon) soon.hidden = true; };
-  const fail = () => { box.hidden = true; if (soon) soon.hidden = false; };
+  const ok = () => { box.hidden = false; };
+  const fail = () => { box.hidden = true; };
   img.src = CONFIG.donateQr || "/img/donate-qr.png";
   img.addEventListener("load", () => { if (img.naturalWidth > 16) ok(); else fail(); });
   img.addEventListener("error", fail);
@@ -1065,11 +1062,70 @@ function bindDonateQr() {
     else fail();
   }
 }
+function openContact(e) {
+  if (e) e.preventDefault();
+  metrikaGoal("contact_open");
+  $("#contactModal").hidden = false;
+  setTimeout(() => $("#contactName")?.focus(), 50);
+}
+function closeContact() {
+  $("#contactModal").hidden = true;
+}
+async function submitContact(e) {
+  e.preventDefault();
+  if ($("#contactHoney")?.value) return;
+  const name = ($("#contactName").value || "").trim();
+  const message = ($("#contactMsg").value || "").trim();
+  if (!name || !message) {
+    toast("Напиши имя и сообщение");
+    return;
+  }
+  const btn = $("#contactSend");
+  btn.disabled = true;
+  try {
+    const r = await fetch(`${shareApiBase()}/api/contact`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name, message })
+    });
+    const j = await r.json().catch(() => ({}));
+    if (r.status === 503 || j.error === "not_configured") {
+      toast("Форма ещё настраивается — напиши на " + (CONFIG.donateEmail || "artem@gorelikov.ae"));
+      return;
+    }
+    if (r.status === 429) {
+      toast("Слишком часто — подожди немного");
+      return;
+    }
+    if (!r.ok) throw new Error(j.error || "send");
+    $("#contactName").value = "";
+    $("#contactMsg").value = "";
+    closeContact();
+    toast("Отправлено — прочитаю в Telegram");
+    metrikaGoal("contact_send");
+  } catch (err) {
+    console.error(err);
+    toast("Не ушло. Попробуй ещё раз чуть позже");
+  } finally {
+    btn.disabled = false;
+  }
+}
 $("#donateClose").onclick = () => { $("#donateModal").hidden = true; };
 $("#donateModal").addEventListener("click", (e) => {
   if (e.target.id === "donateModal") $("#donateModal").hidden = true;
 });
 document.querySelectorAll("[data-donate]").forEach((b) => { b.addEventListener("click", openDonate); });
+$("#contactClose").onclick = closeContact;
+$("#contactModal").addEventListener("click", (e) => {
+  if (e.target.id === "contactModal") closeContact();
+});
+document.querySelectorAll("[data-contact]").forEach((b) => { b.addEventListener("click", openContact); });
+$("#contactForm").addEventListener("submit", submitContact);
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "Escape") return;
+  if (!$("#donateModal").hidden) $("#donateModal").hidden = true;
+  if (!$("#contactModal").hidden) closeContact();
+});
 
 function metrikaGoal(name, params) {
   const id = CONFIG.metrikaId;
