@@ -388,6 +388,17 @@ function closePreview(silent) {
 function activeDayIdx() {
   return state.days.map((on, i) => (on ? i : -1)).filter((i) => i >= 0);
 }
+function setDayEnabled(i, on) {
+  const next = on ? 1 : 0;
+  if ((state.days[i] ? 1 : 0) === next) return true;
+  if (!next && activeDayIdx().length <= 1) {
+    toast("Хотя бы один день оставь");
+    return false;
+  }
+  state.days[i] = next;
+  save();
+  return true;
+}
 function grid() {
   return state.cells[state.dual ? state.activeGrid : 0];
 }
@@ -541,11 +552,16 @@ function renderDayEditor() {
   if (typing) return;
   ensureEditDay();
   const d = editDay;
-  const days = activeDayIdx();
   const g = grid() || emptyGrid();
-  const tabs = days.map((di) =>
-    `<button type="button" class="day-tab${di === d ? " on" : ""}" data-edit-day="${di}">${DAY_NAMES[di]}</button>`
-  ).join("");
+  const tabs = DAY_NAMES.map((name, i) => {
+    const enabled = !!state.days[i];
+    const active = enabled && i === d;
+    const cls = `day-tab${enabled ? " on" : " off"}${active ? " active" : ""}`;
+    const hide = enabled
+      ? `<button type="button" class="day-tab-x" data-toggle-day="${i}" title="Скрыть ${DAY_FULL[i]}" aria-label="Скрыть ${DAY_FULL[i]}">×</button>`
+      : "";
+    return `<div class="${cls}"><button type="button" class="day-tab-hit" data-edit-day="${i}" title="${DAY_FULL[i]}">${name}</button>${hide}</div>`;
+  }).join("");
   let slots = "";
   for (let r = 0; r < state.rows; r++) {
     const kind = (state.kinds && state.kinds[r]) || "lesson";
@@ -571,9 +587,9 @@ function renderDayEditor() {
       <h2 class="s-title" contenteditable="true" spellcheck="false" data-bind="title">${esc(state.title)}</h2>
       <div class="s-sub" contenteditable="true" spellcheck="false" data-bind="sub">${esc(state.sub)}</div>
     </div>
-    <div class="day-tabs">${tabs || `<span class="hint">Включи хотя бы один день слева</span>`}</div>
+    <div class="day-tabs">${tabs}</div>
     <div class="day-slots">${slots}</div>
-    <p class="hint day-editor-hint">Дни сверху — правишь по одному. Предпросмотр покажет весь лист как на картинке.</p>
+    <p class="hint day-editor-hint">Серый день выключен — нажми, чтобы вернуть. Крестик скрывает день. Предпросмотр покажет весь лист.</p>
   `;
 }
 
@@ -669,9 +685,26 @@ function bindEditorRoot(root) {
 bindEditorRoot(sheet);
 bindEditorRoot(dayEditor);
 dayEditor?.addEventListener("click", (e) => {
+  const hide = e.target.closest("[data-toggle-day]");
+  if (hide && dayEditor.contains(hide)) {
+    e.preventDefault();
+    if (!setDayEnabled(+hide.dataset.toggleDay, false)) return;
+    renderControls();
+    renderSheet();
+    return;
+  }
   const b = e.target.closest("[data-edit-day]");
   if (!b || !dayEditor.contains(b)) return;
-  editDay = +b.dataset.editDay;
+  const i = +b.dataset.editDay;
+  if (!state.days[i]) {
+    if (!setDayEnabled(i, true)) return;
+    editDay = i;
+    renderControls();
+    renderSheet();
+    return;
+  }
+  if (i === editDay) return;
+  editDay = i;
   renderDayEditor();
 });
 onClick("#previewBtn", openPreview);
@@ -705,9 +738,8 @@ function renderControls() {
     b.textContent = n;
     b.title = DAY_FULL[i];
     b.onclick = () => {
-      if (state.days[i] && activeDayIdx().length === 1) return toast("Хотя бы один день оставь");
-      state.days[i] = state.days[i] ? 0 : 1;
-      save(); renderControls(); renderSheet();
+      if (!setDayEnabled(i, !state.days[i])) return;
+      renderControls(); renderSheet();
     };
     chips.appendChild(b);
   });
