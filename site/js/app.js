@@ -230,6 +230,24 @@ async function counterGet(action) {
     return Number(j.value) || 0;
   } catch { return null; }
 }
+let thanksCount = 0;
+function setThanksStat(n) {
+  if (n != null && !Number.isNaN(Number(n))) thanksCount = Number(n);
+  const label = n == null ? "…" : fmtCount(thanksCount);
+  document.querySelectorAll("[data-thanks]").forEach((b) => {
+    b.innerHTML = `спасибо <b>${label}</b>`;
+  });
+}
+async function sayThanks() {
+  if (isProdHost()) {
+    const n = await counterHit("thanks");
+    setThanksStat(n == null ? thanksCount : n);
+  } else {
+    setThanksStat(thanksCount + 1);
+  }
+  toast("Спасибо!");
+  metrikaGoal("thanks");
+}
 function setCreatedStat(n) {
   const el = $("#statCreated");
   if (!el || n == null || Number.isNaN(Number(n))) return;
@@ -292,11 +310,9 @@ function applyThemeTo(el, themeId) {
 function renderSheet() {
   const days = activeDayIdx();
   const uni = state.mode === "uni";
-  const decor = applyThemeTo(sheet, state.theme);
+  applyThemeTo(sheet, state.theme);
   const badge = state.dual
     ? `<span class="s-badge">${state.activeGrid === 0 ? "числитель" : "знаменатель"}</span>` : "";
-  const decorHtml = decor
-    ? `<div class="s-decor">${[...decor].slice(0, 3).map((e) => `<i>${esc(e)}</i>`).join("")}</div>` : "";
   const crestHtml = state.theme === "ru-gold"
     ? `<img class="s-crest" src="/img/crest-ru.svg" alt="" width="120" height="132">`
     : "";
@@ -326,7 +342,7 @@ function renderSheet() {
     </div>`;
   }
 
-  let html = decorHtml + crestHtml + `
+  let html = crestHtml + `
     <header class="s-head">
       <div class="s-tagrow"><span class="s-tag">расписание</span>${badge}</div>
       <h2 class="s-title" contenteditable="true" spellcheck="false" data-bind="title">${esc(state.title)}</h2>
@@ -335,29 +351,26 @@ function renderSheet() {
     ${extra}
     <div class="s-grid" style="--days:${days.length}">
       <div class="s-headrow">
-        <div class="s-corner">${uni ? "пара" : "урок"}</div>`;
+        <div class="s-corner"></div>`;
   for (const d of days) html += `<div class="s-dayh">${DAY_NAMES[d]}</div>`;
   html += `</div>`;
   const g = grid();
-  let lessonNo = 0;
   for (let r = 0; r < state.rows; r++) {
     const kind = (state.kinds && state.kinds[r]) || "lesson";
     html += `<div class="s-row" data-row="${r}">`;
     if (kind === "lesson") {
-      lessonNo++;
-      html += `<div class="s-num" data-drag-row="${r}"><span class="grip" title="Перетащить">⋮⋮</span><b>${lessonNo}</b><span class="s-time" contenteditable="true" spellcheck="false" data-time="${r}">${esc(state.times[r] || "")}</span></div>`;
+      html += `<div class="s-num" data-drag-row="${r}"><span class="grip" title="Перетащить">⋮⋮</span><span class="s-time" contenteditable="true" spellcheck="false" data-time="${r}">${esc(state.times[r] || "")}</span></div>`;
       for (const d of days) {
         const val = g[r][d] || "";
         html += `<div class="s-cell cat-${subjectCat(val)}">${cellInnerHtml(val, r, d)}</div>`;
       }
     } else {
-      const tag = kind === "meal" ? "еда" : kind === "walk" ? "прогулка" : "перемена";
-      html += `<div class="s-num" data-drag-row="${r}"><span class="grip" title="Перетащить">⋮⋮</span><span class="mini">${tag}</span><span class="s-time" contenteditable="true" spellcheck="false" data-time="${r}">${esc(state.times[r] || "")}</span></div>`;
+      html += `<div class="s-num" data-drag-row="${r}"><span class="grip" title="Перетащить">⋮⋮</span><span class="s-time" contenteditable="true" spellcheck="false" data-time="${r}">${esc(state.times[r] || "")}</span></div>`;
       html += `<div class="s-span kind-${kind}" contenteditable="true" spellcheck="false" data-span="${r}">${esc(state.labels[r] || KIND_NAME[kind])}</div>`;
     }
     html += `</div>`;
   }
-  html += `</div><footer class="s-foot">✦ расписалка · ${CONFIG.site}</footer>`;
+  html += `</div><footer class="s-foot"><img class="s-foot-logo" src="/img/logo.png" alt="" width="16" height="16">расписалка</footer>`;
   sheet.innerHTML = html;
 }
 
@@ -685,7 +698,7 @@ function bindSortable(root, { itemSel, handleSel, onMove }) {
     endSession();
   });
 }
-bindSortable(sheet, { itemSel: ".s-row", handleSel: ".s-num", onMove: moveRow });
+bindSortable(sheet, { itemSel: ".s-row", handleSel: ".grip", onMove: moveRow });
 bindSortable($("#slotList"), { itemSel: ".slot-row", handleSel: ".grip", onMove: moveRow });
 bindSortable($("#teacherList"), { itemSel: ".tcard", handleSel: ".grip", onMove: moveTeacher });
 
@@ -846,36 +859,9 @@ async function downloadPng() {
     btns.forEach((b) => { b.disabled = false; });
   }
 }
-async function copyPng() {
-  toast("Копирую картинку…");
-  try {
-    const canvas = await renderCanvas();
-    const blob = await new Promise((res) => canvas.toBlob(res, "image/png"));
-    if (!blob) throw new Error("blob");
-    if (navigator.clipboard && window.ClipboardItem) {
-      try {
-        await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
-      } catch {
-        await navigator.clipboard.write([new ClipboardItem({ "image/png": Promise.resolve(blob) })]);
-      }
-      toast("Картинка в буфере — вставляй в Telegram");
-      counterHit("download");
-      metrikaGoal("download");
-      markScheduleCreated("copy");
-      return;
-    }
-    throw new Error("no clipboard");
-  } catch (err) {
-    console.error(err);
-    toast("Этот браузер не даёт копировать картинку — скачаю файлом");
-    downloadPng();
-  }
-}
 $("#dlBtn").onclick = downloadPng;
 $("#dlBtn2").onclick = downloadPng;
-$("#copyBtn").onclick = copyPng;
-$("#copyBtn2").onclick = copyPng;
-$("#printBtn").onclick = () => {
+function printSheet() {
   let tag = document.getElementById("printPage");
   if (!tag) {
     tag = document.createElement("style");
@@ -885,7 +871,9 @@ $("#printBtn").onclick = () => {
   const size = state.fmt === "a4" ? "A4 portrait" : "A4 landscape";
   tag.textContent = `@media print { @page { size: ${size}; margin: 6mm; } }`;
   window.print();
-};
+}
+$("#printBtn").onclick = printSheet;
+$("#printBtnTop").onclick = printSheet;
 
 function bytesToB64url(bytes) {
   let bin = "";
@@ -1070,69 +1058,15 @@ function bindDonateQr() {
     else fail();
   }
 }
-function openContact(e) {
-  if (e) e.preventDefault();
-  metrikaGoal("contact_open");
-  $("#contactModal").hidden = false;
-  setTimeout(() => $("#contactName")?.focus(), 50);
-}
-function closeContact() {
-  $("#contactModal").hidden = true;
-}
-async function submitContact(e) {
-  e.preventDefault();
-  if ($("#contactHoney")?.value) return;
-  const name = ($("#contactName").value || "").trim();
-  const message = ($("#contactMsg").value || "").trim();
-  if (!name || !message) {
-    toast("Напиши имя и сообщение");
-    return;
-  }
-  const btn = $("#contactSend");
-  btn.disabled = true;
-  try {
-    const r = await fetch(`${shareApiBase()}/api/contact`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name, message })
-    });
-    const j = await r.json().catch(() => ({}));
-    if (r.status === 503 || j.error === "not_configured") {
-      toast("Форма ещё настраивается — напиши на " + (CONFIG.donateEmail || "artem@gorelikov.ae"));
-      return;
-    }
-    if (r.status === 429) {
-      toast("Слишком часто — подожди немного");
-      return;
-    }
-    if (!r.ok) throw new Error(j.error || "send");
-    $("#contactName").value = "";
-    $("#contactMsg").value = "";
-    closeContact();
-    toast("Отправлено — прочитаю в Telegram");
-    metrikaGoal("contact_send");
-  } catch (err) {
-    console.error(err);
-    toast("Не ушло. Попробуй ещё раз чуть позже");
-  } finally {
-    btn.disabled = false;
-  }
-}
 $("#donateClose").onclick = () => { $("#donateModal").hidden = true; };
 $("#donateModal").addEventListener("click", (e) => {
   if (e.target.id === "donateModal") $("#donateModal").hidden = true;
 });
 document.querySelectorAll("[data-donate]").forEach((b) => { b.addEventListener("click", openDonate); });
-$("#contactClose").onclick = closeContact;
-$("#contactModal").addEventListener("click", (e) => {
-  if (e.target.id === "contactModal") closeContact();
-});
-document.querySelectorAll("[data-contact]").forEach((b) => { b.addEventListener("click", openContact); });
-$("#contactForm").addEventListener("submit", submitContact);
+document.querySelectorAll("[data-thanks]").forEach((b) => { b.addEventListener("click", sayThanks); });
 document.addEventListener("keydown", (e) => {
   if (e.key !== "Escape") return;
   if (!$("#donateModal").hidden) $("#donateModal").hidden = true;
-  if (!$("#contactModal").hidden) closeContact();
 });
 
 function metrikaGoal(name, params) {
@@ -1184,5 +1118,7 @@ async function boot() {
   if (created != null) setCreatedStat(created);
   else $("#statCreated").textContent = "0";
   setVisitsStat(visits);
+  const thanks = await counterGet("thanks");
+  setThanksStat(thanks);
 }
 boot();

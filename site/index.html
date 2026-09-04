@@ -76,7 +76,7 @@
     <nav class="nav">
       <a class="logo" href="/"><img class="logo-mark" src="/img/logo.png" width="32" height="32" alt="">расписалка</a>
       <div class="spacer"></div>
-      <button class="btn sm ghost" type="button" data-contact>Написать</button>
+      <button class="btn sm ghost" type="button" data-thanks>спасибо</button>
       <button class="btn sm hot" type="button" data-donate>Поддержать</button>
       <button class="btn sm primary" type="button" data-open-editor>Создать</button>
     </nav>
@@ -105,7 +105,7 @@
     <div class="steps">
       <div class="step"><div class="n">1</div><b>Заполни прямо в таблице</b><p>Кликай по ячейкам и пиши предметы — верхняя строка название, нижняя — кабинет или учитель.</p></div>
       <div class="step"><div class="n">2</div><b>Выбери или собери стиль</b><p>14 готовых тем или конструктор: свои цвета, шрифт, фон и стикеры. Предметы сами красятся по смыслу.</p></div>
-      <div class="step"><div class="n">3</div><b>Скачай и поставь</b><p>PNG под обои, сторис, пост или печать А4. Или копируй картинку в Telegram одной кнопкой. Ссылка откроет расписание у друга.</p></div>
+      <div class="step"><div class="n">3</div><b>Скачай и поставь</b><p>PNG под обои, сторис, пост или печать А4. Ссылка откроет расписание у друга — он сможет сохранить или переделать.</p></div>
     </div>
 
     <div class="donate-band">
@@ -113,7 +113,7 @@
       <p>Если она сэкономила тебе время — можно закинуть разработчику на кофе</p>
       <div class="cta-row">
         <button class="btn hot" type="button" data-donate>Поддержать проект</button>
-        <button class="btn" type="button" data-contact>Написать разработчику</button>
+        <button class="btn" type="button" data-thanks>спасибо</button>
       </div>
     </div>
 
@@ -121,7 +121,7 @@
       <a class="logo foot-logo" href="/"><img class="logo-mark" src="/img/logo.png" width="28" height="28" alt=""><span>© <span id="year"></span> gorelikov.ae</span></a>
       <div class="spacer"></div>
       <span id="statFooter"></span>
-      <button class="btn sm ghost" type="button" data-contact>написать</button>
+      <a class="btn sm ghost" href="https://t.me/gorelikov" target="_blank" rel="noopener">@gorelikov</a>
       <button class="btn sm ghost" type="button" data-donate>донат</button>
     </footer>
   </div>
@@ -132,11 +132,11 @@
     <button class="btn sm ghost" id="backBtn" type="button">←</button>
     <a class="logo" href="/" id="logoHome"><img class="logo-mark" src="/img/logo.png" width="32" height="32" alt="">расписалка</a>
     <div class="spacer"></div>
-    <button class="btn sm ghost" type="button" data-contact>написать</button>
-    <button class="btn sm hot" type="button" data-donate>донат</button>
-    <button class="btn sm" id="copyBtn" type="button">в Telegram</button>
-    <button class="btn sm" id="shareBtn" type="button">ссылка</button>
     <button class="btn sm primary" id="dlBtn" type="button">скачать PNG</button>
+    <button class="btn sm" id="shareBtn" type="button">ссылка</button>
+    <button class="btn sm" id="printBtnTop" type="button">печать</button>
+    <button class="btn sm ghost" type="button" data-thanks>спасибо</button>
+    <button class="btn sm hot" type="button" data-donate>донат</button>
   </div>
 
   <div class="workspace">
@@ -239,7 +239,6 @@
         <div class="hint">Широкий лист — как альбомный А4 или А5, без пустых полей. Остальные форматы как были.</div>
         <label class="check" style="margin-top:8px"><input type="checkbox" id="wmChk" checked /> Подпись «расписалка» на картинке</label>
         <button class="btn primary" id="dlBtn2" type="button">Скачать PNG</button>
-        <button class="btn" id="copyBtn2" type="button">Копировать в Telegram</button>
         <button class="btn" id="printBtn" type="button">Печать / PDF</button>
         <button class="btn" id="shareBtn2" type="button">Ссылка на расписание</button>
         <div class="hint">По ссылке у друга откроется твоё расписание — он сможет сохранить или переделать.</div>
@@ -248,7 +247,6 @@
       <div class="grp">
         <label>Поддержка</label>
         <button class="btn hot" type="button" data-donate style="display:flex">Закинуть на кофе</button>
-        <button class="btn" type="button" data-contact>Написать разработчику</button>
         <button class="btn ghost" id="resetBtn" type="button" style="color:#f87171">Очистить всё</button>
       </div>
     </aside>
@@ -275,24 +273,6 @@
     </div>
     <a class="btn hot" id="donateGo" href="#" target="_blank" rel="noopener" hidden>Открыть донат</a>
     <button class="btn ghost" id="donateClose" type="button">Закрыть</button>
-  </div>
-</div>
-
-<div class="modal" id="contactModal" hidden>
-  <div class="modal-card contact-card">
-    <h3>Написать разработчику</h3>
-    <p>Имя и сообщение. Отвечу, когда смогу.</p>
-    <form id="contactForm">
-      <input type="text" name="company" id="contactHoney" tabindex="-1" autocomplete="off" aria-hidden="true">
-      <label>Имя
-        <input type="text" id="contactName" name="name" maxlength="80" required placeholder="Как к тебе обращаться" autocomplete="name">
-      </label>
-      <label>Сообщение
-        <textarea id="contactMsg" name="message" maxlength="2000" required placeholder="Что сломалось, чего не хватает, просто привет"></textarea>
-      </label>
-      <button class="btn primary" id="contactSend" type="submit">Отправить</button>
-      <button class="btn ghost" id="contactClose" type="button">Закрыть</button>
-    </form>
   </div>
 </div>
 <script src="/js/app.js" defer></script>
