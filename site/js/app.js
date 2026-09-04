@@ -557,10 +557,7 @@ function renderDayEditor() {
     const enabled = !!state.days[i];
     const active = enabled && i === d;
     const cls = `day-tab${enabled ? " on" : " off"}${active ? " active" : ""}`;
-    const hide = enabled
-      ? `<button type="button" class="day-tab-x" data-toggle-day="${i}" title="Скрыть ${DAY_FULL[i]}" aria-label="Скрыть ${DAY_FULL[i]}">×</button>`
-      : "";
-    return `<div class="${cls}"><button type="button" class="day-tab-hit" data-edit-day="${i}" title="${DAY_FULL[i]}">${name}</button>${hide}</div>`;
+    return `<button type="button" class="${cls}" data-edit-day="${i}" title="${DAY_FULL[i]}">${name}</button>`;
   }).join("");
   let slots = "";
   for (let r = 0; r < state.rows; r++) {
@@ -589,7 +586,7 @@ function renderDayEditor() {
     </div>
     <div class="day-tabs">${tabs}</div>
     <div class="day-slots">${slots}</div>
-    <p class="hint day-editor-hint">Серый день выключен — нажми, чтобы вернуть. Крестик скрывает день. Предпросмотр покажет весь лист.</p>
+    <p class="hint day-editor-hint">Серый день выключен — нажми, чтобы вернуть. Ещё раз по активному — скрыть. Предпросмотр покажет весь лист.</p>
   `;
 }
 
@@ -685,14 +682,6 @@ function bindEditorRoot(root) {
 bindEditorRoot(sheet);
 bindEditorRoot(dayEditor);
 dayEditor?.addEventListener("click", (e) => {
-  const hide = e.target.closest("[data-toggle-day]");
-  if (hide && dayEditor.contains(hide)) {
-    e.preventDefault();
-    if (!setDayEnabled(+hide.dataset.toggleDay, false)) return;
-    renderControls();
-    renderSheet();
-    return;
-  }
   const b = e.target.closest("[data-edit-day]");
   if (!b || !dayEditor.contains(b)) return;
   const i = +b.dataset.editDay;
@@ -703,7 +692,12 @@ dayEditor?.addEventListener("click", (e) => {
     renderSheet();
     return;
   }
-  if (i === editDay) return;
+  if (i === editDay) {
+    if (!setDayEnabled(i, false)) return;
+    renderControls();
+    renderSheet();
+    return;
+  }
   editDay = i;
   renderDayEditor();
 });
@@ -1142,7 +1136,52 @@ listen("#tplChips", "click", (e) => {
 });
 onClick("#resetBtn", () => applyTemplate("empty", true));
 
-const FMT_TARGET = { auto: 2, phone: 1170 / 430, story: 1080 / 540, post: 1080 / 540, a4: 2480 / 794 };
+const FMT_TARGET = { auto: 3, phone: 3, story: 3, post: 3, a4: 4 };
+const SHEET_PAINT_PROPS = [
+  "backgroundColor", "backgroundImage", "backgroundSize", "backgroundPosition",
+  "backgroundRepeat", "color", "borderTopColor", "borderRightColor",
+  "borderBottomColor", "borderLeftColor", "outlineColor", "boxShadow",
+  "textShadow", "webkitTextFillColor", "caretColor"
+];
+let sheetPaintBackup = null;
+
+function bakeSheetPaint(root) {
+  if (!root || sheetPaintBackup) return;
+  const nodes = [root, ...root.querySelectorAll("*")];
+  const saved = [];
+  for (const el of nodes) {
+    const prev = {};
+    for (const p of SHEET_PAINT_PROPS) prev[p] = el.style[p];
+    saved.push({ el, prev });
+    const cs = getComputedStyle(el);
+    el.style.backgroundColor = cs.backgroundColor;
+    if (cs.backgroundImage && cs.backgroundImage !== "none") {
+      el.style.backgroundImage = cs.backgroundImage;
+      el.style.backgroundSize = cs.backgroundSize;
+      el.style.backgroundPosition = cs.backgroundPosition;
+      el.style.backgroundRepeat = cs.backgroundRepeat;
+    }
+    el.style.color = cs.color;
+    el.style.borderTopColor = cs.borderTopColor;
+    el.style.borderRightColor = cs.borderRightColor;
+    el.style.borderBottomColor = cs.borderBottomColor;
+    el.style.borderLeftColor = cs.borderLeftColor;
+    if (cs.outlineColor && cs.outlineStyle !== "none") el.style.outlineColor = cs.outlineColor;
+    if (cs.boxShadow && cs.boxShadow !== "none") el.style.boxShadow = cs.boxShadow;
+    if (cs.textShadow && cs.textShadow !== "none") el.style.textShadow = cs.textShadow;
+    if (cs.webkitTextFillColor) el.style.webkitTextFillColor = cs.webkitTextFillColor;
+  }
+  sheetPaintBackup = saved;
+}
+function restoreSheetPaint() {
+  if (!sheetPaintBackup) return;
+  for (const { el, prev } of sheetPaintBackup) {
+    if (!el) continue;
+    for (const p of SHEET_PAINT_PROPS) el.style[p] = prev[p];
+  }
+  sheetPaintBackup = null;
+}
+
 function loadHtml2Canvas() {
   if (window.html2canvas) return Promise.resolve();
   return new Promise((res, rej) => {
@@ -1161,12 +1200,19 @@ async function renderCanvas() {
   document.body.classList.add("capturing");
   sheet.style.transform = "none";
   sheet.classList.add("exporting");
+  bakeSheetPaint(sheet);
   try {
+    const bg = getComputedStyle(sheet).backgroundColor;
     return await window.html2canvas(sheet, {
-      scale: FMT_TARGET[state.fmt] || 2,
-      backgroundColor: null,
+      scale: FMT_TARGET[state.fmt] || 3,
+      backgroundColor: (bg && bg !== "rgba(0, 0, 0, 0)" && bg !== "transparent") ? bg : "#ffffff",
       useCORS: true,
       logging: false,
+      imageSmoothing: true,
+      imageSmoothingQuality: "high",
+      windowWidth: Math.max(1400, window.innerWidth || 1400),
+      scrollX: 0,
+      scrollY: 0,
       onclone(doc) {
         doc.querySelectorAll(".grip").forEach((g) => g.remove());
         const clone = doc.getElementById("sheet");
@@ -1175,10 +1221,14 @@ async function renderCanvas() {
           clone.style.opacity = "1";
           clone.style.transform = "none";
           clone.style.position = "relative";
+          clone.style.left = "auto";
+          clone.style.top = "auto";
+          clone.style.zIndex = "1";
         }
       }
     });
   } finally {
+    restoreSheetPaint();
     sheet.classList.remove("exporting");
     document.body.classList.remove("capturing");
     if (keepPreview && isCompact()) {
@@ -1236,10 +1286,13 @@ function printSheet() {
   }
   const size = state.fmt === "a4" ? "A4 portrait" : "A4 landscape";
   tag.textContent = `@media print { @page { size: ${size}; margin: 6mm; } }`;
+  bakeSheetPaint(sheet);
   window.print();
 }
 onClick("#printBtn", printSheet);
 onClick("#printBtnTop", printSheet);
+window.addEventListener("beforeprint", () => bakeSheetPaint(sheet));
+window.addEventListener("afterprint", restoreSheetPaint);
 
 function bytesToB64url(bytes) {
   let bin = "";

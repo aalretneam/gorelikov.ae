@@ -344,6 +344,8 @@ body.paint-mode .s-cell .s-note { pointer-events: none; }
   position: relative; overflow: visible;
   box-shadow: 0 24px 70px rgba(0,0,0,.5);
   flex-shrink: 0;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
 }
 .s-head {
   position: relative; z-index: 2;
@@ -458,6 +460,8 @@ body.is-sorting * { cursor: grabbing !important; }
   outline: none;
   transition: box-shadow .12s, background .15s;
   word-break: break-word;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
 }
 .s-subj, .s-note { outline: none; word-break: break-word; display: block; min-width: 0; max-width: 100%; }
 .s-subj {
@@ -558,6 +562,8 @@ body.is-sorting * { cursor: grabbing !important; }
   font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
   font-size: .78rem; outline: none; border: 1px solid var(--s-line);
   height: auto;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
 }
 .s-span:focus { box-shadow: 0 0 0 2px var(--s-acc); }
 .s-span.kind-break {
@@ -1065,8 +1071,8 @@ body.is-sorting * { cursor: grabbing !important; }
     flex-shrink: 0;
   }
   body.mode-edit.compact.capturing #sheet {
-    position: fixed !important;
-    left: 0; top: 0; z-index: -1;
+    position: relative !important;
+    left: auto; top: auto; z-index: 1;
     transform: none !important;
     opacity: 1;
   }
@@ -1105,8 +1111,8 @@ body.is-sorting * { cursor: grabbing !important; }
     background: var(--bg);
   }
   .day-tab {
-    position: relative;
-    display: flex; min-width: 0;
+    min-width: 0;
+    padding: 10px 2px;
     border-radius: 12px;
     font-weight: 800; font-size: .72rem;
     letter-spacing: .04em; text-transform: uppercase;
@@ -1128,26 +1134,6 @@ body.is-sorting * { cursor: grabbing !important; }
     border-style: solid;
     color: #67e8f9;
     opacity: 1;
-  }
-  .day-tab-hit {
-    flex: 1; min-width: 0;
-    padding: 10px 2px 8px;
-    background: none; border: none;
-    color: inherit; font: inherit;
-    letter-spacing: inherit; text-transform: inherit; font-weight: inherit;
-    cursor: pointer;
-  }
-  .day-tab-x {
-    position: absolute; top: -7px; right: -5px;
-    width: 22px; height: 22px; padding: 0;
-    border-radius: 50%;
-    border: 1px solid var(--line);
-    background: var(--p2);
-    color: var(--tx2);
-    font-size: 14px; line-height: 20px;
-    font-weight: 700;
-    cursor: pointer;
-    z-index: 2;
   }
   .day-slots { display: grid; gap: 8px; }
   .day-slot {
@@ -1194,11 +1180,20 @@ body.is-sorting * { cursor: grabbing !important; }
 
 @media print {
   @page { size: A4 landscape; margin: 6mm; }
-  body { background: #fff !important; color: #000; }
+  html, body, #sheet, #sheet * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+  body { background: #fff !important; }
   #landing, .topbar, .side, #toast, .modal, .week-tabs, #donateNudge { display: none !important; }
-  #editor, .workspace, .stage { display: block !important; height: auto !important; overflow: visible !important; background: #fff !important; padding: 0; }
-  .sheet { box-shadow: none !important; border-radius: 0; overflow: hidden !important; }
-  #sheet { opacity: 1 !important; position: relative !important; transform: none !important; left: auto !important; top: auto !important; }
+  #editor, .workspace, .stage { display: block !important; height: auto !important; overflow: visible !important; background: transparent !important; padding: 0; }
+  .sheet {
+    box-shadow: none !important; border-radius: 0; overflow: hidden !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  #sheet { opacity: 1 !important; position: relative !important; transform: none !important; left: auto !important; top: auto !important; z-index: 1 !important; }
   .day-editor, .preview-scrim, .compact-only { display: none !important; }
   .s-num .grip { display: none !important; }
   .sheet.fmt-auto {
