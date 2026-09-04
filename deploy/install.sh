@@ -50,6 +50,27 @@ rsync -a --delete \
   --exclude 'og.html' \
   "$SITE_SRC/" "$WEB_ROOT/"
 
+ensure_le_nginx_snippets() {
+  mkdir -p /etc/letsencrypt
+  if [[ ! -f /etc/letsencrypt/options-ssl-nginx.conf ]]; then
+    cat > /etc/letsencrypt/options-ssl-nginx.conf <<'EOF'
+ssl_session_cache shared:le_nginx_SSL:10m;
+ssl_session_timeout 1440m;
+ssl_session_tickets off;
+ssl_protocols TLSv1.2 TLSv1.3;
+ssl_prefer_server_ciphers off;
+EOF
+  fi
+  if [[ ! -f /etc/letsencrypt/ssl-dhparams.pem ]]; then
+    local stock="/usr/lib/python3/dist-packages/certbot/ssl-dhparams.pem"
+    if [[ -f "$stock" ]]; then
+      cp "$stock" /etc/letsencrypt/ssl-dhparams.pem
+    else
+      openssl dhparam -out /etc/letsencrypt/ssl-dhparams.pem 2048
+    fi
+  fi
+}
+
 find_ssl_pair() {
   local live="/etc/letsencrypt/live/${DOMAIN}/fullchain.pem"
   local key="/etc/letsencrypt/live/${DOMAIN}/privkey.pem"
@@ -61,6 +82,7 @@ find_ssl_pair() {
 }
 
 if SSL_PAIR=$(find_ssl_pair); then
+  ensure_le_nginx_snippets
   SSL_CERT="${SSL_PAIR%%|*}"
   SSL_KEY="${SSL_PAIR#*|}"
   echo "SSL: $SSL_CERT"
