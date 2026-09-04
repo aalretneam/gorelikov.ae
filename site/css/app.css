@@ -373,7 +373,7 @@ body.paint-mode .s-cell .s-note { pointer-events: none; }
   text-align: right; min-width: 0;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.s-grid { display: flex; flex-direction: column; gap: 7px; position: relative; z-index: 2; --days: 5; --time-col: 8em; }
+.s-grid { display: flex; flex-direction: column; gap: 7px; position: relative; z-index: 2; --days: 5; --time-col: 4em; }
 .s-headrow, .s-row {
   display: grid;
   grid-template-columns: var(--time-col) repeat(var(--days), minmax(0, 1fr));
@@ -418,7 +418,7 @@ body.is-sorting { cursor: grabbing; user-select: none; -webkit-user-select: none
 body.is-sorting * { cursor: grabbing !important; }
 .exporting { overflow: hidden !important; }
 .exporting .grip { display: none !important; }
-.exporting .s-num { padding: 0 10px; }
+.exporting .s-num { padding: 0 4px; }
 .s-corner {
   display: grid; place-items: center;
   font-size: .62rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase;
@@ -434,7 +434,7 @@ body.is-sorting * { cursor: grabbing !important; }
 }
 .s-num {
   display: flex; align-items: center; justify-content: center;
-  padding: 0 10px; position: relative;
+  padding: 0 4px; position: relative;
   color: var(--s-mut); user-select: none;
   min-width: 0; width: 100%;
   box-sizing: border-box;
@@ -443,7 +443,7 @@ body.is-sorting * { cursor: grabbing !important; }
 .s-num b { display: none; }
 .s-time {
   display: block;
-  font-size: .66rem; font-weight: 700; outline: none; white-space: nowrap;
+  font-size: .58rem; font-weight: 700; outline: none; white-space: nowrap;
   cursor: text; user-select: text; -webkit-user-select: text;
   text-align: center; width: 100%; min-width: 0; box-sizing: border-box;
 }
@@ -937,8 +937,8 @@ body.is-sorting * { cursor: grabbing !important; }
 .th-russia .s-num, .th-russia .s-time { color: #111; }
 .th-russia .s-time {
   background: rgba(255,255,255,.94);
-  border-radius: 8px;
-  padding: 4px 7px;
+  border-radius: 6px;
+  padding: 3px 2px;
   font-weight: 800;
 }
 
