@@ -1079,6 +1079,9 @@ body.is-sorting * { cursor: grabbing !important; }
   body.mode-edit.compact #sheet.fmt-phone { width: 430px !important; }
   body.mode-edit.compact #sheet.fmt-story,
   body.mode-edit.compact #sheet.fmt-post { width: 540px !important; }
+  body.mode-edit.compact #sheet .s-extra { grid-template-columns: 1fr 1fr; }
+  body.mode-edit.compact #sheet.fmt-phone .s-extra,
+  body.mode-edit.compact #sheet.fmt-story .s-extra { grid-template-columns: 1fr; }
 
   .day-editor-head {
     display: grid; gap: 4px;
@@ -1143,7 +1146,6 @@ body.is-sorting * { cursor: grabbing !important; }
   .stage { order: 1; padding: 16px 16px 24px 40px; overflow-x: auto; align-items: flex-start; -webkit-overflow-scrolling: touch; }
   .sheet { width: 680px; }
   .sheet.fmt-auto { width: 1123px; height: auto; }
-  .s-extra { grid-template-columns: 1fr; }
   .sheet.fmt-phone, .sheet.fmt-story, .sheet.fmt-post, .sheet.fmt-a4 { width: 680px; min-height: 0; }
   #editor { height: auto; min-height: 100dvh; }
   body.mode-edit { overflow: auto; }
