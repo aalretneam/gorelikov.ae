@@ -134,32 +134,38 @@ function defaultState(mode = "school") {
 }
 
 let state = loadState();
+function hydrateState(s) {
+  if (!s || typeof s !== "object" || ![2, 3, 4].includes(s.v)) return null;
+  const base = defaultState(s.mode || "school");
+  const merged = Object.assign(base, s, { v: 4 });
+  merged.rows = Math.max(1, Math.min(MAX_ROWS, Number(merged.rows) || base.rows));
+  if (!Array.isArray(merged.days) || merged.days.length !== 7) merged.days = base.days.slice();
+  if (!Array.isArray(merged.cells) || merged.cells.length < 2) merged.cells = base.cells;
+  merged.cells = merged.cells.map((g) => {
+    const ng = emptyGrid();
+    (g || []).forEach((row, r) => { if (r < MAX_ROWS) ng[r] = (row || []).concat(["","","","","","",""]).slice(0, 7); });
+    return ng;
+  });
+  while (merged.cells.length < 2) merged.cells.push(emptyGrid());
+  if (!Array.isArray(s.kinds)) {
+    merged.kinds = Array.from({ length: merged.rows || 7 }, () => "lesson");
+    merged.labels = Array.from({ length: merged.rows || 7 }, () => "");
+  }
+  const padded = padKinds(merged.rows || base.rows, merged.kinds, merged.labels, merged.times, merged.mode === "uni" ? UNI_TIMES : SCHOOL_TIMES);
+  merged.kinds = padded.kinds;
+  merged.labels = padded.labels;
+  merged.times = padded.times;
+  if (!Array.isArray(merged.info)) merged.info = [];
+  if (!Array.isArray(merged.teachers)) merged.teachers = [];
+  if (merged.showInfo == null) merged.showInfo = false;
+  if (!merged.custom || typeof merged.custom !== "object") merged.custom = base.custom;
+  return merged;
+}
 function loadState() {
   try {
     const raw = localStorage.getItem(LS_KEY) || localStorage.getItem("raspisalka-v3") || localStorage.getItem("raspisalka-v2");
     if (!raw) return defaultState();
-    const s = JSON.parse(raw);
-    if (!s || ![2, 3, 4].includes(s.v)) return defaultState();
-    const base = defaultState(s.mode || "school");
-    const merged = Object.assign(base, s, { v: 4 });
-    if (!Array.isArray(merged.cells) || merged.cells.length < 2) merged.cells = base.cells;
-    merged.cells = merged.cells.map((g) => {
-      const ng = emptyGrid();
-      (g || []).forEach((row, r) => { if (r < MAX_ROWS) ng[r] = (row || []).concat(["","","","","","",""]).slice(0, 7); });
-      return ng;
-    });
-    if (!Array.isArray(s.kinds)) {
-      merged.kinds = Array.from({ length: merged.rows || 7 }, () => "lesson");
-      merged.labels = Array.from({ length: merged.rows || 7 }, () => "");
-    }
-    const padded = padKinds(merged.rows || base.rows, merged.kinds, merged.labels, merged.times, merged.mode === "uni" ? UNI_TIMES : SCHOOL_TIMES);
-    merged.kinds = padded.kinds;
-    merged.labels = padded.labels;
-    merged.times = padded.times;
-    if (!Array.isArray(merged.info)) merged.info = [];
-    if (!Array.isArray(merged.teachers)) merged.teachers = [];
-    if (merged.showInfo == null) merged.showInfo = false;
-    return merged;
+    return hydrateState(JSON.parse(raw)) || defaultState();
   } catch { return defaultState(); }
 }
 function save() {
@@ -167,6 +173,15 @@ function save() {
 }
 
 const $ = (sel) => document.querySelector(sel);
+function listen(sel, ev, fn) {
+  const el = typeof sel === "string" ? $(sel) : sel;
+  if (!el) return;
+  el.addEventListener(ev, fn);
+}
+function onClick(sel, fn) {
+  const el = $(sel);
+  if (el) el.onclick = fn;
+}
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 function splitCell(val) {
   const raw = String(val || "").replace(/\r/g, "");
@@ -187,6 +202,7 @@ function cellInnerHtml(val, r, d) {
 let toastTimer;
 function toast(msg) {
   const t = $("#toast");
+  if (!t) return;
   t.textContent = msg;
   t.classList.add("show");
   clearTimeout(toastTimer);
@@ -215,20 +231,25 @@ function subjectCat(raw) {
   return "p" + (h % 8);
 }
 
+async function counterFetch(kind, action) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), 2500);
+  try {
+    const r = await fetch(
+      `https://abacus.jasoncameron.dev/${kind}/${encodeURIComponent(CONFIG.abacusNs)}/${encodeURIComponent(action)}`,
+      { cache: "no-store", signal: ctrl.signal }
+    );
+    const j = await r.json();
+    return Number(j.value) || 0;
+  } catch { return null; }
+  finally { clearTimeout(t); }
+}
 async function counterHit(action) {
   if (!isProdHost()) return counterGet(action);
-  try {
-    const r = await fetch(`https://abacus.jasoncameron.dev/hit/${encodeURIComponent(CONFIG.abacusNs)}/${encodeURIComponent(action)}`, { cache: "no-store" });
-    const j = await r.json();
-    return Number(j.value) || 0;
-  } catch { return null; }
+  return counterFetch("hit", action);
 }
 async function counterGet(action) {
-  try {
-    const r = await fetch(`https://abacus.jasoncameron.dev/get/${encodeURIComponent(CONFIG.abacusNs)}/${encodeURIComponent(action)}`, { cache: "no-store" });
-    const j = await r.json();
-    return Number(j.value) || 0;
-  } catch { return null; }
+  return counterFetch("get", action);
 }
 let thanksCount = 0;
 function setThanksStat(n) {
@@ -254,14 +275,16 @@ function setCreatedStat(n) {
   el.textContent = fmtCount(n);
 }
 function setVisitsStat(n) {
+  const visitsEl = $("#statVisits");
+  const foot = $("#statFooter");
   if (!n) {
-    $("#statVisits").textContent = "live";
+    if (visitsEl) visitsEl.textContent = "live";
     return;
   }
-  $("#statVisits").textContent = fmtCount(n);
+  if (visitsEl) visitsEl.textContent = fmtCount(n);
   const created = $("#statCreated")?.textContent;
   const createdBit = created && created !== "…" && created !== "0" ? ` · ${created} расписаний` : "";
-  $("#statFooter").textContent = `${fmtCount(n)} заходов${createdBit}`;
+  if (foot) foot.textContent = `${fmtCount(n)} заходов${createdBit}`;
 }
 async function markScheduleCreated(source) {
   metrikaGoal("schedule_created", { source });
@@ -308,6 +331,7 @@ function applyThemeTo(el, themeId) {
 }
 
 function renderSheet() {
+  if (!sheet) return;
   const days = activeDayIdx();
   const uni = state.mode === "uni";
   applyThemeTo(sheet, state.theme);
@@ -354,14 +378,15 @@ function renderSheet() {
         <div class="s-corner"></div>`;
   for (const d of days) html += `<div class="s-dayh">${DAY_NAMES[d]}</div>`;
   html += `</div>`;
-  const g = grid();
+  const g = grid() || emptyGrid();
   for (let r = 0; r < state.rows; r++) {
     const kind = (state.kinds && state.kinds[r]) || "lesson";
+    const row = g[r] || [];
     html += `<div class="s-row" data-row="${r}">`;
     if (kind === "lesson") {
       html += `<div class="s-num" data-drag-row="${r}"><span class="grip" title="Перетащить">⋮⋮</span><span class="s-time" contenteditable="true" spellcheck="false" data-time="${r}">${esc(state.times[r] || "")}</span></div>`;
       for (const d of days) {
-        const val = g[r][d] || "";
+        const val = row[d] || "";
         html += `<div class="s-cell cat-${subjectCat(val)}">${cellInnerHtml(val, r, d)}</div>`;
       }
     } else {
@@ -374,7 +399,7 @@ function renderSheet() {
   sheet.innerHTML = html;
 }
 
-sheet.addEventListener("input", (e) => {
+sheet?.addEventListener("input", (e) => {
   const el = e.target;
   if (el.dataset.bind) state[el.dataset.bind] = el.innerText.trim();
   else if (el.dataset.time !== undefined) state.times[+el.dataset.time] = el.innerText.trim();
@@ -384,12 +409,16 @@ sheet.addEventListener("input", (e) => {
     const subj = cell.querySelector(".s-subj")?.innerText.replace(/\n+/g, " ") || "";
     const note = cell.querySelector(".s-note")?.innerText.replace(/\n+$/, "") || "";
     const val = joinCell(subj, note);
-    grid()[+el.dataset.r][+el.dataset.d] = val;
+    const g = grid();
+    if (g) {
+      if (!g[+el.dataset.r]) g[+el.dataset.r] = Array(7).fill("");
+      g[+el.dataset.r][+el.dataset.d] = val;
+    }
     cell.className = "s-cell cat-" + subjectCat(val);
   }
   save();
 });
-sheet.addEventListener("paste", (e) => {
+sheet?.addEventListener("paste", (e) => {
   const part = e.target.dataset && e.target.dataset.part;
   e.preventDefault();
   let text = (e.clipboardData || window.clipboardData).getData("text/plain");
@@ -405,7 +434,7 @@ sheet.addEventListener("paste", (e) => {
   }
   document.execCommand("insertText", false, part ? text.replace(/\n+/g, " ") : text);
 });
-sheet.addEventListener("keydown", (e) => {
+sheet?.addEventListener("keydown", (e) => {
   if (e.target.dataset.part === "subj" && e.key === "Enter") {
     e.preventDefault();
     e.target.parentElement.querySelector(".s-note")?.focus();
@@ -421,17 +450,20 @@ sheet.addEventListener("keydown", (e) => {
     e.target.blur();
   }
 });
-sheet.addEventListener("pointerdown", (e) => {
+sheet?.addEventListener("pointerdown", (e) => {
   const cell = e.target.closest?.(".s-cell");
   if (!cell || e.target.closest(".s-subj, .s-note")) return;
   cell.querySelector(".s-subj")?.focus();
 });
 
 function renderControls() {
+  try {
   document.querySelectorAll("#modeSeg button").forEach((b) =>
     b.classList.toggle("active", b.dataset.mode === state.mode));
-  $("#rowsLabel").textContent = "Строки расписания";
+  const rowsLabel = $("#rowsLabel");
+  if (rowsLabel) rowsLabel.textContent = "Строки расписания";
   const chips = $("#dayChips");
+  if (chips) {
   chips.innerHTML = "";
   DAY_NAMES.forEach((n, i) => {
     const b = document.createElement("button");
@@ -446,59 +478,72 @@ function renderControls() {
     };
     chips.appendChild(b);
   });
-  $("#rowCount").textContent = lessonCount();
-  $("#dualChk").checked = !!state.dual;
-  $("#weekTabs").classList.toggle("show", !!state.dual);
+  }
+  const rowCount = $("#rowCount");
+  if (rowCount) rowCount.textContent = lessonCount();
+  const dualChk = $("#dualChk");
+  if (dualChk) dualChk.checked = !!state.dual;
+  $("#weekTabs")?.classList.toggle("show", !!state.dual);
   document.querySelectorAll("#weekTabs button").forEach((b) =>
     b.classList.toggle("active", +b.dataset.g === state.activeGrid));
   const tg = $("#themeGrid");
-  tg.innerHTML = "";
-  THEMES.forEach((t) => {
-    const b = document.createElement("button");
-    b.type = "button";
-    b.className = "tbtn" + (state.theme === t.id ? " active" : "");
-    b.innerHTML = `<span class="nm">${t.name}</span><span class="sw">${t.sw.map((c) => `<i style="background:${c}"></i>`).join("")}</span>`;
-    b.onclick = () => { state.theme = t.id; save(); renderControls(); renderSheet(); };
-    tg.appendChild(b);
-  });
-  $("#customPanel").classList.toggle("show", state.theme === "custom");
-  const c = state.custom;
-  $("#cBg").value = c.bg; $("#cCard").value = c.card; $("#cInk").value = c.ink; $("#cAcc").value = c.acc;
-  $("#cFont").value = c.font; $("#cRad").value = c.rad; $("#cPat").value = c.pat; $("#cEmoji").value = c.emoji;
-  $("#fmtSel").value = state.fmt;
-  $("#wmChk").checked = !!state.wm;
+  if (tg) {
+    tg.innerHTML = "";
+    THEMES.forEach((t) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "tbtn" + (state.theme === t.id ? " active" : "");
+      b.innerHTML = `<span class="nm">${t.name}</span><span class="sw">${t.sw.map((c) => `<i style="background:${c}"></i>`).join("")}</span>`;
+      b.onclick = () => { state.theme = t.id; save(); renderControls(); renderSheet(); };
+      tg.appendChild(b);
+    });
+  }
+  $("#customPanel")?.classList.toggle("show", state.theme === "custom");
+  const c = state.custom || {};
+  const setVal = (id, val, prop) => { const el = $(id); if (el) el[prop] = val; };
+  setVal("#cBg", c.bg, "value"); setVal("#cCard", c.card, "value");
+  setVal("#cInk", c.ink, "value"); setVal("#cAcc", c.acc, "value");
+  setVal("#cFont", c.font, "value"); setVal("#cRad", c.rad, "value");
+  setVal("#cPat", c.pat, "value"); setVal("#cEmoji", c.emoji, "value");
+  setVal("#fmtSel", state.fmt, "value");
+  const wmChk = $("#wmChk");
+  if (wmChk) wmChk.checked = !!state.wm;
   const infoChk = $("#infoChk");
-  infoChk.checked = !!state.showInfo;
-  $("#infoFields").hidden = !state.showInfo;
+  if (infoChk) infoChk.checked = !!state.showInfo;
+  const infoFields = $("#infoFields");
+  if (infoFields) infoFields.hidden = !state.showInfo;
   const infoText = $("#infoText");
-  if (document.activeElement !== infoText) infoText.value = (state.info || []).join("\n");
+  if (infoText && document.activeElement !== infoText) infoText.value = (state.info || []).join("\n");
   renderTeachers();
   renderSlots();
+  } catch (err) {
+    console.error("renderControls", err);
+  }
 }
 
-$("#modeSeg").addEventListener("click", (e) => {
+listen("#modeSeg", "click", (e) => {
   const b = e.target.closest("button");
   if (!b || b.dataset.mode === state.mode) return;
   applyTemplate(b.dataset.mode === "uni" ? "uni" : "school", false);
 });
-$("#dualChk").addEventListener("change", (e) => {
+listen("#dualChk", "change", (e) => {
   state.dual = e.target.checked;
   if (!state.dual) state.activeGrid = 0;
   save(); renderControls(); renderSheet();
   if (state.dual) toast("Вверху вкладки недель I и II");
 });
-$("#weekTabs").addEventListener("click", (e) => {
+listen("#weekTabs", "click", (e) => {
   const b = e.target.closest("button");
   if (!b) return;
   state.activeGrid = +b.dataset.g;
   save(); renderControls(); renderSheet();
 });
-$("#rowPlus").onclick = () => addSlot("lesson");
-$("#rowMinus").onclick = () => {
+onClick("#rowPlus", () => addSlot("lesson"));
+onClick("#rowMinus", () => {
   if (state.rows <= 1) return;
   state.rows--;
   save(); renderControls(); renderSheet();
-};
+});
 
 function addSlot(kind) {
   if (state.rows >= MAX_ROWS) return toast("Максимум " + MAX_ROWS + " строк");
@@ -522,6 +567,7 @@ function lessonCount() {
 }
 function renderSlots() {
   const box = $("#slotList");
+  if (!box) return;
   box.innerHTML = "";
   for (let i = 0; i < state.rows; i++) {
     const kind = state.kinds[i] || "lesson";
@@ -541,6 +587,7 @@ function renderSlots() {
 }
 function renderTeachers() {
   const box = $("#teacherList");
+  if (!box) return;
   box.innerHTML = "";
   (state.teachers || []).forEach((t, idx) => {
     const card = document.createElement("div");
@@ -585,6 +632,7 @@ function scrollParent(el) {
   return document.scrollingElement;
 }
 function bindSortable(root, { itemSel, handleSel, onMove }) {
+  if (!root) return;
   let session = null;
   const THRESH = 8;
 
@@ -702,11 +750,11 @@ bindSortable(sheet, { itemSel: ".s-row", handleSel: ".grip", onMove: moveRow });
 bindSortable($("#slotList"), { itemSel: ".slot-row", handleSel: ".grip", onMove: moveRow });
 bindSortable($("#teacherList"), { itemSel: ".tcard", handleSel: ".grip", onMove: moveTeacher });
 
-document.querySelector("[data-add-slot]").parentElement.addEventListener("click", (e) => {
+document.querySelector("[data-add-slot]")?.parentElement?.addEventListener("click", (e) => {
   const b = e.target.closest("[data-add-slot]");
   if (b) addSlot(b.dataset.addSlot);
 });
-$("#slotList").addEventListener("change", (e) => {
+listen("#slotList", "change", (e) => {
   const sel = e.target.closest("select[data-kind]");
   if (!sel) return;
   const i = +sel.dataset.kind;
@@ -716,7 +764,7 @@ $("#slotList").addEventListener("change", (e) => {
   }
   save(); renderControls(); renderSheet();
 });
-$("#slotList").addEventListener("click", (e) => {
+listen("#slotList", "click", (e) => {
   const b = e.target.closest("[data-del]");
   if (!b) return;
   const i = +b.dataset.del;
@@ -731,24 +779,27 @@ $("#slotList").addEventListener("click", (e) => {
   state.rows--;
   save(); renderControls(); renderSheet();
 });
-$("#infoChk").addEventListener("change", (e) => {
+listen("#infoChk", "change", (e) => {
   state.showInfo = e.target.checked;
-  $("#infoFields").hidden = !state.showInfo;
+  const infoFields = $("#infoFields");
+  if (infoFields) infoFields.hidden = !state.showInfo;
   save(); renderSheet();
   if (state.showInfo) toast("Верхний блок включён — заполни инфо и учителей слева");
 });
-$("#infoText").addEventListener("input", (e) => {
+listen("#infoText", "input", (e) => {
   state.info = e.target.value.split("\n").map((s) => s.trim()).filter(Boolean);
   save(); renderSheet();
 });
-$("#addTeacher").onclick = () => {
+onClick("#addTeacher", () => {
   state.teachers.push({ subject: "Предмет", names: "Имя Отчество", room: "каб. ", color: "#6366f1" });
   state.showInfo = true;
-  $("#infoChk").checked = true;
-  $("#infoFields").hidden = false;
+  const infoChk = $("#infoChk");
+  if (infoChk) infoChk.checked = true;
+  const infoFields = $("#infoFields");
+  if (infoFields) infoFields.hidden = false;
   save(); renderTeachers(); renderSheet();
-};
-$("#teacherList").addEventListener("input", (e) => {
+});
+listen("#teacherList", "input", (e) => {
   const el = e.target.closest("[data-tf]");
   if (!el) return;
   const i = +el.dataset.i;
@@ -756,7 +807,7 @@ $("#teacherList").addEventListener("input", (e) => {
   state.teachers[i][el.dataset.tf] = el.value;
   save(); renderSheet();
 });
-$("#teacherList").addEventListener("click", (e) => {
+listen("#teacherList", "click", (e) => {
   const b = e.target.closest("[data-tdel]");
   if (!b) return;
   state.teachers.splice(+b.dataset.tdel, 1);
@@ -764,15 +815,15 @@ $("#teacherList").addEventListener("click", (e) => {
 });
 
 function bindCustom(id, key, transform = (v) => v) {
-  $(id).addEventListener("input", (e) => {
+  listen(id, "input", (e) => {
     state.custom[key] = transform(e.target.value);
     save(); renderSheet();
   });
 }
 bindCustom("#cBg", "bg"); bindCustom("#cCard", "card"); bindCustom("#cInk", "ink"); bindCustom("#cAcc", "acc");
 bindCustom("#cFont", "font"); bindCustom("#cRad", "rad", Number); bindCustom("#cPat", "pat"); bindCustom("#cEmoji", "emoji");
-$("#fmtSel").addEventListener("change", (e) => { state.fmt = e.target.value; save(); renderSheet(); });
-$("#wmChk").addEventListener("change", (e) => { state.wm = e.target.checked; save(); renderSheet(); });
+listen("#fmtSel", "change", (e) => { state.fmt = e.target.value; save(); renderSheet(); });
+listen("#wmChk", "change", (e) => { state.wm = e.target.checked; save(); renderSheet(); });
 
 function applyTemplate(kind, ask) {
   if (ask && !confirm("Заменить текущее расписание шаблоном?")) return;
@@ -797,12 +848,12 @@ function applyTemplate(kind, ask) {
   save(); renderControls(); renderSheet();
   toast(kind === "empty" ? "Чистый лист" : "Шаблон подставлен — правь прямо в таблице");
 }
-$("#tplChips").addEventListener("click", (e) => {
+listen("#tplChips", "click", (e) => {
   const b = e.target.closest("[data-tpl]");
   if (!b) return;
   applyTemplate(b.dataset.tpl, true);
 });
-$("#resetBtn").onclick = () => applyTemplate("empty", true);
+onClick("#resetBtn", () => applyTemplate("empty", true));
 
 const FMT_TARGET = { auto: 2, phone: 1170 / 430, story: 1080 / 540, post: 1080 / 540, a4: 2480 / 794 };
 function loadHtml2Canvas() {
@@ -859,8 +910,8 @@ async function downloadPng() {
     btns.forEach((b) => { b.disabled = false; });
   }
 }
-$("#dlBtn").onclick = downloadPng;
-$("#dlBtn2").onclick = downloadPng;
+onClick("#dlBtn", downloadPng);
+onClick("#dlBtn2", downloadPng);
 function printSheet() {
   let tag = document.getElementById("printPage");
   if (!tag) {
@@ -872,8 +923,8 @@ function printSheet() {
   tag.textContent = `@media print { @page { size: ${size}; margin: 6mm; } }`;
   window.print();
 }
-$("#printBtn").onclick = printSheet;
-$("#printBtnTop").onclick = printSheet;
+onClick("#printBtn", printSheet);
+onClick("#printBtnTop", printSheet);
 
 function bytesToB64url(bytes) {
   let bin = "";
@@ -928,8 +979,9 @@ async function loadShareRemote(id) {
   return r.json();
 }
 function applySharedState(shared) {
-  if (!shared || (shared.v !== 2 && shared.v !== 3 && shared.v !== 4)) return false;
-  state = Object.assign(defaultState(shared.mode), shared, { v: 4 });
+  const next = hydrateState(shared);
+  if (!next) return false;
+  state = next;
   save();
   openEditor({ keepUrl: true });
   toast("Расписание из ссылки загружено — теперь оно твоё");
@@ -963,8 +1015,8 @@ async function shareSchedule() {
     toast("Не вышло создать ссылку");
   }
 }
-$("#shareBtn").onclick = shareSchedule;
-$("#shareBtn2").onclick = shareSchedule;
+onClick("#shareBtn", shareSchedule);
+onClick("#shareBtn2", shareSchedule);
 
 const DEMO_CELLS = [
   ["алгебра", "физика", "инглиш", "история", "физра"],
@@ -974,6 +1026,7 @@ const DEMO_CELLS = [
 ];
 function buildShowcase() {
   const wrap = $("#showcase");
+  if (!wrap) return;
   THEMES.forEach((t) => {
     const card = document.createElement("button");
     card.type = "button";
@@ -1005,23 +1058,35 @@ function buildShowcase() {
 }
 
 function openEditor(opts) {
-  document.body.classList.add("mode-edit");
-  $("#landing").setAttribute("aria-hidden", "true");
-  $("#landing").inert = true;
-  if (!opts || !opts.keepUrl) history.replaceState(null, "", "#edit");
-  renderControls(); renderSheet();
-  window.scrollTo(0, 0);
-  metrikaGoal("editor_open");
+  try {
+    document.body.classList.add("mode-edit");
+    const landing = $("#landing");
+    if (landing) {
+      landing.setAttribute("aria-hidden", "true");
+      landing.inert = true;
+    }
+    if (!opts || !opts.keepUrl) history.replaceState(null, "", "#edit");
+    renderControls();
+    renderSheet();
+    window.scrollTo(0, 0);
+    metrikaGoal("editor_open");
+  } catch (err) {
+    console.error("openEditor", err);
+    toast("Не получилось открыть редактор — обнови страницу");
+  }
 }
 function openLanding() {
   document.body.classList.remove("mode-edit");
-  $("#landing").removeAttribute("aria-hidden");
-  $("#landing").inert = false;
+  const landing = $("#landing");
+  if (landing) {
+    landing.removeAttribute("aria-hidden");
+    landing.inert = false;
+  }
   history.replaceState(null, "", "/");
   window.scrollTo(0, 0);
 }
-$("#backBtn").onclick = openLanding;
-$("#logoHome").addEventListener("click", (e) => {
+onClick("#backBtn", openLanding);
+listen("#logoHome", "click", (e) => {
   e.preventDefault();
   openLanding();
 });
@@ -1035,14 +1100,15 @@ function openDonate(e) {
   metrikaGoal("donate_open");
   const url = donateHref();
   const go = $("#donateGo");
-  if (url) {
+  if (url && go) {
     go.hidden = false;
     go.href = url;
     go.textContent = "Открыть страницу доната";
   } else if (go) {
     go.hidden = true;
   }
-  $("#donateModal").hidden = false;
+  const modal = $("#donateModal");
+  if (modal) modal.hidden = false;
 }
 function bindDonateQr() {
   const img = $("#donateQr");
@@ -1058,15 +1124,16 @@ function bindDonateQr() {
     else fail();
   }
 }
-$("#donateClose").onclick = () => { $("#donateModal").hidden = true; };
-$("#donateModal").addEventListener("click", (e) => {
-  if (e.target.id === "donateModal") $("#donateModal").hidden = true;
+onClick("#donateClose", () => { const m = $("#donateModal"); if (m) m.hidden = true; });
+listen("#donateModal", "click", (e) => {
+  if (e.target.id === "donateModal") e.currentTarget.hidden = true;
 });
 document.querySelectorAll("[data-donate]").forEach((b) => { b.addEventListener("click", openDonate); });
 document.querySelectorAll("[data-thanks]").forEach((b) => { b.addEventListener("click", sayThanks); });
 document.addEventListener("keydown", (e) => {
   if (e.key !== "Escape") return;
-  if (!$("#donateModal").hidden) $("#donateModal").hidden = true;
+  const modal = $("#donateModal");
+  if (modal && !modal.hidden) modal.hidden = true;
 });
 
 function metrikaGoal(name, params) {
@@ -1078,47 +1145,56 @@ function metrikaGoal(name, params) {
 }
 
 async function boot() {
-  $("#year").textContent = new Date().getFullYear();
-  buildShowcase();
-  bindDonateQr();
+  try {
+    const y = $("#year");
+    if (y) y.textContent = new Date().getFullYear();
+    buildShowcase();
+    bindDonateQr();
 
-  const short = location.pathname.match(/^\/s\/([23456789abcdefghijkmnpqrstuvwxyz]{8,12})$/i);
-  const m = location.hash.match(/^#s=(.+)$/);
-  if (short) {
-    try {
-      const shared = await loadShareRemote(short[1].toLowerCase());
-      if (!applySharedState(shared)) toast("Этой ссылки уже нет — собери расписание заново");
-    } catch (e) {
-      console.error("bad short link", e);
-      toast("Не получилось открыть ссылку");
-    }
-  } else if (m) {
-    try {
-      const shared = await decodeShare(decodeURIComponent(m[1]));
-      if (applySharedState(shared)) {
-        try {
-          const id = await saveShareRemote(state);
-          history.replaceState(null, "", `/s/${id}`);
-        } catch {}
+    const short = location.pathname.match(/^\/s\/([23456789abcdefghijkmnpqrstuvwxyz]{8,12})$/i);
+    const m = location.hash.match(/^#s=(.+)$/);
+    if (short) {
+      try {
+        const shared = await loadShareRemote(short[1].toLowerCase());
+        if (!applySharedState(shared)) toast("Этой ссылки уже нет — собери расписание заново");
+      } catch (e) {
+        console.error("bad short link", e);
+        toast("Не получилось открыть ссылку");
       }
-    } catch (e) { console.error("bad share link", e); }
-  } else if (location.hash === "#edit") {
-    openEditor();
+    } else if (m) {
+      try {
+        const shared = await decodeShare(decodeURIComponent(m[1]));
+        if (applySharedState(shared)) {
+          try {
+            const id = await saveShareRemote(state);
+            history.replaceState(null, "", `/s/${id}`);
+          } catch {}
+        }
+      } catch (e) { console.error("bad share link", e); }
+    } else if (location.hash === "#edit") {
+      openEditor();
+    }
+  } catch (err) {
+    console.error("boot", err);
   }
 
-  let visits = null;
-  const cached = sessionStorage.getItem("rv");
-  if (!cached) {
-    visits = await counterHit("visits");
-    if (visits) { try { sessionStorage.setItem("rv", String(visits)); } catch {} }
-  } else {
-    visits = Number(cached);
+  try {
+    let visits = null;
+    const cached = sessionStorage.getItem("rv");
+    if (!cached) {
+      visits = await counterHit("visits");
+      if (visits) { try { sessionStorage.setItem("rv", String(visits)); } catch {} }
+    } else {
+      visits = Number(cached);
+    }
+    const created = await counterGet("created");
+    if (created != null) setCreatedStat(created);
+    else if ($("#statCreated")) $("#statCreated").textContent = "0";
+    setVisitsStat(visits);
+    const thanks = await counterGet("thanks");
+    setThanksStat(thanks);
+  } catch (err) {
+    console.warn("stats", err);
   }
-  const created = await counterGet("created");
-  if (created != null) setCreatedStat(created);
-  else $("#statCreated").textContent = "0";
-  setVisitsStat(visits);
-  const thanks = await counterGet("thanks");
-  setThanksStat(thanks);
 }
 boot();
