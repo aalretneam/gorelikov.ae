@@ -1285,7 +1285,7 @@ function printSheet() {
     document.head.appendChild(tag);
   }
   const size = state.fmt === "a4" ? "A4 portrait" : "A4 landscape";
-  tag.textContent = `@media print { @page { size: ${size}; margin: 6mm; } }`;
+  tag.textContent = `@media print { @page { size: ${size}; margin: 4mm; } }`;
   document.body.classList.add("printing");
   bakeSheetPaint(sheet);
   window.print();

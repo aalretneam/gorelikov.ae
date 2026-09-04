@@ -1179,13 +1179,18 @@ body.is-sorting * { cursor: grabbing !important; }
 }
 
 @media print {
-  @page { size: A4 landscape; margin: 6mm; }
-  html, body, #sheet, #sheet * {
+  @page { size: A4 landscape; margin: 4mm; }
+  html, body, body.mode-edit, #sheet, #sheet * {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
     color-adjust: exact !important;
   }
-  body { background: #fff !important; }
+  html, body, body.mode-edit {
+    background: #fff !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
   #landing, .topbar, .side, #toast, .modal, .week-tabs, #donateNudge,
   body.mode-edit.compact .topbar,
   body.mode-edit.compact .side,
@@ -1225,6 +1230,9 @@ body.is-sorting * { cursor: grabbing !important; }
     pointer-events: auto !important;
   }
   .s-num .grip { display: none !important; }
+  .s-subj:empty::before, .s-note:empty::before { content: none !important; }
+  .s-note:empty { display: none !important; min-height: 0; }
+  #sheet, .sheet { break-inside: avoid; page-break-inside: avoid; }
   body.mode-edit.compact #sheet.fmt-auto,
   .sheet.fmt-auto {
     width: 285mm !important; height: auto !important; min-height: 0 !important;
