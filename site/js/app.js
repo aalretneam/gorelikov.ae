@@ -982,7 +982,12 @@ async function renderCanvas() {
       scale: FMT_TARGET[state.fmt] || 2,
       backgroundColor: null,
       useCORS: true,
-      logging: false
+      logging: false,
+      onclone(doc) {
+        doc.querySelectorAll(".grip").forEach((g) => g.remove());
+        const clone = doc.getElementById("sheet");
+        if (clone) clone.style.overflow = "hidden";
+      }
     });
   } finally {
     sheet.classList.remove("exporting");
