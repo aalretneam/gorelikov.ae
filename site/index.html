@@ -64,7 +64,7 @@
   "description": "Конструктор красивого расписания для школы и университета с экспортом в PNG."
 }
 </script>
-<link rel="stylesheet" href="/css/app.css?v=20260905f" />
+<link rel="stylesheet" href="/css/app.css?v=20260906a" />
 </head>
 <body>
 
@@ -121,8 +121,9 @@
     <a class="logo" href="/" id="logoHome"><img class="logo-mark" src="/img/logo.png" width="32" height="32" alt="">расписалка</a>
     <div class="spacer"></div>
     <button class="btn sm primary" id="dlBtn" type="button">скачать PNG</button>
+    <button class="btn sm compact-only" id="previewBtn" type="button">предпросмотр</button>
     <button class="btn sm" id="shareBtn" type="button">ссылка</button>
-    <button class="btn sm" id="printBtnTop" type="button">печать</button>
+    <button class="btn sm desktop-only" id="printBtnTop" type="button">печать</button>
     <button class="btn sm ghost" type="button" data-thanks>спасибо</button>
   </div>
 
@@ -224,12 +225,13 @@
         <label>Экспорт</label>
         <select class="wide" id="fmtSel">
           <option value="auto">Обычный (альбом А4/А5)</option>
-          <option value="phone">Обои на телефон</option>
-          <option value="story">Сторис 9:16</option>
-          <option value="post">Пост 4:5</option>
+          <option value="phone" class="fmt-extra">Обои на телефон</option>
+          <option value="story" class="fmt-extra">Сторис 9:16</option>
+          <option value="post" class="fmt-extra">Пост 4:5</option>
           <option value="a4">Печать А4 книжная</option>
         </select>
-        <div class="hint">Широкий лист — как альбомный А4 или А5, без пустых полей. Остальные форматы как были.</div>
+        <div class="hint desktop-fmt-hint">Широкий лист — как альбомный А4 или А5, без пустых полей. Остальные форматы как были.</div>
+        <div class="hint compact-only">Обычный альбомный лист или печать А4. Предпросмотр сверху показывает весь лист.</div>
         <label class="check" style="margin-top:8px"><input type="checkbox" id="wmChk" checked /> Подпись «расписалка» на картинке</label>
         <button class="btn primary" id="dlBtn2" type="button">Скачать PNG</button>
         <button class="btn" id="printBtn" type="button">Печать / PDF</button>
@@ -247,12 +249,23 @@
         <button type="button" data-g="0">Неделя I · числитель</button>
         <button type="button" data-g="1">Неделя II · знаменатель</button>
       </div>
+      <div id="dayEditor" class="day-editor"></div>
       <div class="sheet" id="sheet"></div>
     </main>
   </div>
 </div>
 
 <div id="toast"></div>
+
+<div id="previewScrim" class="preview-scrim" hidden>
+  <div class="preview-bar">
+    <button class="btn sm ghost" id="previewClose" type="button">Закрыть</button>
+    <b>Предпросмотр</b>
+    <div class="spacer"></div>
+    <button class="btn sm primary" id="previewDl" type="button">скачать PNG</button>
+  </div>
+  <div class="preview-port" id="previewPort"></div>
+</div>
 
 <div id="donateNudge" hidden>
   <p>Картинка готова. Если зашло — можно закинуть на кофе</p>
@@ -272,6 +285,6 @@
     <button class="btn ghost" id="donateClose" type="button">Закрыть</button>
   </div>
 </div>
-<script src="/js/app.js?v=20260905f" defer></script>
+<script src="/js/app.js?v=20260906a" defer></script>
 </body>
 </html>

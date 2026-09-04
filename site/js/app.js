@@ -320,6 +320,71 @@ async function markScheduleCreated(source) {
 }
 
 const sheet = $("#sheet");
+const dayEditor = $("#dayEditor");
+const COMPACT_MQ = window.matchMedia("(max-width: 1200px)");
+function isCompact() { return COMPACT_MQ.matches; }
+let editDay = 0;
+
+function syncCompact() {
+  const on = isCompact();
+  document.body.classList.toggle("compact", on);
+  document.querySelectorAll("#fmtSel option.fmt-extra").forEach((o) => { o.hidden = on; });
+  if (!on) closePreview(true);
+}
+
+function ensureEditDay() {
+  const days = activeDayIdx();
+  if (!days.length) { editDay = 0; return; }
+  if (!days.includes(editDay)) editDay = days[0];
+}
+
+function sheetHome() {
+  const stage = $(".stage");
+  if (sheet && stage && sheet.parentElement !== stage) stage.appendChild(sheet);
+  if (sheet) {
+    sheet.style.transform = "";
+    sheet.style.marginBottom = "";
+  }
+}
+
+function scalePreview() {
+  const port = $("#previewPort");
+  if (!sheet || !port || !document.body.classList.contains("preview-open")) return;
+  sheet.style.transform = "none";
+  const pad = 8;
+  const sw = sheet.offsetWidth || 1123;
+  const scale = Math.min(1, Math.max(0.2, (port.clientWidth - pad) / sw));
+  sheet.style.transformOrigin = "top center";
+  sheet.style.transform = `scale(${scale})`;
+  const sh = Math.ceil((sheet.offsetHeight || 0) * scale);
+  port.style.minHeight = sh + 16 + "px";
+}
+
+function openPreview() {
+  if (!isCompact() || !sheet) return;
+  renderSheet();
+  const port = $("#previewPort");
+  const scrim = $("#previewScrim");
+  if (!port || !scrim) return;
+  document.body.classList.add("preview-open");
+  port.appendChild(sheet);
+  scrim.hidden = false;
+  requestAnimationFrame(() => {
+    scalePreview();
+    requestAnimationFrame(scalePreview);
+  });
+}
+
+function closePreview(silent) {
+  const was = document.body.classList.contains("preview-open");
+  document.body.classList.remove("preview-open");
+  const scrim = $("#previewScrim");
+  if (scrim) scrim.hidden = true;
+  const port = $("#previewPort");
+  if (port) port.style.minHeight = "";
+  sheetHome();
+  if (was && !silent) renderDayEditor();
+}
 function activeDayIdx() {
   return state.days.map((on, i) => (on ? i : -1)).filter((i) => i >= 0);
 }
@@ -461,15 +526,65 @@ function renderSheet() {
   }
   html += `</div><footer class="s-foot"><img class="s-foot-logo" src="/img/logo.png" alt="" width="16" height="16">расписалка</footer>`;
   sheet.innerHTML = html;
+  renderDayEditor();
 }
 
-sheet?.addEventListener("input", (e) => {
+function renderDayEditor() {
+  const root = dayEditor;
+  if (!root) return;
+  if (!isCompact() || !document.body.classList.contains("mode-edit")) {
+    root.innerHTML = "";
+    return;
+  }
+  const typing = root.contains(document.activeElement) &&
+    document.activeElement.closest(".s-cell, .s-span, .s-time, [data-bind]");
+  if (typing) return;
+  ensureEditDay();
+  const d = editDay;
+  const days = activeDayIdx();
+  const g = grid() || emptyGrid();
+  const tabs = days.map((di) =>
+    `<button type="button" class="day-tab${di === d ? " on" : ""}" data-edit-day="${di}">${DAY_NAMES[di]}</button>`
+  ).join("");
+  let slots = "";
+  for (let r = 0; r < state.rows; r++) {
+    const kind = (state.kinds && state.kinds[r]) || "lesson";
+    const time = esc(state.times[r] || "");
+    if (kind === "lesson") {
+      const val = (g[r] || [])[d] || "";
+      const look = paintClassAndStyle(val, r, d);
+      slots += `<div class="day-slot" data-row="${r}">
+        <span class="grip" title="Перетащить">⋮⋮</span>
+        <span class="s-time" contenteditable="true" spellcheck="false" data-time="${r}">${time}</span>
+        <div class="${look.cls}" data-r="${r}" data-d="${d}"${look.style}>${cellInnerHtml(val, r, d)}</div>
+      </div>`;
+    } else {
+      slots += `<div class="day-slot is-span" data-row="${r}">
+        <span class="grip" title="Перетащить">⋮⋮</span>
+        <span class="s-time" contenteditable="true" spellcheck="false" data-time="${r}">${time}</span>
+        <div class="s-span kind-${kind}" contenteditable="true" spellcheck="false" data-span="${r}">${esc(state.labels[r] || KIND_NAME[kind])}</div>
+      </div>`;
+    }
+  }
+  root.innerHTML = `
+    <div class="day-editor-head">
+      <h2 class="s-title" contenteditable="true" spellcheck="false" data-bind="title">${esc(state.title)}</h2>
+      <div class="s-sub" contenteditable="true" spellcheck="false" data-bind="sub">${esc(state.sub)}</div>
+    </div>
+    <div class="day-tabs">${tabs || `<span class="hint">Включи хотя бы один день слева</span>`}</div>
+    <div class="day-slots">${slots}</div>
+    <p class="hint day-editor-hint">Дни сверху — правишь по одному. Предпросмотр покажет весь лист как на картинке.</p>
+  `;
+}
+
+function onEditorInput(e) {
   const el = e.target;
   if (el.dataset.bind) state[el.dataset.bind] = el.innerText.trim();
   else if (el.dataset.time !== undefined) state.times[+el.dataset.time] = el.innerText.trim();
   else if (el.dataset.span !== undefined) state.labels[+el.dataset.span] = el.innerText.trim();
   else if (el.dataset.part && el.dataset.r !== undefined) {
     const cell = el.closest(".s-cell");
+    if (!cell) return;
     const subj = cell.querySelector(".s-subj")?.innerText.replace(/\n+/g, " ") || "";
     const note = cell.querySelector(".s-note")?.innerText.replace(/\n+$/, "") || "";
     const val = joinCell(subj, note);
@@ -482,11 +597,12 @@ sheet?.addEventListener("input", (e) => {
     }
     if (subjectCat(val) === "empty") setPaint(r, d, "");
     applyCellLook(cell, val, r, d);
-  }
+  } else return;
   save();
-});
-sheet?.addEventListener("paste", (e) => {
+}
+function onEditorPaste(e) {
   const part = e.target.dataset && e.target.dataset.part;
+  if (!part && !e.target.dataset.bind && e.target.dataset.time === undefined && e.target.dataset.span === undefined) return;
   e.preventDefault();
   let text = (e.clipboardData || window.clipboardData).getData("text/plain");
   if (part === "subj" && text.includes("\n")) {
@@ -500,8 +616,8 @@ sheet?.addEventListener("paste", (e) => {
     return;
   }
   document.execCommand("insertText", false, part ? text.replace(/\n+/g, " ") : text);
-});
-sheet?.addEventListener("keydown", (e) => {
+}
+function onEditorKeydown(e) {
   if (e.target.dataset.part === "subj" && e.key === "Enter") {
     e.preventDefault();
     e.target.parentElement.querySelector(".s-note")?.focus();
@@ -516,11 +632,12 @@ sheet?.addEventListener("keydown", (e) => {
     e.preventDefault();
     e.target.blur();
   }
-});
-sheet?.addEventListener("pointerdown", (e) => {
+}
+function onEditorPointerDown(e) {
+  const root = e.currentTarget;
   if (paintBrush) {
     const cell = e.target.closest?.(".s-cell");
-    if (cell && sheet.contains(cell) && e.button === 0) {
+    if (cell && root.contains(cell) && e.button === 0) {
       e.preventDefault();
       e.stopPropagation();
       const r = +cell.dataset.r;
@@ -540,10 +657,40 @@ sheet?.addEventListener("pointerdown", (e) => {
   const cell = e.target.closest?.(".s-cell");
   if (!cell || e.target.closest(".s-subj, .s-note")) return;
   cell.querySelector(".s-subj")?.focus();
-}, true);
+}
+function bindEditorRoot(root) {
+  if (!root || root.dataset.edBound) return;
+  root.dataset.edBound = "1";
+  root.addEventListener("input", onEditorInput);
+  root.addEventListener("paste", onEditorPaste);
+  root.addEventListener("keydown", onEditorKeydown);
+  root.addEventListener("pointerdown", onEditorPointerDown, true);
+}
+bindEditorRoot(sheet);
+bindEditorRoot(dayEditor);
+dayEditor?.addEventListener("click", (e) => {
+  const b = e.target.closest("[data-edit-day]");
+  if (!b || !dayEditor.contains(b)) return;
+  editDay = +b.dataset.editDay;
+  renderDayEditor();
+});
+onClick("#previewBtn", openPreview);
+onClick("#previewClose", () => closePreview());
+onClick("#previewDl", downloadPng);
+COMPACT_MQ.addEventListener("change", () => {
+  syncCompact();
+  if (document.body.classList.contains("mode-edit")) {
+    renderControls();
+    renderSheet();
+  }
+});
+window.addEventListener("resize", () => {
+  if (document.body.classList.contains("preview-open")) scalePreview();
+});
 
 function renderControls() {
   try {
+  syncCompact();
   document.querySelectorAll("#modeSeg button").forEach((b) =>
     b.classList.toggle("active", b.dataset.mode === state.mode));
   const rowsLabel = $("#rowsLabel");
@@ -853,6 +1000,7 @@ function bindSortable(root, { itemSel, handleSel, onMove }) {
   });
 }
 bindSortable(sheet, { itemSel: ".s-row", handleSel: ".grip", onMove: moveRow });
+bindSortable(dayEditor, { itemSel: ".day-slot", handleSel: ".grip", onMove: moveRow });
 bindSortable($("#slotList"), { itemSel: ".slot-row", handleSel: ".grip", onMove: moveRow });
 bindSortable($("#teacherList"), { itemSel: ".tcard", handleSel: ".grip", onMove: moveTeacher });
 
@@ -974,8 +1122,12 @@ function loadHtml2Canvas() {
 }
 async function renderCanvas() {
   await loadHtml2Canvas();
+  if (isCompact()) renderSheet();
   if (document.fonts?.ready) { try { await document.fonts.ready; } catch {} }
   document.activeElement?.blur?.();
+  const keepPreview = document.body.classList.contains("preview-open");
+  document.body.classList.add("capturing");
+  sheet.style.transform = "none";
   sheet.classList.add("exporting");
   try {
     return await window.html2canvas(sheet, {
@@ -986,15 +1138,28 @@ async function renderCanvas() {
       onclone(doc) {
         doc.querySelectorAll(".grip").forEach((g) => g.remove());
         const clone = doc.getElementById("sheet");
-        if (clone) clone.style.overflow = "hidden";
+        if (clone) {
+          clone.style.overflow = "hidden";
+          clone.style.opacity = "1";
+          clone.style.transform = "none";
+          clone.style.position = "relative";
+        }
       }
     });
   } finally {
     sheet.classList.remove("exporting");
+    document.body.classList.remove("capturing");
+    if (keepPreview && isCompact()) {
+      const port = $("#previewPort");
+      if (port) port.appendChild(sheet);
+      requestAnimationFrame(scalePreview);
+    } else {
+      sheetHome();
+    }
   }
 }
 async function downloadPng() {
-  const btns = [$("#dlBtn"), $("#dlBtn2")];
+  const btns = [$("#dlBtn"), $("#dlBtn2"), $("#previewDl")];
   btns.forEach((b) => { b.disabled = true; });
   toast("Рисую картинку…");
   try {
@@ -1026,6 +1191,11 @@ async function downloadPng() {
 onClick("#dlBtn", downloadPng);
 onClick("#dlBtn2", downloadPng);
 function printSheet() {
+  if (isCompact()) {
+    closePreview(true);
+    renderSheet();
+    sheetHome();
+  }
   let tag = document.getElementById("printPage");
   if (!tag) {
     tag = document.createElement("style");
@@ -1177,6 +1347,7 @@ function openEditor(opts) {
       landing.inert = true;
     }
     if (!opts || !opts.keepUrl) history.replaceState(null, "", "#edit");
+    syncCompact();
     renderControls();
     renderSheet();
     window.scrollTo(0, 0);
@@ -1187,6 +1358,7 @@ function openEditor(opts) {
   }
 }
 function openLanding() {
+  closePreview(true);
   document.body.classList.remove("mode-edit");
   const landing = $("#landing");
   if (landing) {
@@ -1258,6 +1430,10 @@ document.querySelectorAll("[data-donate]").forEach((b) => { b.addEventListener("
 document.querySelectorAll("[data-thanks]").forEach((b) => { b.addEventListener("click", sayThanks); });
 document.addEventListener("keydown", (e) => {
   if (e.key !== "Escape") return;
+  if (document.body.classList.contains("preview-open")) {
+    closePreview();
+    return;
+  }
   const modal = $("#donateModal");
   if (modal && !modal.hidden) modal.hidden = true;
   hideDonateNudge();
@@ -1273,6 +1449,7 @@ function metrikaGoal(name, params) {
 
 async function boot() {
   try {
+    syncCompact();
     const y = $("#year");
     if (y) y.textContent = new Date().getFullYear();
     buildShowcase();
