@@ -78,6 +78,15 @@ const SCHOOL_SLOT_TIMES = ["8:30","9:10","9:25","10:05","10:20","11:00","11:20",
 function emptyGrid() {
   return Array.from({ length: MAX_ROWS }, () => Array(7).fill(""));
 }
+const PAINT_SWATCHES = [
+  "#22c55e", "#3b82f6", "#a855f7", "#f59e0b", "#ef4444",
+  "#14b8a6", "#fb7185", "#6366f1", "#f472b6", "#22d3ee",
+  "#a3e635", "#facc15"
+];
+function sanitizePaint(c) {
+  const t = String(c || "").trim();
+  return /^#[0-9a-fA-F]{6}$/.test(t) ? t.toLowerCase() : "";
+}
 function fillLessons(demo, kinds) {
   const g = emptyGrid();
   const lessonAt = [];
@@ -128,7 +137,8 @@ function defaultState(mode = "school") {
       font: "Manrope, sans-serif", rad: 16, pat: "", emoji: "✦"
     },
     wm: true,
-    fmt: "auto"
+    fmt: "auto",
+    paints: [emptyGrid(), emptyGrid()]
   };
 }
 
@@ -160,6 +170,16 @@ function hydrateState(s) {
   if (!merged.custom || typeof merged.custom !== "object") merged.custom = base.custom;
   if (merged.theme === "ru-gold") merged.theme = "russia";
   else if (!THEMES.some((t) => t.id === merged.theme)) merged.theme = base.theme;
+  if (!Array.isArray(merged.paints) || merged.paints.length < 2) merged.paints = [emptyGrid(), emptyGrid()];
+  merged.paints = merged.paints.map((g) => {
+    const ng = emptyGrid();
+    (g || []).forEach((row, r) => {
+      if (r >= MAX_ROWS) return;
+      ng[r] = (row || []).concat(["", "", "", "", "", "", ""]).slice(0, 7).map(sanitizePaint);
+    });
+    return ng;
+  });
+  while (merged.paints.length < 2) merged.paints.push(emptyGrid());
   return merged;
 }
 function loadState() {
@@ -306,6 +326,51 @@ function activeDayIdx() {
 function grid() {
   return state.cells[state.dual ? state.activeGrid : 0];
 }
+function paintsGrid() {
+  if (!Array.isArray(state.paints) || state.paints.length < 2) state.paints = [emptyGrid(), emptyGrid()];
+  return state.paints[state.dual ? state.activeGrid : 0];
+}
+function getPaint(r, d) {
+  const g = paintsGrid();
+  return sanitizePaint(g[r] && g[r][d]);
+}
+function setPaint(r, d, color) {
+  const g = paintsGrid();
+  if (!g[r]) g[r] = Array(7).fill("");
+  g[r][d] = sanitizePaint(color);
+}
+function paintClassAndStyle(val, r, d) {
+  const cat = subjectCat(val);
+  const paint = cat === "empty" ? "" : getPaint(r, d);
+  const cls = `s-cell cat-${cat}${paint ? " is-painted" : ""}`;
+  const style = paint ? ` style="--cell-fill:${esc(paint)}"` : "";
+  return { cat, paint, cls, style };
+}
+function applyCellLook(cell, val, r, d) {
+  const { cat, paint } = paintClassAndStyle(val, r, d);
+  cell.className = `s-cell cat-${cat}${paint ? " is-painted" : ""}`;
+  cell.dataset.r = String(r);
+  cell.dataset.d = String(d);
+  if (paint) cell.style.setProperty("--cell-fill", paint);
+  else cell.style.removeProperty("--cell-fill");
+}
+
+let paintBrush = null;
+function setPaintBrush(val) {
+  paintBrush = val;
+  document.body.classList.toggle("paint-mode", !!paintBrush);
+  renderPalette();
+}
+function renderPalette() {
+  const box = $("#paintPalette");
+  if (!box) return;
+  const autoOn = paintBrush === "auto";
+  let html = `<button type="button" class="psw auto${autoOn ? " on" : ""}" data-paint="auto" title="Авто по предмету">авто</button>`;
+  PAINT_SWATCHES.forEach((c) => {
+    html += `<button type="button" class="psw${paintBrush === c ? " on" : ""}" data-paint="${c}" style="background:${c}" title="${c}"></button>`;
+  });
+  box.innerHTML = html;
+}
 
 function applyThemeTo(el, themeId) {
   const th = THEMES.find((t) => t.id === themeId) || THEMES[0];
@@ -385,7 +450,8 @@ function renderSheet() {
       html += `<div class="s-num" data-drag-row="${r}"><span class="grip" title="Перетащить">⋮⋮</span><span class="s-time" contenteditable="true" spellcheck="false" data-time="${r}">${esc(state.times[r] || "")}</span></div>`;
       for (const d of days) {
         const val = row[d] || "";
-        html += `<div class="s-cell cat-${subjectCat(val)}">${cellInnerHtml(val, r, d)}</div>`;
+        const look = paintClassAndStyle(val, r, d);
+        html += `<div class="${look.cls}" data-r="${r}" data-d="${d}"${look.style}>${cellInnerHtml(val, r, d)}</div>`;
       }
     } else {
       html += `<div class="s-num" data-drag-row="${r}"><span class="grip" title="Перетащить">⋮⋮</span><span class="s-time" contenteditable="true" spellcheck="false" data-time="${r}">${esc(state.times[r] || "")}</span></div>`;
@@ -408,11 +474,14 @@ sheet?.addEventListener("input", (e) => {
     const note = cell.querySelector(".s-note")?.innerText.replace(/\n+$/, "") || "";
     const val = joinCell(subj, note);
     const g = grid();
+    const r = +el.dataset.r;
+    const d = +el.dataset.d;
     if (g) {
-      if (!g[+el.dataset.r]) g[+el.dataset.r] = Array(7).fill("");
-      g[+el.dataset.r][+el.dataset.d] = val;
+      if (!g[r]) g[r] = Array(7).fill("");
+      g[r][d] = val;
     }
-    cell.className = "s-cell cat-" + subjectCat(val);
+    if (subjectCat(val) === "empty") setPaint(r, d, "");
+    applyCellLook(cell, val, r, d);
   }
   save();
 });
@@ -449,10 +518,29 @@ sheet?.addEventListener("keydown", (e) => {
   }
 });
 sheet?.addEventListener("pointerdown", (e) => {
+  if (paintBrush) {
+    const cell = e.target.closest?.(".s-cell");
+    if (cell && sheet.contains(cell) && e.button === 0) {
+      e.preventDefault();
+      e.stopPropagation();
+      const r = +cell.dataset.r;
+      const d = +cell.dataset.d;
+      if (!Number.isFinite(r) || !Number.isFinite(d)) return;
+      const val = (grid()?.[r] || [])[d] || "";
+      if (subjectCat(val) === "empty") {
+        toast("Сначала напиши предмет");
+        return;
+      }
+      setPaint(r, d, paintBrush === "auto" ? "" : paintBrush);
+      save();
+      applyCellLook(cell, val, r, d);
+      return;
+    }
+  }
   const cell = e.target.closest?.(".s-cell");
   if (!cell || e.target.closest(".s-subj, .s-note")) return;
   cell.querySelector(".s-subj")?.focus();
-});
+}, true);
 
 function renderControls() {
   try {
@@ -514,10 +602,29 @@ function renderControls() {
   if (infoText && document.activeElement !== infoText) infoText.value = (state.info || []).join("\n");
   renderTeachers();
   renderSlots();
+  renderPalette();
   } catch (err) {
     console.error("renderControls", err);
   }
 }
+
+listen("#paintPalette", "click", (e) => {
+  const b = e.target.closest("[data-paint]");
+  if (!b) return;
+  const v = b.dataset.paint;
+  if (!v) return;
+  if (paintBrush === v) {
+    setPaintBrush(null);
+    return;
+  }
+  const first = !paintBrush;
+  setPaintBrush(v);
+  if (first) toast(v === "auto" ? "Кисть: авто. Кликай по урокам" : "Кликай по урокам — Esc выключает кисть");
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "Escape" || !paintBrush) return;
+  setPaintBrush(null);
+});
 
 listen("#modeSeg", "click", (e) => {
   const b = e.target.closest("button");
@@ -613,6 +720,7 @@ function moveRow(from, to) {
   moveItem(state.labels, from, to);
   moveItem(state.times, from, to);
   (state.cells || []).forEach((g) => moveItem(g, from, to));
+  (state.paints || []).forEach((g) => moveItem(g, from, to));
   save(); renderControls(); renderSheet();
 }
 function moveTeacher(from, to) {
@@ -837,6 +945,7 @@ function applyTemplate(kind, ask) {
     state.showInfo = false;
     state.info = [];
     state.teachers = [];
+    state.paints = [emptyGrid(), emptyGrid()];
     state.title = mode === "uni" ? "Моя группа" : "Мой класс";
   } else if (kind === "uni") {
     state = Object.assign(defaultState("uni"), keep);

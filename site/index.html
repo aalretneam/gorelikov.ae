@@ -64,7 +64,7 @@
   "description": "Конструктор красивого расписания для школы и университета с экспортом в PNG."
 }
 </script>
-<link rel="stylesheet" href="/css/app.css?v=20260905b" />
+<link rel="stylesheet" href="/css/app.css?v=20260905c" />
 </head>
 <body>
 
@@ -101,7 +101,7 @@
     <h2 class="section-title">Как это работает</h2>
     <div class="steps">
       <div class="step"><div class="n">1</div><b>Заполни прямо в таблице</b><p>Кликай по ячейкам и пиши предметы — верхняя строка название, нижняя — кабинет или учитель.</p></div>
-      <div class="step"><div class="n">2</div><b>Выбери или собери стиль</b><p>13 готовых тем или конструктор: свои цвета, шрифт, фон и стикеры. Предметы сами красятся по смыслу.</p></div>
+      <div class="step"><div class="n">2</div><b>Выбери или собери стиль</b><p>13 готовых тем или конструктор: свои цвета, шрифт, фон и стикеры. Предметы сами красятся по смыслу — или залей любой урок из палитры.</p></div>
       <div class="step"><div class="n">3</div><b>Скачай и поставь</b><p>PNG под обои, сторис, пост или печать А4. Ссылка откроет расписание у друга — он сможет сохранить или переделать.</p></div>
     </div>
 
@@ -186,6 +186,12 @@
       </div>
 
       <div class="grp">
+        <label>Цвет уроков</label>
+        <div class="paint-palette" id="paintPalette"></div>
+        <div class="hint">Выбери цвет, потом кликай по урокам. Ещё раз по тому же цвету или Esc — выключить кисть. «Авто» вернёт цвет по предмету.</div>
+      </div>
+
+      <div class="grp">
         <div class="custom-panel" id="customPanel">
           <div class="crow"><span>Фон</span><input type="color" id="cBg" value="#101322" /></div>
           <div class="crow"><span>Карточки</span><input type="color" id="cCard" value="#1c2136" /></div>
@@ -266,6 +272,6 @@
     <button class="btn ghost" id="donateClose" type="button">Закрыть</button>
   </div>
 </div>
-<script src="/js/app.js?v=20260905b" defer></script>
+<script src="/js/app.js?v=20260905c" defer></script>
 </body>
 </html>
