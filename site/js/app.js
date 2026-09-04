@@ -26,8 +26,8 @@ const THEMES = [
   { id: "academia", name: "Dark Academia", sw: ["#efe5cf", "#7a2020", "#382a1e"], decor: "" },
   { id: "glass",    name: "Градиент",      sw: ["#5b21b6", "#2563eb", "#db2777"], decor: "" },
   { id: "sticker",  name: "Стикеры",       sw: ["#fef9c3", "#16a34a", "#1f2937"], decor: "⚡" },
-  { id: "minecraft", name: "Майнкрафт",    sw: ["#5c8c3e", "#8b5a2b", "#7ec0ee"], decor: "🟩" },
-  { id: "potter",   name: "Гарри Поттер",  sw: ["#1a0f14", "#c9a227", "#7a1f2b"], decor: "⚡" },
+  { id: "minecraft", name: "Пиксель-крафт", sw: ["#1a1c2c", "#7cf0c2", "#7b5cff"], decor: "▦" },
+  { id: "potter",   name: "Волшебная академия", sw: ["#0e1418", "#c4a574", "#1a3a3a"], decor: "✦" },
   { id: "russia",   name: "Россия",        sw: ["#ffffff", "#0039a6", "#d52b1e"], decor: "" },
   { id: "ru-gold",  name: "Россия премиум", sw: ["#0a0a0a", "#e8c872", "#1a1a1a"], decor: "" },
   { id: "custom",   name: "Свой стиль",    sw: ["#101322", "#ffd166", "#1c2136"], decor: "" }
@@ -899,7 +899,7 @@ async function downloadPng() {
     a.click();
     a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 2500);
-    toast("Готово — картинка в загрузках");
+    showDonateNudge();
     counterHit("download");
     metrikaGoal("download");
     markScheduleCreated("download");
@@ -1096,6 +1096,7 @@ function donateHref() {
 }
 function openDonate(e) {
   if (e) e.preventDefault();
+  hideDonateNudge();
   metrikaGoal("donate_open");
   const url = donateHref();
   const go = $("#donateGo");
@@ -1127,12 +1128,27 @@ onClick("#donateClose", () => { const m = $("#donateModal"); if (m) m.hidden = t
 listen("#donateModal", "click", (e) => {
   if (e.target.id === "donateModal") e.currentTarget.hidden = true;
 });
+let donateNudgeTimer;
+function hideDonateNudge() {
+  const el = $("#donateNudge");
+  if (el) el.hidden = true;
+  clearTimeout(donateNudgeTimer);
+}
+function showDonateNudge() {
+  const el = $("#donateNudge");
+  if (!el) return;
+  el.hidden = false;
+  clearTimeout(donateNudgeTimer);
+  donateNudgeTimer = setTimeout(hideDonateNudge, 12000);
+}
+onClick("#donateNudgeClose", hideDonateNudge);
 document.querySelectorAll("[data-donate]").forEach((b) => { b.addEventListener("click", openDonate); });
 document.querySelectorAll("[data-thanks]").forEach((b) => { b.addEventListener("click", sayThanks); });
 document.addEventListener("keydown", (e) => {
   if (e.key !== "Escape") return;
   const modal = $("#donateModal");
   if (modal && !modal.hidden) modal.hidden = true;
+  hideDonateNudge();
 });
 
 function metrikaGoal(name, params) {

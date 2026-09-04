@@ -35,8 +35,8 @@
 <meta name="apple-mobile-web-app-title" content="Расписалка" />
 <link rel="canonical" href="https://gorelikov.ae/" />
 <link rel="manifest" href="/manifest.webmanifest" />
-<meta property="og:title" content="Расписалка — расписание, которое не стыдно поставить на обои" />
-<meta property="og:description" content="Собери за минуту: Y2K, неон, kawaii, майнкрафт, Гарри Поттер, Россия и свой стиль. Скачай или кинь в Telegram. Бесплатно." />
+<meta property="og:title" content="Расписалка — расписание, которое всегда под рукой" />
+<meta property="og:description" content="Собери за минуту: Y2K, неон, kawaii, пиксель, академия, Россия и свой стиль. Скачай или кинь в Telegram. Бесплатно." />
 <meta property="og:type" content="website" />
 <meta property="og:locale" content="ru_RU" />
 <meta property="og:url" content="https://gorelikov.ae/" />
@@ -44,7 +44,7 @@
 <meta property="og:image:width" content="1200" />
 <meta property="og:image:height" content="630" />
 <meta name="twitter:card" content="summary_large_image" />
-<meta name="twitter:title" content="Расписалка — расписание на обои" />
+<meta name="twitter:title" content="Расписалка — расписание, которое всегда под рукой" />
 <meta name="twitter:description" content="14 стилей + свой. Школа и универ. Бесплатно, без регистрации." />
 <meta name="twitter:image" content="https://gorelikov.ae/og.png" />
 <link rel="icon" href="/img/favicon.png" type="image/png" sizes="32x32" />
@@ -64,7 +64,7 @@
   "description": "Конструктор красивого расписания для школы и университета с экспортом в PNG."
 }
 </script>
-<link rel="stylesheet" href="/css/app.css?v=20260904d" />
+<link rel="stylesheet" href="/css/app.css?v=20260905" />
 </head>
 <body>
 
@@ -75,13 +75,12 @@
       <a class="logo" href="/"><img class="logo-mark" src="/img/logo.png" width="32" height="32" alt="">расписалка</a>
       <div class="spacer"></div>
       <button class="btn sm ghost" type="button" data-thanks>спасибо</button>
-      <button class="btn sm hot" type="button" data-donate>Поддержать</button>
       <button class="btn sm primary" type="button" data-open-editor>Создать</button>
     </nav>
 
     <section class="hero">
       <div class="pill">бесплатно · без регистрации · за минуту</div>
-      <h1>Расписание, которое<br /><span class="grad">не стыдно поставить на обои</span></h1>
+      <h1>Расписание, которое<br /><span class="grad">всегда под рукой</span></h1>
       <p class="sub">Собери расписание для школы или универа, выбери готовый стиль или сделай свой. Скачай на телефон, распечатай, кинь в сторис или в чат класса.</p>
       <div class="cta-row">
         <button class="btn primary" type="button" data-open-editor>Собрать расписание →</button>
@@ -106,15 +105,6 @@
       <div class="step"><div class="n">3</div><b>Скачай и поставь</b><p>PNG под обои, сторис, пост или печать А4. Ссылка откроет расписание у друга — он сможет сохранить или переделать.</p></div>
     </div>
 
-    <div class="donate-band">
-      <b>Расписалка бесплатна и без рекламы</b>
-      <p>Если она сэкономила тебе время — можно закинуть разработчику на кофе</p>
-      <div class="cta-row">
-        <button class="btn hot" type="button" data-donate>Поддержать проект</button>
-        <button class="btn" type="button" data-thanks>спасибо</button>
-      </div>
-    </div>
-
     <footer class="site">
       <a class="logo foot-logo" href="/"><img class="logo-mark" src="/img/logo.png" width="28" height="28" alt=""><span>© <span id="year"></span> gorelikov.ae</span></a>
       <div class="spacer"></div>
@@ -134,7 +124,6 @@
     <button class="btn sm" id="shareBtn" type="button">ссылка</button>
     <button class="btn sm" id="printBtnTop" type="button">печать</button>
     <button class="btn sm ghost" type="button" data-thanks>спасибо</button>
-    <button class="btn sm hot" type="button" data-donate>донат</button>
   </div>
 
   <div class="workspace">
@@ -239,12 +228,10 @@
         <button class="btn primary" id="dlBtn2" type="button">Скачать PNG</button>
         <button class="btn" id="printBtn" type="button">Печать / PDF</button>
         <button class="btn" id="shareBtn2" type="button">Ссылка на расписание</button>
-        <div class="hint">По ссылке у друга откроется твоё расписание — он сможет сохранить или переделать.</div>
+        <div class="hint">По ссылке друг откроет то же расписание и сможет сохранить или переделать. Ссылку видит кто угодно, у кого она есть. Лежит на сервере, удалить по кнопке нельзя — не пиши туда личное.</div>
       </div>
 
       <div class="grp">
-        <label>Поддержка</label>
-        <button class="btn hot" type="button" data-donate style="display:flex">Закинуть на кофе</button>
         <button class="btn ghost" id="resetBtn" type="button" style="color:#f87171">Очистить всё</button>
       </div>
     </aside>
@@ -261,6 +248,12 @@
 
 <div id="toast"></div>
 
+<div id="donateNudge" hidden>
+  <p>Картинка готова. Если зашло — можно закинуть на кофе</p>
+  <button class="btn sm hot" type="button" data-donate>Поддержать</button>
+  <button class="btn sm ghost" type="button" id="donateNudgeClose">не сейчас</button>
+</div>
+
 <div class="modal" id="donateModal" hidden>
   <div class="modal-card donate-card">
     <h3>Закинуть на кофе</h3>
@@ -273,6 +266,6 @@
     <button class="btn ghost" id="donateClose" type="button">Закрыть</button>
   </div>
 </div>
-<script src="/js/app.js?v=20260904b" defer></script>
+<script src="/js/app.js?v=20260905" defer></script>
 </body>
 </html>
