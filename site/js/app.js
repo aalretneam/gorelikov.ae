@@ -26,6 +26,10 @@ const THEMES = [
   { id: "academia", name: "Dark Academia", sw: ["#efe5cf", "#7a2020", "#382a1e"], decor: "" },
   { id: "glass",    name: "Градиент",      sw: ["#5b21b6", "#2563eb", "#db2777"], decor: "" },
   { id: "sticker",  name: "Стикеры",       sw: ["#fef9c3", "#16a34a", "#1f2937"], decor: "⚡" },
+  { id: "minecraft", name: "Майнкрафт",    sw: ["#5c8c3e", "#8b5a2b", "#7ec0ee"], decor: "🟩" },
+  { id: "potter",   name: "Гарри Поттер",  sw: ["#1a0f14", "#c9a227", "#7a1f2b"], decor: "⚡" },
+  { id: "russia",   name: "Россия",        sw: ["#ffffff", "#0039a6", "#d52b1e"], decor: "" },
+  { id: "ru-gold",  name: "Россия премиум", sw: ["#0a0a0a", "#e8c872", "#1a1a1a"], decor: "" },
   { id: "custom",   name: "Свой стиль",    sw: ["#101322", "#ffd166", "#1c2136"], decor: "" }
 ];
 const DAY_NAMES = ["пн", "вт", "ср", "чт", "пт", "сб", "вс"];
@@ -293,6 +297,9 @@ function renderSheet() {
     ? `<span class="s-badge">${state.activeGrid === 0 ? "числитель" : "знаменатель"}</span>` : "";
   const decorHtml = decor
     ? `<div class="s-decor">${[...decor].slice(0, 3).map((e) => `<i>${esc(e)}</i>`).join("")}</div>` : "";
+  const crestHtml = state.theme === "ru-gold"
+    ? `<img class="s-crest" src="/img/crest-ru.svg" alt="" width="120" height="132">`
+    : "";
 
   let extra = "";
   if (state.showInfo) {
@@ -319,7 +326,7 @@ function renderSheet() {
     </div>`;
   }
 
-  let html = decorHtml + `
+  let html = decorHtml + crestHtml + `
     <header class="s-head">
       <div class="s-tagrow"><span class="s-tag">расписание</span>${badge}</div>
       <h2 class="s-title" contenteditable="true" spellcheck="false" data-bind="title">${esc(state.title)}</h2>
@@ -985,6 +992,7 @@ function buildShowcase() {
     card.className = "mini-card";
     let mini = `<div class="mini-clip"><div class="sheet th-${t.id}">`;
     if (t.decor) mini += `<div class="s-decor">${[...t.decor].slice(0, 3).map((e) => `<i>${e}</i>`).join("")}</div>`;
+    if (t.id === "ru-gold") mini += `<img class="s-crest" src="/img/crest-ru.svg" alt="" width="120" height="132">`;
     mini += `<header class="s-head"><div class="s-tagrow"><span class="s-tag">расписание</span></div>
       <h2 class="s-title">7 «Б»</h2><div class="s-sub">2026/27 учебный год</div></header>
       <div class="s-grid" style="grid-template-columns:52px repeat(5,1fr)">
