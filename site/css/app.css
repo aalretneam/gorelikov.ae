@@ -403,7 +403,7 @@ body.is-sorting * { cursor: grabbing !important; }
   border-radius: calc(var(--s-rad) * .55);
 }
 .s-num {
-  display: grid; grid-template-columns: 1fr; place-items: center;
+  display: grid; grid-template-columns: 1fr; align-items: center; justify-items: stretch;
   padding: 0 10px; position: relative;
   color: var(--s-mut); user-select: none;
   min-width: 5.2em;
@@ -411,9 +411,10 @@ body.is-sorting * { cursor: grabbing !important; }
 }
 .s-num b { display: none; }
 .s-time {
+  display: block;
   font-size: .66rem; font-weight: 700; outline: none; white-space: nowrap;
   cursor: text; user-select: text; -webkit-user-select: text;
-  text-align: center; width: 100%; min-width: 0;
+  text-align: center; width: 100%; min-width: 0; box-sizing: border-box;
 }
 .s-cell {
   background: var(--s-card);
