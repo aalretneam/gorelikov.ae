@@ -396,7 +396,7 @@ body.paint-mode .s-cell .s-note { pointer-events: none; }
   left: 0;
   z-index: 6;
   width: 22px; height: 28px; margin: 0;
-  transform: translate(calc(-100% - var(--s-pad-x) - 8px), -50%);
+  transform: translate(calc(-100% - var(--s-pad-x) - 12px), -50%);
   border-radius: 8px;
   color: #c9cedb;
   background: #1c2233;
@@ -861,6 +861,7 @@ body.is-sorting * { cursor: grabbing !important; }
 .th-minecraft .s-num b { font-family: "Press Start 2P", sans-serif; font-size: .7rem; }
 .th-minecraft .s-box { border-radius: 0; border-width: 3px; }
 .th-minecraft .s-num, .th-minecraft .s-time { color: #111; }
+.th-minecraft .s-time { font-weight: 800; }
 
 .th-potter {
   --s-bg: #140c10;
@@ -933,6 +934,12 @@ body.is-sorting * { cursor: grabbing !important; }
 }
 .th-russia .s-badge { color: #fff; background: #0039a6; }
 .th-russia .s-num, .th-russia .s-time { color: #111; }
+.th-russia .s-time {
+  background: rgba(255,255,255,.94);
+  border-radius: 8px;
+  padding: 4px 7px;
+  font-weight: 800;
+}
 
 .pat-dots { background-image: radial-gradient(circle at 1.5px 1.5px, var(--s-line) 1.5px, transparent 0) !important; background-size: 22px 22px !important; background-color: var(--s-bg-c, #fff) !important; }
 .pat-grid { background-image: linear-gradient(var(--s-line) 1px, transparent 1px), linear-gradient(90deg, var(--s-line) 1px, transparent 1px) !important; background-size: 24px 24px !important; background-color: var(--s-bg-c, #fff) !important; }
