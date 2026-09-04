@@ -368,8 +368,8 @@ function renderSheet() {
 
   let html = crestHtml + `
     <header class="s-head">
-      <div class="s-tagrow"><span class="s-tag">расписание</span>${badge}</div>
       <h2 class="s-title" contenteditable="true" spellcheck="false" data-bind="title">${esc(state.title)}</h2>
+      <div class="s-tagrow"><span class="s-tag">расписание</span>${badge}</div>
       <div class="s-sub" contenteditable="true" spellcheck="false" data-bind="sub">${esc(state.sub)}</div>
     </header>
     ${extra}
@@ -1034,8 +1034,7 @@ function buildShowcase() {
     let mini = `<div class="mini-clip"><div class="sheet th-${t.id}">`;
     if (t.decor) mini += `<div class="s-decor">${[...t.decor].slice(0, 3).map((e) => `<i>${e}</i>`).join("")}</div>`;
     if (t.id === "ru-gold") mini += `<img class="s-crest" src="/img/crest-ru.svg" alt="" width="120" height="132">`;
-    mini += `<header class="s-head"><div class="s-tagrow"><span class="s-tag">расписание</span></div>
-      <h2 class="s-title">7 «Б»</h2><div class="s-sub">2026/27 учебный год</div></header>
+    mini += `<header class="s-head"><h2 class="s-title">7 «Б»</h2><div class="s-tagrow"><span class="s-tag">расписание</span></div><div class="s-sub">2026/27 учебный год</div></header>
       <div class="s-grid" style="grid-template-columns:52px repeat(5,1fr)">
       <div class="s-corner">урок</div>`;
     for (let d = 0; d < 5; d++) mini += `<div class="s-dayh">${DAY_NAMES[d]}</div>`;
