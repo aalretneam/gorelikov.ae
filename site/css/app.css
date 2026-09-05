@@ -189,6 +189,13 @@ footer.site a { text-decoration: none; }
 }
 .icon-btn svg { width: 18px; height: 18px; display: block; }
 button.icon-btn { padding: 0; }
+.icon-btn-rub {
+  font-family: Manrope, system-ui, sans-serif;
+  font-weight: 800;
+  font-size: 1.05rem;
+  line-height: 1;
+  letter-spacing: 0;
+}
 .foot-logo {
   font-family: Manrope, sans-serif; font-weight: 600; font-size: .86rem;
   color: var(--tx2); letter-spacing: 0;
