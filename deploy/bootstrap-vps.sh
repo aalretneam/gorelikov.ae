@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Первый залив Расписалки на чистый Ubuntu VPS (Beget и т.п.).
+# Первый залив Расписалки на чистый Ubuntu VPS Beget (159.194.227.211).
 # Запуск от root:
 #   bash deploy/bootstrap-vps.sh
 set -euo pipefail

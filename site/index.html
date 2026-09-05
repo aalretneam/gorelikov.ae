@@ -14,10 +14,8 @@
       k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)
     })(window, document, "script", "https://mc.yandex.ru/metrika/tag.js?id=112279782", "ym");
     ym(112279782, "init", {
-      ssr: true,
       webvisor: true,
       clickmap: true,
-      ecommerce: "dataLayer",
       referrer: document.referrer,
       url: location.href,
       accurateTrackBounce: true,
@@ -65,7 +63,7 @@
   "description": "Конструктор красивого расписания для школы и университета с экспортом в PNG."
 }
 </script>
-<link rel="stylesheet" href="/css/app.css?v=20260908a" />
+<link rel="stylesheet" href="/css/app.css?v=20260912" />
 </head>
 <body>
 
@@ -110,7 +108,12 @@
       <a class="logo foot-logo" href="/"><svg class="logo-mark" viewBox="22.765 101.148 231.971 72.043" width="46" height="14" aria-hidden="true" focusable="false"><path d="M 238.433 138.710 C 228.693 138.226 248.736 139.169 233.930 138.528 C 225.213 138.201 192.441 137.121 172.477 136.563 C 158.041 136.160 149.183 136.444 148.174 136.248 C 145.035 135.649 143.530 132.531 145.192 130.495 C 154.833 118.671 164.060 112.576 162.536 108.809 C 161.866 107.148 156.104 107.678 154.336 107.976 C 129.887 112.028 89.342 125.553 65.884 135.048 C 61.962 136.637 50.544 142.684 51.723 144.792 C 52.851 146.597 78.408 140.345 89.635 136.773 C 92.964 135.713 91.253 125.518 90.478 122.112 C 89.663 118.536 87.670 112.741 84.042 112.225 C 75.908 111.075 69.993 116.969 54.784 132.403 C 39.558 147.853 28.765 167.191 33.425 159.572"/></svg><span>© <span id="year"></span> gorelikov.ae</span></a>
       <div class="spacer"></div>
       <span id="statFooter"></span>
-      <a class="btn sm ghost" href="https://t.me/gorelikov" target="_blank" rel="noopener">@gorelikov</a>
+      <a class="icon-btn" href="https://t.me/gorelikov" target="_blank" rel="noopener" aria-label="Telegram">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>
+      </a>
+      <a class="icon-btn" href="mailto:info@gorelikov.ae" aria-label="Написать на info@gorelikov.ae">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4-8 5-8-5V6l8 5 8-5v2z"/></svg>
+      </a>
       <button class="btn sm ghost" type="button" data-donate>донат</button>
     </footer>
   </div>
@@ -135,17 +138,9 @@
         <div class="seg" id="modeSeg">
           <button type="button" data-mode="school">Школа</button>
           <button type="button" data-mode="uni">Универ</button>
+          <button type="button" data-mode="own">Свой</button>
         </div>
-        <label class="check" style="margin-top:10px"><input type="checkbox" id="dualChk" /> Две недели (числитель / знаменатель)</label>
-      </div>
-
-      <div class="grp">
-        <label>Шаблон</label>
-        <div class="chips" id="tplChips">
-          <button type="button" class="chip" data-tpl="school">пример школы</button>
-          <button type="button" class="chip" data-tpl="uni">пример универа</button>
-          <button type="button" class="chip" data-tpl="empty">пустое</button>
-        </div>
+        <label class="check" style="margin-top:10px"><input type="checkbox" id="dualChk" /> Две недели (чётная / нечётная)</label>
       </div>
 
       <div class="grp desktop-only">
@@ -170,7 +165,7 @@
           <button type="button" id="rowMinus">−</button>
           <b id="rowCount">7</b>
           <button type="button" id="rowPlus">+</button>
-          <span>уроков</span>
+          <span id="slotWordLabel">уроков</span>
         </div>
         <div class="slot-btns">
           <button class="btn sm" type="button" data-add-slot="break">+ перемена</button>
@@ -247,11 +242,13 @@
 
     <main class="stage">
       <div class="week-tabs" id="weekTabs">
-        <button type="button" data-g="0">Неделя I · числитель</button>
-        <button type="button" data-g="1">Неделя II · знаменатель</button>
+        <button type="button" data-g="0">Чётная</button>
+        <button type="button" data-g="1">Нечётная</button>
       </div>
       <div id="dayEditor" class="day-editor"></div>
-      <div class="sheet" id="sheet"></div>
+      <div class="sheet-fit" id="sheetFit">
+        <div class="sheet" id="sheet"></div>
+      </div>
     </main>
   </div>
 </div>
@@ -286,6 +283,6 @@
     <button class="btn ghost" id="donateClose" type="button">Закрыть</button>
   </div>
 </div>
-<script src="/js/app.js?v=20260908a" defer></script>
+<script src="/js/app.js?v=20260912" defer></script>
 </body>
 </html>
