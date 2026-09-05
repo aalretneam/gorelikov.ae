@@ -63,7 +63,7 @@
   "description": "Конструктор красивого расписания для школы и университета с экспортом в PNG."
 }
 </script>
-<link rel="stylesheet" href="/css/app.css?v=20260912" />
+<link rel="stylesheet" href="/css/app.css?v=20260914" />
 </head>
 <body>
 
@@ -99,7 +99,7 @@
     <h2 class="section-title">Как это работает</h2>
     <div class="steps">
       <div class="step"><div class="n">1</div><b>Заполни прямо в таблице</b><p>Кликай по ячейкам и пиши предметы — верхняя строка название, нижняя — кабинет или учитель.</p></div>
-      <div class="step"><div class="n">2</div><b>Выбери или собери стиль</b><p>13 готовых тем или конструктор: свои цвета, шрифт, фон и стикеры. Предметы сами красятся по смыслу — или залей любой урок из палитры.</p></div>
+      <div class="step"><div class="n">2</div><b>Выбери или собери стиль</b><p>13 готовых тем или конструктор: свои цвета, шрифт, фото на фоне и эмодзи в углах. Предметы сами красятся по смыслу — или залей любой урок из палитры.</p></div>
       <div class="step"><div class="n">3</div><b>Скачай и поставь</b><p>PNG под обои, сторис, пост или печать А4. Ссылка откроет расписание у друга — он сможет сохранить или переделать.</p></div>
     </div>
 
@@ -171,7 +171,7 @@
           <button class="btn sm" type="button" data-add-slot="lunch">+ обед</button>
           <button class="btn sm" type="button" data-add-slot="walk">+ прогулка</button>
         </div>
-        <div class="hint">Потяни строку за ⋮⋮ — пальцем или мышкой. Перемена, завтрак и обед идут на всю ширину.</div>
+        <div class="hint">Потяни строку за ⋮⋮ — пальцем или мышкой. Карточку предмета тоже можно потянуть: она поменяется местами с другой. Перемена, завтрак и обед идут на всю ширину.</div>
         <div class="slot-list" id="slotList"></div>
       </div>
 
@@ -188,7 +188,16 @@
 
       <div class="grp">
         <div class="custom-panel" id="customPanel">
-          <div class="crow"><span>Фон</span><input type="color" id="cBg" value="#101322" /></div>
+          <div class="crow"><span>Цвет фона</span><input type="color" id="cBg" value="#101322" /></div>
+          <div class="crow"><span>Картинка</span>
+            <div class="crow-actions">
+              <span class="bg-thumb" id="cBgThumb" hidden></span>
+              <input type="file" id="cBgFile" accept="image/*" hidden />
+              <button class="btn sm" type="button" id="cBgPick">загрузить</button>
+              <button class="btn sm ghost" type="button" id="cBgClear" hidden>убрать</button>
+            </div>
+          </div>
+          <div class="hint" id="cBgHint">JPG или PNG. Попадёт в скачанный PNG и останется на этом компьютере. В короткую ссылку фото не влезет — у друга будет цвет.</div>
           <div class="crow"><span>Карточки</span><input type="color" id="cCard" value="#1c2136" /></div>
           <div class="crow"><span>Текст</span><input type="color" id="cInk" value="#f2f4ff" /></div>
           <div class="crow"><span>Акцент</span><input type="color" id="cAcc" value="#ffd166" /></div>
@@ -211,7 +220,8 @@
               <option value="pat-lines">Линейка</option>
             </select>
           </div>
-          <div class="crow"><span>Стикеры</span><input type="text" id="cEmoji" placeholder="✦ ★" maxlength="12" /></div>
+          <div class="crow"><span>Эмодзи на фоне</span><input type="text" id="cEmoji" placeholder="✦ ★" maxlength="12" /></div>
+          <div class="hint">До четырёх символов в углах листа. Пусто — без декора.</div>
         </div>
       </div>
 
@@ -281,6 +291,6 @@
     <button class="btn ghost" id="donateClose" type="button">Закрыть</button>
   </div>
 </div>
-<script src="/js/app.js?v=20260912" defer></script>
+<script src="/js/app.js?v=20260914" defer></script>
 </body>
 </html>

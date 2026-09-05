@@ -33,6 +33,20 @@ const THEMES = [
 ];
 const DAY_NAMES = ["пн", "вт", "ср", "чт", "пт", "сб", "вс"];
 const DAY_FULL = ["понедельник", "вторник", "среда", "четверг", "пятница", "суббота", "воскресенье"];
+function dayLabel(i) {
+  const t = state && state.dayLabels && String(state.dayLabels[i] || "").trim();
+  return t || DAY_NAMES[i];
+}
+function emojiChars(raw, max = 4) {
+  const s = String(raw || "");
+  let parts;
+  try {
+    parts = [...new Intl.Segmenter("ru", { granularity: "grapheme" }).segment(s)].map((x) => x.segment);
+  } catch {
+    parts = [...s];
+  }
+  return parts.filter((ch) => ch.trim()).slice(0, max);
+}
 const SCHOOL_TIMES = ["8:30", "9:25", "10:20", "11:20", "12:20", "13:15", "14:10", "15:05", "16:00", "16:55"];
 const UNI_TIMES = ["9:00", "10:40", "12:20", "14:30", "16:10", "17:50", "19:30", "21:00", "21:30", "22:00"];
 const LS_KEY = "raspisalka-v4";
@@ -131,6 +145,7 @@ function defaultState(mode = "school") {
       times: SCHOOL_TIMES.slice(),
       kinds: Array.from({ length: 7 }, () => "lesson"),
       labels: Array.from({ length: 7 }, () => ""),
+      dayLabels: ["", "", "", "", "", "", ""],
       dual: false,
       activeGrid: 0,
       cells: [emptyGrid(), emptyGrid()],
@@ -139,7 +154,7 @@ function defaultState(mode = "school") {
       teachers: [],
       custom: {
         bg: "#101322", card: "#1c2136", ink: "#f2f4ff", acc: "#ffd166",
-        font: "Manrope, sans-serif", rad: 16, pat: "", emoji: "✦"
+        font: "Manrope, sans-serif", rad: 16, pat: "", emoji: "", bgImage: ""
       },
       wm: true,
       fmt: "auto",
@@ -164,6 +179,7 @@ function defaultState(mode = "school") {
     times,
     kinds,
     labels,
+    dayLabels: ["", "", "", "", "", "", ""],
     dual: false,
     activeGrid: 0,
     cells: uni ? [fillLessons(UNI_DEMO, kinds), fillLessons(UNI_DEMO_B, kinds)] : [fillLessons(SCHOOL_DEMO, kinds), emptyGrid()],
@@ -172,7 +188,7 @@ function defaultState(mode = "school") {
     teachers: uni ? [] : SCHOOL_TEACHERS.map((t) => Object.assign({}, t)),
     custom: {
       bg: "#101322", card: "#1c2136", ink: "#f2f4ff", acc: "#ffd166",
-      font: "Manrope, sans-serif", rad: 16, pat: "", emoji: "✦"
+      font: "Manrope, sans-serif", rad: 16, pat: "", emoji: "", bgImage: ""
     },
     wm: true,
     fmt: "auto",
@@ -206,6 +222,16 @@ function hydrateState(s) {
   if (!Array.isArray(merged.teachers)) merged.teachers = [];
   if (merged.showInfo == null) merged.showInfo = false;
   if (!merged.custom || typeof merged.custom !== "object") merged.custom = base.custom;
+  else merged.custom = Object.assign({}, base.custom, merged.custom);
+  if (merged.custom.bgImage && !/^data:image\/(jpeg|jpg|png|webp);base64,/i.test(merged.custom.bgImage)) {
+    merged.custom.bgImage = "";
+  }
+  if (merged.custom.bgImage && merged.custom.bgImage.length > 400000) merged.custom.bgImage = "";
+  if (!Array.isArray(merged.dayLabels) || merged.dayLabels.length !== 7) {
+    merged.dayLabels = ["", "", "", "", "", "", ""];
+  } else {
+    merged.dayLabels = merged.dayLabels.map((x) => String(x || "").slice(0, 24));
+  }
   if (merged.theme === "ru-gold") merged.theme = "russia";
   else if (!THEMES.some((t) => t.id === merged.theme)) merged.theme = base.theme;
   if (!Array.isArray(merged.paints) || merged.paints.length < 2) merged.paints = [emptyGrid(), emptyGrid()];
@@ -228,7 +254,14 @@ function loadState() {
   } catch { return defaultState(); }
 }
 function save() {
-  try { localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch {}
+  try { localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch (err) {
+    if (state.custom && state.custom.bgImage) {
+      const img = state.custom.bgImage;
+      state.custom.bgImage = "";
+      try { localStorage.setItem(LS_KEY, JSON.stringify(state)); toast("Фото большое для браузера — выбери поменьше"); } catch {}
+      state.custom.bgImage = img;
+    }
+  }
 }
 
 const $ = (sel) => document.querySelector(sel);
@@ -547,8 +580,7 @@ function applyThemeTo(el, themeId) {
   el.removeAttribute("style");
   let decor = th.decor;
   if (themeId === "custom") {
-    const c = state.custom;
-    if (c.pat) el.classList.add(c.pat);
+    const c = state.custom || {};
     el.style.setProperty("--s-bg", c.bg);
     el.style.setProperty("--s-bg-c", c.bg);
     el.style.setProperty("--s-card", c.card);
@@ -559,7 +591,17 @@ function applyThemeTo(el, themeId) {
     el.style.setProperty("--s-rad", c.rad + "px");
     el.style.setProperty("--s-hfont", c.font);
     el.style.setProperty("--s-font", c.font);
-    if (!c.pat) el.style.background = c.bg;
+    if (c.bgImage) {
+      el.style.backgroundColor = c.bg;
+      el.style.backgroundImage = `url("${c.bgImage}")`;
+      el.style.backgroundSize = "cover";
+      el.style.backgroundPosition = "center";
+      el.style.backgroundRepeat = "no-repeat";
+    } else if (c.pat) {
+      el.classList.add(c.pat);
+    } else {
+      el.style.background = c.bg;
+    }
     decor = c.emoji;
   }
   return decor;
@@ -569,7 +611,7 @@ function renderSheet() {
   if (!sheet) return;
   const days = activeDayIdx();
   const uni = state.mode === "uni";
-  applyThemeTo(sheet, state.theme);
+  const decor = applyThemeTo(sheet, state.theme);
   const badge = state.dual
     ? `<span class="s-badge">${weekParity(state.activeGrid)}</span>` : "";
 
@@ -608,7 +650,7 @@ function renderSheet() {
     <div class="s-grid" style="--days:${days.length}">
       <div class="s-headrow">
         <div class="s-corner"></div>`;
-  for (const d of days) html += `<div class="s-dayh">${DAY_NAMES[d]}</div>`;
+  for (const d of days) html += `<div class="s-dayh" contenteditable="true" spellcheck="false" data-day-label="${d}">${esc(dayLabel(d))}</div>`;
   html += `</div>`;
   const g = grid() || emptyGrid();
   for (let r = 0; r < state.rows; r++) {
@@ -629,6 +671,10 @@ function renderSheet() {
     html += `</div>`;
   }
   html += `</div><footer class="s-foot">${LOGO_MARK}расписалка</footer>`;
+  if (state.theme === "custom") {
+    const chars = emojiChars(decor, 4);
+    if (chars.length) html = `<div class="s-decor">${chars.map((e) => `<i>${esc(e)}</i>`).join("")}</div>` + html;
+  }
   sheet.innerHTML = html;
   renderDayEditor();
   scheduleFit();
@@ -642,7 +688,7 @@ function renderDayEditor() {
     return;
   }
   const typing = root.contains(document.activeElement) &&
-    document.activeElement.closest(".s-cell, .s-span, .s-time, [data-bind]");
+    document.activeElement.closest(".s-cell, .s-span, .s-time, .s-dayh, [data-bind]");
   if (typing) return;
   ensureEditDay();
   const d = editDay;
@@ -651,7 +697,7 @@ function renderDayEditor() {
     const enabled = !!state.days[i];
     const active = enabled && i === d;
     const cls = `day-tab${enabled ? " on" : " off"}${active ? " active" : ""}`;
-    return `<button type="button" class="${cls}" data-edit-day="${i}" title="${DAY_FULL[i]}">${name}</button>`;
+    return `<button type="button" class="${cls}" data-edit-day="${i}" title="${DAY_FULL[i]}">${esc(dayLabel(i))}</button>`;
   }).join("");
   let slots = "";
   for (let r = 0; r < state.rows; r++) {
@@ -677,6 +723,7 @@ function renderDayEditor() {
     <div class="day-editor-head">
       <h2 class="s-title" contenteditable="true" spellcheck="false" data-bind="title">${esc(state.title)}</h2>
       <div class="s-sub" contenteditable="true" spellcheck="false" data-bind="sub">${esc(state.sub)}</div>
+      <div class="s-dayh" contenteditable="true" spellcheck="false" data-day-label="${d}">${esc(dayLabel(d))}</div>
     </div>
     <div class="day-tabs">${tabs}</div>
     <div class="day-slots">${slots}</div>
@@ -689,6 +736,12 @@ function onEditorInput(e) {
   if (el.dataset.bind) state[el.dataset.bind] = el.innerText.trim();
   else if (el.dataset.time !== undefined) state.times[+el.dataset.time] = el.innerText.trim();
   else if (el.dataset.span !== undefined) state.labels[+el.dataset.span] = el.innerText.trim();
+  else if (el.dataset.dayLabel !== undefined) {
+    if (!Array.isArray(state.dayLabels) || state.dayLabels.length !== 7) state.dayLabels = ["", "", "", "", "", "", ""];
+    const i = +el.dataset.dayLabel;
+    state.dayLabels[i] = el.innerText.replace(/\n+/g, " ").trim().slice(0, 24);
+    document.querySelectorAll(`[data-edit-day="${i}"]`).forEach((b) => { b.textContent = dayLabel(i); });
+  }
   else if (el.dataset.part && el.dataset.r !== undefined) {
     const cell = el.closest(".s-cell");
     if (!cell) return;
@@ -709,7 +762,7 @@ function onEditorInput(e) {
 }
 function onEditorPaste(e) {
   const part = e.target.dataset && e.target.dataset.part;
-  if (!part && !e.target.dataset.bind && e.target.dataset.time === undefined && e.target.dataset.span === undefined) return;
+  if (!part && !e.target.dataset.bind && e.target.dataset.time === undefined && e.target.dataset.span === undefined && e.target.dataset.dayLabel === undefined) return;
   e.preventDefault();
   let text = (e.clipboardData || window.clipboardData).getData("text/plain");
   if (part === "subj" && text.includes("\n")) {
@@ -720,6 +773,10 @@ function onEditorPaste(e) {
       note.textContent = lines.slice(1).join(" ").trim();
       note.dispatchEvent(new Event("input", { bubbles: true }));
     }
+    return;
+  }
+  if (e.target.dataset.dayLabel !== undefined) {
+    document.execCommand("insertText", false, text.replace(/\n+/g, " ").slice(0, 24));
     return;
   }
   document.execCommand("insertText", false, part ? text.replace(/\n+/g, " ") : text);
@@ -735,34 +792,36 @@ function onEditorKeydown(e) {
     e.target.blur();
     return;
   }
-  if (e.key === "Enter" && !e.shiftKey && (e.target.dataset.bind || e.target.dataset.time !== undefined || e.target.dataset.span !== undefined)) {
+  if (e.key === "Enter" && !e.shiftKey && (e.target.dataset.bind || e.target.dataset.time !== undefined || e.target.dataset.span !== undefined || e.target.dataset.dayLabel !== undefined)) {
     e.preventDefault();
     e.target.blur();
   }
 }
 function onEditorPointerDown(e) {
   const root = e.currentTarget;
-  if (paintBrush) {
-    const cell = e.target.closest?.(".s-cell");
-    if (cell && root.contains(cell) && e.button === 0) {
-      e.preventDefault();
-      e.stopPropagation();
-      const r = +cell.dataset.r;
-      const d = +cell.dataset.d;
-      if (!Number.isFinite(r) || !Number.isFinite(d)) return;
-      const val = (grid()?.[r] || [])[d] || "";
-      if (subjectCat(val) === "empty") {
-        toast("Сначала напиши предмет");
-        return;
-      }
-      setPaint(r, d, paintBrush === "auto" ? "" : paintBrush);
-      save();
-      applyCellLook(cell, val, r, d);
+  if (!paintBrush) return;
+  const cell = e.target.closest?.(".s-cell");
+  if (cell && root.contains(cell) && e.button === 0) {
+    e.preventDefault();
+    e.stopPropagation();
+    const r = +cell.dataset.r;
+    const d = +cell.dataset.d;
+    if (!Number.isFinite(r) || !Number.isFinite(d)) return;
+    const val = (grid()?.[r] || [])[d] || "";
+    if (subjectCat(val) === "empty") {
+      toast("Сначала напиши предмет");
       return;
     }
+    setPaint(r, d, paintBrush === "auto" ? "" : paintBrush);
+    save();
+    applyCellLook(cell, val, r, d);
   }
+}
+function onEditorClick(e) {
+  if (paintBrush) return;
+  if (document.body.classList.contains("is-sorting")) return;
   const cell = e.target.closest?.(".s-cell");
-  if (!cell || e.target.closest(".s-subj, .s-note")) return;
+  if (!cell || e.target.closest(".s-subj, .s-note, .grip")) return;
   cell.querySelector(".s-subj")?.focus();
 }
 function bindEditorRoot(root) {
@@ -771,6 +830,7 @@ function bindEditorRoot(root) {
   root.addEventListener("input", onEditorInput);
   root.addEventListener("paste", onEditorPaste);
   root.addEventListener("keydown", onEditorKeydown);
+  root.addEventListener("click", onEditorClick);
   root.addEventListener("pointerdown", onEditorPointerDown, true);
 }
 bindEditorRoot(sheet);
@@ -826,7 +886,7 @@ function renderControls() {
     const b = document.createElement("button");
     b.type = "button";
     b.className = "chip" + (state.days[i] ? " on" : "");
-    b.textContent = n;
+    b.textContent = dayLabel(i);
     b.title = DAY_FULL[i];
     b.onclick = () => {
       if (!setDayEnabled(i, !state.days[i])) return;
@@ -861,6 +921,15 @@ function renderControls() {
   setVal("#cInk", c.ink, "value"); setVal("#cAcc", c.acc, "value");
   setVal("#cFont", c.font, "value"); setVal("#cRad", c.rad, "value");
   setVal("#cPat", c.pat, "value"); setVal("#cEmoji", c.emoji, "value");
+  const thumb = $("#cBgThumb");
+  const clearBg = $("#cBgClear");
+  if (thumb) {
+    thumb.hidden = !c.bgImage;
+    thumb.style.backgroundImage = c.bgImage ? `url("${c.bgImage}")` : "";
+  }
+  if (clearBg) clearBg.hidden = !c.bgImage;
+  const patSel = $("#cPat");
+  if (patSel) patSel.disabled = !!c.bgImage;
   setVal("#fmtSel", state.fmt, "value");
   const wmChk = $("#wmChk");
   if (wmChk) wmChk.checked = !!state.wm;
@@ -1127,6 +1196,169 @@ bindSortable(dayEditor, { itemSel: ".day-slot", handleSel: ".grip", onMove: move
 bindSortable($("#slotList"), { itemSel: ".slot-row", handleSel: ".grip", onMove: moveRow });
 bindSortable($("#teacherList"), { itemSel: ".tcard", handleSel: ".grip", onMove: moveTeacher });
 
+function swapLessonCells(a, b) {
+  const r1 = +a.r, d1 = +a.d, r2 = +b.r, d2 = +b.d;
+  if (!Number.isFinite(r1) || !Number.isFinite(d1) || !Number.isFinite(r2) || !Number.isFinite(d2)) return;
+  if (r1 === r2 && d1 === d2) return;
+  const kind1 = (state.kinds && state.kinds[r1]) || "lesson";
+  const kind2 = (state.kinds && state.kinds[r2]) || "lesson";
+  if (kind1 !== "lesson" || kind2 !== "lesson") return;
+  const g = grid();
+  const p = paintsGrid();
+  if (!g) return;
+  if (!g[r1]) g[r1] = Array(7).fill("");
+  if (!g[r2]) g[r2] = Array(7).fill("");
+  const tmp = g[r1][d1] || "";
+  g[r1][d1] = g[r2][d2] || "";
+  g[r2][d2] = tmp;
+  if (!p[r1]) p[r1] = Array(7).fill("");
+  if (!p[r2]) p[r2] = Array(7).fill("");
+  const pt = p[r1][d1] || "";
+  p[r1][d1] = p[r2][d2] || "";
+  p[r2][d2] = pt;
+  save();
+  renderSheet();
+}
+function bindCellSwap() {
+  const THRESH = 10;
+  const HOLD = 380;
+  let session = null;
+
+  function liveCell(el) {
+    if (!el || !el.closest) return null;
+    const cell = el.closest(".s-cell[data-r][data-d]");
+    if (!cell) return null;
+    if (sheet && sheet.contains(cell)) return cell;
+    if (dayEditor && dayEditor.contains(cell)) return cell;
+    return null;
+  }
+  function cellFromPoint(x, y) {
+    const stack = document.elementsFromPoint ? document.elementsFromPoint(x, y) : [document.elementFromPoint(x, y)];
+    for (const el of stack) {
+      if (!el) continue;
+      if (el.classList && el.classList.contains("drag-ghost")) continue;
+      const cell = liveCell(el);
+      if (cell) return cell;
+    }
+    return null;
+  }
+  function paintGhost(ghost, src) {
+    const cs = getComputedStyle(src);
+    ghost.style.background = cs.backgroundColor;
+    ghost.style.color = cs.color;
+    ghost.style.border = `${cs.borderWidth} ${cs.borderStyle} ${cs.borderColor}`;
+    ghost.style.borderRadius = cs.borderRadius;
+    ghost.style.fontFamily = cs.fontFamily;
+    ghost.style.fontSize = cs.fontSize;
+    ghost.style.fontWeight = cs.fontWeight;
+    ghost.style.boxShadow = cs.boxShadow;
+    ghost.style.padding = cs.padding;
+    ghost.style.display = "flex";
+    ghost.style.flexDirection = "column";
+    ghost.style.justifyContent = "center";
+    ghost.style.alignItems = "center";
+    ghost.style.textAlign = "center";
+  }
+  function endSession() {
+    if (!session) return;
+    if (session.timer) clearTimeout(session.timer);
+    session.cell.classList.remove("is-drag", "is-lift");
+    document.querySelectorAll(".s-cell.is-over").forEach((n) => n.classList.remove("is-over"));
+    document.body.classList.remove("is-sorting");
+    if (session.ghost) session.ghost.remove();
+    try { session.cell.releasePointerCapture(session.pointerId); } catch (_) {}
+    session = null;
+  }
+
+  document.addEventListener("pointerdown", (e) => {
+    if (e.button !== 0) return;
+    if (paintBrush) return;
+    if (document.body.classList.contains("capturing") || document.body.classList.contains("printing")) return;
+    const cell = liveCell(e.target);
+    if (!cell) return;
+    if (e.target.closest(".grip")) return;
+    if (cell.contains(document.activeElement) && document.activeElement.isContentEditable) return;
+    const touch = e.pointerType === "touch" || e.pointerType === "pen";
+    session = {
+      pointerId: e.pointerId,
+      cell,
+      startX: e.clientX,
+      startY: e.clientY,
+      started: false,
+      armed: !touch,
+      ghost: null,
+      ox: 0,
+      oy: 0,
+      timer: null,
+      touch
+    };
+    if (touch) session.timer = setTimeout(() => {
+      if (!session || session.started) return;
+      session.armed = true;
+      session.cell.classList.add("is-lift");
+    }, HOLD);
+  });
+  window.addEventListener("pointermove", (e) => {
+    if (!session || e.pointerId !== session.pointerId) return;
+    const dist = Math.hypot(e.clientX - session.startX, e.clientY - session.startY);
+    if (!session.started) {
+      if (session.touch && !session.armed) {
+        if (dist > 8) endSession();
+        return;
+      }
+      if (!session.armed || dist < THRESH) return;
+      session.started = true;
+      if (session.timer) { clearTimeout(session.timer); session.timer = null; }
+      if (document.activeElement && typeof document.activeElement.blur === "function") document.activeElement.blur();
+      session.cell.classList.add("is-drag");
+      session.cell.classList.remove("is-lift");
+      document.body.classList.add("is-sorting");
+      const ghost = session.cell.cloneNode(true);
+      ghost.classList.add("drag-ghost");
+      ghost.classList.remove("is-drag", "is-over", "is-lift");
+      ghost.querySelectorAll("[contenteditable]").forEach((n) => n.removeAttribute("contenteditable"));
+      const r = session.cell.getBoundingClientRect();
+      ghost.style.width = r.width + "px";
+      ghost.style.height = r.height + "px";
+      ghost.style.left = r.left + "px";
+      ghost.style.top = r.top + "px";
+      session.ox = e.clientX - r.left;
+      session.oy = e.clientY - r.top;
+      paintGhost(ghost, session.cell);
+      document.body.appendChild(ghost);
+      session.ghost = ghost;
+      try { session.cell.setPointerCapture(e.pointerId); } catch (_) {}
+    }
+    e.preventDefault();
+    session.ghost.style.left = (e.clientX - session.ox) + "px";
+    session.ghost.style.top = (e.clientY - session.oy) + "px";
+    document.querySelectorAll(".s-cell.is-over").forEach((n) => n.classList.remove("is-over"));
+    const over = cellFromPoint(e.clientX, e.clientY);
+    if (over && over !== session.cell) over.classList.add("is-over");
+  }, { passive: false });
+  window.addEventListener("pointerup", (e) => {
+    if (!session || e.pointerId !== session.pointerId) return;
+    const { cell, started } = session;
+    const x = e.clientX, y = e.clientY;
+    endSession();
+    if (!started) return;
+    const blockClick = (ev) => { ev.preventDefault(); ev.stopPropagation(); };
+    window.addEventListener("click", blockClick, { capture: true, once: true });
+    setTimeout(() => window.removeEventListener("click", blockClick, true), 80);
+    const over = cellFromPoint(x, y);
+    if (!over || over === cell) return;
+    swapLessonCells(
+      { r: cell.dataset.r, d: cell.dataset.d },
+      { r: over.dataset.r, d: over.dataset.d }
+    );
+  });
+  window.addEventListener("pointercancel", (e) => {
+    if (!session || e.pointerId !== session.pointerId) return;
+    endSession();
+  });
+}
+bindCellSwap();
+
 document.querySelector("[data-add-slot]")?.parentElement?.addEventListener("click", (e) => {
   const b = e.target.closest("[data-add-slot]");
   if (b) addSlot(b.dataset.addSlot);
@@ -1202,9 +1434,87 @@ bindCustom("#cFont", "font"); bindCustom("#cRad", "rad", Number); bindCustom("#c
 listen("#fmtSel", "change", (e) => { state.fmt = e.target.value; save(); renderSheet(); });
 listen("#wmChk", "change", (e) => { state.wm = e.target.checked; save(); renderSheet(); });
 
+function compressBgImage(file) {
+  return new Promise((resolve, reject) => {
+    if (!file || !/^image\/(jpeg|jpg|png|webp|gif|bmp)$/i.test(file.type)) {
+      reject(new Error("type"));
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const max = 1400;
+      let w = img.naturalWidth || img.width;
+      let h = img.naturalHeight || img.height;
+      if (!w || !h) { reject(new Error("size")); return; }
+      if (w > max || h > max) {
+        const s = max / Math.max(w, h);
+        w = Math.round(w * s);
+        h = Math.round(h * s);
+      }
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      const fill = (state.custom && state.custom.bg) || "#101322";
+      const encode = (cw, ch, q) => {
+        canvas.width = cw;
+        canvas.height = ch;
+        ctx.fillStyle = fill;
+        ctx.fillRect(0, 0, cw, ch);
+        ctx.drawImage(img, 0, 0, cw, ch);
+        return canvas.toDataURL("image/jpeg", q);
+      };
+      let q = 0.72;
+      let data = encode(w, h, q);
+      while (data.length > 280000 && q > 0.42) {
+        q -= 0.08;
+        data = encode(w, h, q);
+      }
+      if (data.length > 280000) {
+        const s2 = Math.sqrt(280000 / data.length);
+        w = Math.max(420, Math.round(w * s2));
+        h = Math.max(420, Math.round(h * s2));
+        data = encode(w, h, 0.62);
+      }
+      if (data.length > 400000) { reject(new Error("heavy")); return; }
+      resolve(data);
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("read"));
+    };
+    img.src = url;
+  });
+}
+onClick("#cBgPick", () => $("#cBgFile")?.click());
+listen("#cBgFile", "change", async (e) => {
+  const file = e.target.files && e.target.files[0];
+  e.target.value = "";
+  if (!file) return;
+  try {
+    const data = await compressBgImage(file);
+    state.theme = "custom";
+    state.custom.bgImage = data;
+    save();
+    renderControls();
+    renderSheet();
+    toast("Фон поставлен");
+  } catch (err) {
+    toast(err && err.message === "heavy" ? "Картинка слишком тяжёлая — выбери поменьше" : "Нужна картинка JPG, PNG или WebP");
+  }
+});
+onClick("#cBgClear", () => {
+  if (!state.custom) return;
+  state.custom.bgImage = "";
+  save();
+  renderControls();
+  renderSheet();
+});
+
 function applyTemplate(kind, ask) {
   if (ask && !confirm("Заменить текущее расписание шаблоном?")) return;
   const keep = { theme: state.theme, custom: state.custom, wm: state.wm, fmt: state.fmt };
+  if (Array.isArray(state.dayLabels) && state.dayLabels.length === 7) keep.dayLabels = state.dayLabels;
   if (kind === "empty") {
     const mode = normalizeMode(state.mode);
     state = Object.assign(defaultState(mode), keep);
@@ -1418,8 +1728,13 @@ function b64urlToBytes(str) {
   const b64 = str.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((str.length + 3) % 4);
   return Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
 }
+function stateForShare() {
+  const s = JSON.parse(JSON.stringify(state));
+  if (s.custom) s.custom.bgImage = "";
+  return s;
+}
 async function encodeShare() {
-  const json = JSON.stringify(state);
+  const json = JSON.stringify(stateForShare());
   const raw = new TextEncoder().encode(json);
   if (typeof CompressionStream === "function") {
     const stream = new Blob([raw]).stream().pipeThrough(new CompressionStream("gzip"));
@@ -1472,9 +1787,11 @@ function applySharedState(shared) {
 }
 async function shareSchedule() {
   try {
+    const payload = stateForShare();
+    const hadBg = !!(state.custom && state.custom.bgImage);
     let url;
     try {
-      const id = await saveShareRemote(state);
+      const id = await saveShareRemote(payload);
       url = `${location.origin}/s/${id}`;
       history.replaceState(null, "", `/s/${id}`);
     } catch (e) {
@@ -1485,14 +1802,18 @@ async function shareSchedule() {
     counterHit("share");
     metrikaGoal("share", { theme: state.theme });
     markScheduleCreated("share");
+    const doneMsg = hadBg
+      ? "Ссылка без фото фона — у друга будет цвет. Картинка останется у тебя и в PNG."
+      : "Ссылка скопирована — кидай друзьям";
     if (navigator.share) {
       try {
         await navigator.share({ title: "Моё расписание", text: "Смотри, какое расписание я собрал(а) в Расписалке:", url });
+        if (hadBg) toast(doneMsg);
         return;
       } catch (err) { if (err.name === "AbortError") return; }
     }
     await navigator.clipboard.writeText(url);
-    toast("Ссылка скопирована — кидай друзьям");
+    toast(doneMsg);
   } catch (err) {
     console.error(err);
     toast("Не вышло создать ссылку");
