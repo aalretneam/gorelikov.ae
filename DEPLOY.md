@@ -1,20 +1,21 @@
-# Деплой Расписалки на VPS через GitHub
+# Деплой Расписалки на Beget
 
 Сайт статический. На сервер уходит содержимое `site/` в `/var/www/gorelikov.ae`.
 Пуш в `main` сам выкладывает через GitHub Actions.
 
-VPS тот же, что Palma / QuestQuest: **`208.76.221.48`**. Отдельный nginx-vhost, чужие сайты не трогаем.
+| Сервер | IP | Роль |
+|---|---|---|
+| **Beget** | `159.194.227.211` | **Прод gorelikov.ae** — DNS, nginx, SSL, деплой |
+| Vultr | `208.76.221.48` | Другой сервер (Palma / QuestQuest). Расписалку сюда не выкладывать |
 
-## 1. DNS
-
-У регистратора `gorelikov.ae`:
+## 1. DNS (панель Beget)
 
 | Тип | Имя | Значение |
-|-----|-----|----------|
-| A | `@` | `208.76.221.48` |
-| A | `www` | `208.76.221.48` |
+|---|---|---|
+| A | `@` | `159.194.227.211` |
+| A | `www` | `159.194.227.211` |
 
-Парковочные ANAME/CNAME на DonDominio — удалить, иначе корень будет скакать.
+У корня должен быть **один** A — Beget. Лишний A на Vultr или на парковку `5.101.152.161` ломает сайт и Вебмастер: запросы скачут между машинами. MX/TXT Beget для почты `info@gorelikov.ae` не трогать.
 
 ## 2. GitHub-репозиторий и секреты
 
@@ -22,37 +23,45 @@ VPS тот же, что Palma / QuestQuest: **`208.76.221.48`**. Отдельн�
 
 | Secret | Значение |
 |--------|----------|
-| `VPS_HOST` | `208.76.221.48` |
+| `VPS_HOST` | `159.194.227.211` (Beget, не Vultr) |
 | `VPS_USER` | `root` |
 | `VPS_SSH_KEY` | приватный ключ деплоя (целиком, включая `BEGIN`/`END`) |
 
-Публичную пару ключа добавь на VPS в `/root/.ssh/authorized_keys`.
+Публичную пару ключа добавь на Beget в `/root/.ssh/authorized_keys`.
 
 С Mac, один раз:
 
 ```bash
 ssh-keygen -t ed25519 -f ~/.ssh/gorelikov_deploy -N "" -C "gorelikov-github-actions"
-ssh-copy-id -i ~/.ssh/gorelikov_deploy.pub root@208.76.221.48
+ssh-copy-id -i ~/.ssh/gorelikov_deploy.pub root@159.194.227.211
 # приватный ~/.ssh/gorelikov_deploy — в секрет VPS_SSH_KEY
 ```
 
-## 3. Первый раз на VPS
+## 3. Первый раз на Beget
 
 Когда репозиторий уже на GitHub:
 
 ```bash
-ssh root@208.76.221.48
+ssh root@159.194.227.211
 git clone git@github.com:USER/gorelikov.ae.git /opt/gorelikov.ae
 bash /opt/gorelikov.ae/deploy/install.sh
 bash /opt/gorelikov.ae/deploy/setup-ssl.sh
 ```
 
 `install.sh` копирует `site/` в `/var/www/gorelikov.ae` и включает nginx.
-`setup-ssl.sh` выпускает Let's Encrypt (нужны верные A-записи и открытые 80/443).
+`setup-ssl.sh` выпускает Let's Encrypt (нужны верные A-записи на Beget и открытые 80/443).
 
 ## 4. Дальше
 
-Пуш в `main` → workflow **Deploy to VPS** → rsync в `/opt/gorelikov.ae` → `install.sh`.
+Пуш в `main` → workflow **Deploy to Beget** → rsync в `/opt/gorelikov.ae` → `install.sh`.
+
+Если секретов нет — вручную на Beget:
+
+```bash
+ssh root@159.194.227.211
+git -C /opt/gorelikov.ae pull origin main
+bash /opt/gorelikov.ae/deploy/install.sh
+```
 
 Короткие ссылки `https://gorelikov.ae/s/k4m2np8q` — gzip в `/var/lib/raspisalka/` (обычно 200–800 байт, одинаковые расписания не дублируются). Старые длинные `#s=...` открываются как раньше.
 
@@ -123,7 +132,7 @@ bash /opt/gorelikov.ae/deploy/setup-ssl.sh
 5. Регион: Россия. Оригинальные тексты — главная.
 6. Проверить индексацию и ошибки обхода.
 
-Код подтверждения Вебмастера в репозиторий не кладём, пока его нет на руках.
+Файл подтверждения: `site/yandex_3b28865268227439.html` → https://gorelikov.ae/yandex_3b28865268227439.html — не удалять.
 
 Живые цифры на главной: заходы и «создано расписаний» (abacus). Второе растёт один раз за сессию, когда человек сохранил, напечатал или отправил расписание. Это не Метрика — отдельный публичный счётчик.
 

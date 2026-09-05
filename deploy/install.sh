@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Статика gorelikov.ae на текущем VPS (рядом с Palma, отдельный nginx).
-# Запуск на VPS от root:
+# Статика gorelikov.ae на Beget (прод 159.194.227.211).
+# Запуск от root:
 #   sudo bash /opt/gorelikov.ae/deploy/install.sh
 set -euo pipefail
 

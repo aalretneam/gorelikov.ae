@@ -1,4 +1,4 @@
-name: Deploy to VPS
+name: Deploy to Beget
 
 on:
   push:
@@ -20,13 +20,14 @@ jobs:
         run: |
           if [ -z "$KEY" ] || [ -z "$HOST" ] || [ -z "$USER" ]; then
             echo "ready=no" >> "$GITHUB_OUTPUT"
-            echo "GitHub → VPS не настроен (нет VPS_SSH_KEY / VPS_HOST / VPS_USER)."
-            echo "Сайт на Beget обновляется вручную: git -C /opt/gorelikov.ae pull origin main && bash /opt/gorelikov.ae/deploy/install.sh"
+            echo "GitHub → Beget не настроен (нет VPS_SSH_KEY / VPS_HOST / VPS_USER)."
+            echo "VPS_HOST должен быть 159.194.227.211 (Beget), не Vultr 208.76.221.48."
+            echo "Вручную: ssh root@159.194.227.211 && git -C /opt/gorelikov.ae pull origin main && bash /opt/gorelikov.ae/deploy/install.sh"
           else
             echo "ready=yes" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Publish to VPS
+      - name: Publish to Beget
         if: steps.creds.outputs.ready == 'yes'
         uses: easingthemes/ssh-deploy@v5.0.3
         with:
