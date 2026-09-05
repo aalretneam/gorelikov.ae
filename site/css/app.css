@@ -1232,7 +1232,6 @@ body.is-sorting * { cursor: grabbing !important; }
   .s-num .grip { display: none !important; }
   .s-subj:empty::before, .s-note:empty::before { content: none !important; }
   .s-note:empty { display: none !important; min-height: 0; }
-  #sheet, .sheet { break-inside: avoid; page-break-inside: avoid; }
   body.mode-edit.compact #sheet.fmt-auto,
   .sheet.fmt-auto {
     width: 285mm !important; height: auto !important; min-height: 0 !important;
