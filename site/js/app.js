@@ -38,6 +38,7 @@ const UNI_TIMES = ["9:00", "10:40", "12:20", "14:30", "16:10", "17:50", "19:30",
 const LS_KEY = "raspisalka-v4";
 const MAX_ROWS = 16;
 const KIND_NAME = { lesson: "урок", break: "перемена", meal: "еда", walk: "прогулка" };
+const LOGO_MARK = '<svg class="s-foot-logo" viewBox="22.765 101.148 231.971 72.043" width="38" height="12" aria-hidden="true" focusable="false"><path d="M 238.433 138.710 C 228.693 138.226 248.736 139.169 233.930 138.528 C 225.213 138.201 192.441 137.121 172.477 136.563 C 158.041 136.160 149.183 136.444 148.174 136.248 C 145.035 135.649 143.530 132.531 145.192 130.495 C 154.833 118.671 164.060 112.576 162.536 108.809 C 161.866 107.148 156.104 107.678 154.336 107.976 C 129.887 112.028 89.342 125.553 65.884 135.048 C 61.962 136.637 50.544 142.684 51.723 144.792 C 52.851 146.597 78.408 140.345 89.635 136.773 C 92.964 135.713 91.253 125.518 90.478 122.112 C 89.663 118.536 87.670 112.741 84.042 112.225 C 75.908 111.075 69.993 116.969 54.784 132.403 C 39.558 147.853 28.765 167.191 33.425 159.572"/></svg>';
 
 const SCHOOL_DEMO = [
   ["Разговоры о важном", "Русский язык", "Алгебра", "История", "Английский", "Физра", ""],
@@ -535,7 +536,7 @@ function renderSheet() {
     }
     html += `</div>`;
   }
-  html += `</div><footer class="s-foot"><img class="s-foot-logo" src="/img/logo.png" alt="" width="16" height="16">расписалка</footer>`;
+  html += `</div><footer class="s-foot">${LOGO_MARK}расписалка</footer>`;
   sheet.innerHTML = html;
   renderDayEditor();
 }
@@ -1141,7 +1142,7 @@ const SHEET_PAINT_PROPS = [
   "backgroundColor", "backgroundImage", "backgroundSize", "backgroundPosition",
   "backgroundRepeat", "color", "borderTopColor", "borderRightColor",
   "borderBottomColor", "borderLeftColor", "outlineColor", "boxShadow",
-  "textShadow", "webkitTextFillColor", "caretColor"
+  "textShadow", "webkitTextFillColor", "caretColor", "stroke", "fill"
 ];
 let sheetPaintBackup = null;
 
@@ -1170,6 +1171,10 @@ function bakeSheetPaint(root) {
     if (cs.boxShadow && cs.boxShadow !== "none") el.style.boxShadow = cs.boxShadow;
     if (cs.textShadow && cs.textShadow !== "none") el.style.textShadow = cs.textShadow;
     if (cs.webkitTextFillColor) el.style.webkitTextFillColor = cs.webkitTextFillColor;
+    if (el instanceof SVGElement) {
+      if (cs.stroke && cs.stroke !== "none") el.style.stroke = cs.stroke;
+      if (cs.fill) el.style.fill = cs.fill;
+    }
   }
   sheetPaintBackup = saved;
 }
