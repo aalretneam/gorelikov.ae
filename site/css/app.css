@@ -594,7 +594,7 @@ body.is-sorting * { cursor: grabbing !important; }
   font-size: .72rem; font-weight: 700; color: var(--s-mut); opacity: .85;
 }
 .s-foot-logo {
-  width: 38px; height: 12px; display: block; flex: none;
+  width: 48px; height: 15px; display: block; flex: none;
   overflow: visible; color: inherit;
 }
 .sheet.fmt-phone .s-extra, .sheet.fmt-story .s-extra { grid-template-columns: 1fr; }
