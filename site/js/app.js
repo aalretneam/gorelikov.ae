@@ -345,7 +345,14 @@ function setVisitsStat(n) {
   if (foot) foot.textContent = `${fmtCount(n)} заходов${createdBit}`;
 }
 async function markScheduleCreated(source) {
-  metrikaGoal("schedule_created", { source });
+  try {
+    if (!sessionStorage.getItem("rm")) {
+      sessionStorage.setItem("rm", "1");
+      metrikaGoal("schedule_created", { source });
+    }
+  } catch {
+    metrikaGoal("schedule_created", { source });
+  }
   try {
     if (sessionStorage.getItem("rc")) return;
   } catch {}
@@ -1352,7 +1359,7 @@ async function downloadPng() {
     setTimeout(() => URL.revokeObjectURL(url), 2500);
     showDonateNudge();
     counterHit("download");
-    metrikaGoal("download");
+    metrikaGoal("download", { theme: state.theme, fmt: state.fmt || "auto" });
     markScheduleCreated("download");
   } catch (err) {
     console.error(err);
@@ -1380,6 +1387,8 @@ function printSheet() {
   document.body.classList.add("printing");
   resetSheetFit();
   bakeSheetPaint(sheet);
+  metrikaGoal("print", { theme: state.theme, fmt: state.fmt || "auto" });
+  markScheduleCreated("print");
   window.print();
 }
 onClick("#printBtn", printSheet);
@@ -1469,7 +1478,7 @@ async function shareSchedule() {
       url = `${location.origin}/#s=${token}`;
     }
     counterHit("share");
-    metrikaGoal("share");
+    metrikaGoal("share", { theme: state.theme });
     markScheduleCreated("share");
     if (navigator.share) {
       try {
@@ -1526,13 +1535,19 @@ function buildShowcase() {
 
 function openEditor(opts) {
   try {
+    const keepUrl = !!(opts && opts.keepUrl);
+    const prev = location.href;
     document.body.classList.add("mode-edit");
     const landing = $("#landing");
     if (landing) {
       landing.setAttribute("aria-hidden", "true");
       landing.inert = true;
     }
-    if (!opts || !opts.keepUrl) history.replaceState(null, "", "#edit");
+    if (!keepUrl) {
+      const alreadyEdit = location.hash === "#edit";
+      history.replaceState(null, "", "#edit");
+      if (!alreadyEdit) metrikaHit(location.href, prev);
+    }
     syncCompact();
     renderControls();
     renderSheet();
@@ -1551,7 +1566,9 @@ function openLanding() {
     landing.removeAttribute("aria-hidden");
     landing.inert = false;
   }
+  const prev = location.href;
   history.replaceState(null, "", "/");
+  metrikaHit(location.href, prev);
   window.scrollTo(0, 0);
 }
 onClick("#backBtn", openLanding);
@@ -1625,12 +1642,20 @@ document.addEventListener("keydown", (e) => {
   hideDonateNudge();
 });
 
-function metrikaGoal(name, params) {
+function metrikaCall(method, ...args) {
   const id = CONFIG.metrikaId;
   if (!id || !isProdHost()) return;
   try {
-    if (typeof window.ym === "function") window.ym(id, "reachGoal", name, params);
+    if (typeof window.ym === "function") window.ym(id, method, ...args);
   } catch {}
+}
+function metrikaGoal(name, params) {
+  metrikaCall("reachGoal", name, params);
+}
+function metrikaHit(url, referer) {
+  const opts = { title: document.title };
+  if (referer) opts.referer = referer;
+  metrikaCall("hit", url, opts);
 }
 
 async function boot() {

@@ -169,6 +169,25 @@ footer.site {
 }
 footer.site .spacer { flex: 1; }
 footer.site a { text-decoration: none; }
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  color: var(--tx2);
+  background: var(--p2);
+  border: 1px solid var(--line);
+  flex: none;
+  transition: transform .15s, border-color .15s, color .15s;
+}
+.icon-btn:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255,255,255,.22);
+  color: var(--tx);
+}
+.icon-btn svg { width: 18px; height: 18px; display: block; }
 .foot-logo {
   font-family: Manrope, sans-serif; font-weight: 600; font-size: .86rem;
   color: var(--tx2); letter-spacing: 0;
