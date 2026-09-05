@@ -73,7 +73,6 @@
     <nav class="nav">
       <a class="logo" href="/"><svg class="logo-mark" viewBox="22.765 101.148 231.971 72.043" width="58" height="18" aria-hidden="true" focusable="false"><path d="M 238.433 138.710 C 228.693 138.226 248.736 139.169 233.930 138.528 C 225.213 138.201 192.441 137.121 172.477 136.563 C 158.041 136.160 149.183 136.444 148.174 136.248 C 145.035 135.649 143.530 132.531 145.192 130.495 C 154.833 118.671 164.060 112.576 162.536 108.809 C 161.866 107.148 156.104 107.678 154.336 107.976 C 129.887 112.028 89.342 125.553 65.884 135.048 C 61.962 136.637 50.544 142.684 51.723 144.792 C 52.851 146.597 78.408 140.345 89.635 136.773 C 92.964 135.713 91.253 125.518 90.478 122.112 C 89.663 118.536 87.670 112.741 84.042 112.225 C 75.908 111.075 69.993 116.969 54.784 132.403 C 39.558 147.853 28.765 167.191 33.425 159.572"/></svg>расписалка</a>
       <div class="spacer"></div>
-      <button class="btn sm ghost" type="button" data-thanks>спасибо</button>
       <button class="btn sm primary" type="button" data-open-editor>Создать</button>
     </nav>
 
@@ -114,7 +113,7 @@
       <a class="icon-btn" href="mailto:info@gorelikov.ae" aria-label="Написать на info@gorelikov.ae">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4-8 5-8-5V6l8 5 8-5v2z"/></svg>
       </a>
-      <button class="btn sm ghost" type="button" data-donate>донат</button>
+      <button type="button" class="icon-btn icon-btn-rub" data-donate aria-label="Поддержать проект">₽</button>
     </footer>
   </div>
 </div>
@@ -128,7 +127,6 @@
     <button class="btn sm compact-only" id="previewBtn" type="button">предпросмотр</button>
     <button class="btn sm" id="shareBtn" type="button">ссылка</button>
     <button class="btn sm desktop-only" id="printBtnTop" type="button">печать</button>
-    <button class="btn sm ghost" type="button" data-thanks>спасибо</button>
   </div>
 
   <div class="workspace">
@@ -273,8 +271,8 @@
 
 <div class="modal" id="donateModal" hidden>
   <div class="modal-card donate-card">
-    <h3>Закинуть на кофе</h3>
-    <p>Расписалка без рекламы и регистрации. Если зашла — можно поддержать, чтобы вдохновить на аналогичные проекты.</p>
+    <h3>Поддержать проект.</h3>
+    <p>Расписалка без рекламы и регистрации. Если зашла - можно поддержать, чтобы покрыть хостинг и вдохновить на новые проекты.</p>
     <div class="donate-qr" id="donateQrBox" hidden>
       <img id="donateQr" src="/img/donate-qr.png" alt="QR для доната по СБП" width="220" height="220">
       <span class="donate-qr-cap">СБП — отсканируй в приложении банка</span>
