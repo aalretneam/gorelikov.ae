@@ -64,7 +64,7 @@
   "description": "Конструктор красивого расписания для школы и университета с экспортом в PNG."
 }
 </script>
-<link rel="stylesheet" href="/css/app.css?v=20260907b" />
+<link rel="stylesheet" href="/css/app.css?v=20260909" />
 </head>
 <body>
 
@@ -134,17 +134,9 @@
         <div class="seg" id="modeSeg">
           <button type="button" data-mode="school">Школа</button>
           <button type="button" data-mode="uni">Универ</button>
+          <button type="button" data-mode="own">Свой</button>
         </div>
-        <label class="check" style="margin-top:10px"><input type="checkbox" id="dualChk" /> Две недели (числитель / знаменатель)</label>
-      </div>
-
-      <div class="grp">
-        <label>Шаблон</label>
-        <div class="chips" id="tplChips">
-          <button type="button" class="chip" data-tpl="school">пример школы</button>
-          <button type="button" class="chip" data-tpl="uni">пример универа</button>
-          <button type="button" class="chip" data-tpl="empty">пустое</button>
-        </div>
+        <label class="check" style="margin-top:10px"><input type="checkbox" id="dualChk" /> Две недели (чётная / нечётная)</label>
       </div>
 
       <div class="grp desktop-only">
@@ -169,7 +161,7 @@
           <button type="button" id="rowMinus">−</button>
           <b id="rowCount">7</b>
           <button type="button" id="rowPlus">+</button>
-          <span>уроков</span>
+          <span id="slotWordLabel">уроков</span>
         </div>
         <div class="slot-btns">
           <button class="btn sm" type="button" data-add-slot="break">+ перемена</button>
@@ -246,11 +238,13 @@
 
     <main class="stage">
       <div class="week-tabs" id="weekTabs">
-        <button type="button" data-g="0">Неделя I · числитель</button>
-        <button type="button" data-g="1">Неделя II · знаменатель</button>
+        <button type="button" data-g="0">Чётная</button>
+        <button type="button" data-g="1">Нечётная</button>
       </div>
       <div id="dayEditor" class="day-editor"></div>
-      <div class="sheet" id="sheet"></div>
+      <div class="sheet-fit" id="sheetFit">
+        <div class="sheet" id="sheet"></div>
+      </div>
     </main>
   </div>
 </div>
@@ -285,6 +279,6 @@
     <button class="btn ghost" id="donateClose" type="button">Закрыть</button>
   </div>
 </div>
-<script src="/js/app.js?v=20260907b" defer></script>
+<script src="/js/app.js?v=20260909" defer></script>
 </body>
 </html>

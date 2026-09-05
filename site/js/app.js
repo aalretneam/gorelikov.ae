@@ -107,7 +107,44 @@ function padKinds(n, kinds, labels, times, fallbackTimes) {
   while (t.length < n) t.push(fallbackTimes[t.length] || "");
   return { kinds: k.slice(0, n), labels: l.slice(0, n), times: t.slice(0, Math.max(n, 10)) };
 }
+function normalizeMode(mode) {
+  return mode === "uni" || mode === "own" ? mode : "school";
+}
+function slotWord(mode = state && state.mode) {
+  return mode === "uni" ? "пара" : "урок";
+}
+function weekParity(idx) {
+  return idx === 0 ? "чётная" : "нечётная";
+}
 function defaultState(mode = "school") {
+  mode = normalizeMode(mode);
+  if (mode === "own") {
+    return {
+      v: 4,
+      mode,
+      theme: "minimal",
+      title: "Моё расписание",
+      sub: "",
+      days: [1, 1, 1, 1, 1, 0, 0],
+      rows: 7,
+      times: SCHOOL_TIMES.slice(),
+      kinds: Array.from({ length: 7 }, () => "lesson"),
+      labels: Array.from({ length: 7 }, () => ""),
+      dual: false,
+      activeGrid: 0,
+      cells: [emptyGrid(), emptyGrid()],
+      showInfo: false,
+      info: [],
+      teachers: [],
+      custom: {
+        bg: "#101322", card: "#1c2136", ink: "#f2f4ff", acc: "#ffd166",
+        font: "Manrope, sans-serif", rad: 16, pat: "", emoji: "✦"
+      },
+      wm: true,
+      fmt: "auto",
+      paints: [emptyGrid(), emptyGrid()]
+    };
+  }
   const uni = mode === "uni";
   const kinds = uni ? ["lesson","lesson","break","lesson","lesson"] : SCHOOL_KINDS.slice();
   const labels = uni ? ["","","Перерыв","",""] : SCHOOL_LABELS.slice();
@@ -145,8 +182,8 @@ function defaultState(mode = "school") {
 let state = loadState();
 function hydrateState(s) {
   if (!s || typeof s !== "object" || ![2, 3, 4].includes(s.v)) return null;
-  const base = defaultState(s.mode || "school");
-  const merged = Object.assign(base, s, { v: 4 });
+  const base = defaultState(s.mode);
+  const merged = Object.assign(base, s, { v: 4, mode: normalizeMode(s.mode) });
   merged.rows = Math.max(1, Math.min(MAX_ROWS, Number(merged.rows) || base.rows));
   if (!Array.isArray(merged.days) || merged.days.length !== 7) merged.days = base.days.slice();
   if (!Array.isArray(merged.cells) || merged.cells.length < 2) merged.cells = base.cells;
@@ -321,7 +358,7 @@ async function markScheduleCreated(source) {
 
 const sheet = $("#sheet");
 const dayEditor = $("#dayEditor");
-const COMPACT_MQ = window.matchMedia("(max-width: 1200px)");
+const COMPACT_MQ = window.matchMedia("(max-width: 720px)");
 function isCompact() { return COMPACT_MQ.matches; }
 let editDay = 0;
 
@@ -338,13 +375,61 @@ function ensureEditDay() {
   if (!days.includes(editDay)) editDay = days[0];
 }
 
-function sheetHome() {
-  const stage = $(".stage");
-  if (sheet && stage && sheet.parentElement !== stage) stage.appendChild(sheet);
+function resetSheetFit() {
   if (sheet) {
     sheet.style.transform = "";
+    sheet.style.transformOrigin = "";
     sheet.style.marginBottom = "";
   }
+  const wrap = $("#sheetFit");
+  if (wrap) wrap.style.height = "";
+}
+function sheetHome() {
+  const wrap = $("#sheetFit") || $(".stage");
+  if (sheet && wrap && sheet.parentElement !== wrap) wrap.appendChild(sheet);
+  resetSheetFit();
+  scheduleFit();
+}
+function fitSheetToStage() {
+  const wrap = $("#sheetFit");
+  if (!sheet || !wrap) return;
+  if (document.body.classList.contains("preview-open")) {
+    scalePreview();
+    return;
+  }
+  if (
+    !document.body.classList.contains("mode-edit") ||
+    document.body.classList.contains("capturing") ||
+    document.body.classList.contains("printing") ||
+    document.body.classList.contains("compact")
+  ) {
+    resetSheetFit();
+    return;
+  }
+  sheet.style.transform = "none";
+  wrap.style.height = "";
+  const naturalW = sheet.offsetWidth;
+  const naturalH = sheet.offsetHeight;
+  if (!naturalW || !naturalH) return;
+  const availW = Math.max(160, wrap.clientWidth - 32);
+  const scale = Math.min(1, Math.max(0.2, availW / naturalW));
+  if (scale >= 0.995) {
+    sheet.style.transform = "";
+    wrap.style.height = "";
+    return;
+  }
+  sheet.style.transformOrigin = "top center";
+  sheet.style.transform = `scale(${scale})`;
+  const nextH = Math.ceil(naturalH * scale) + "px";
+  if (wrap.style.height !== nextH) wrap.style.height = nextH;
+}
+let fitRaf = 0;
+function scheduleFit() {
+  cancelAnimationFrame(fitRaf);
+  fitRaf = requestAnimationFrame(() => {
+    fitSheetToStage();
+    fitRaf = requestAnimationFrame(fitSheetToStage);
+  });
 }
 
 function scalePreview() {
@@ -478,7 +563,7 @@ function renderSheet() {
   const uni = state.mode === "uni";
   applyThemeTo(sheet, state.theme);
   const badge = state.dual
-    ? `<span class="s-badge">${state.activeGrid === 0 ? "числитель" : "знаменатель"}</span>` : "";
+    ? `<span class="s-badge">${weekParity(state.activeGrid)}</span>` : "";
 
   let extra = "";
   if (state.showInfo) {
@@ -538,6 +623,7 @@ function renderSheet() {
   html += `</div><footer class="s-foot"><img class="s-foot-logo" src="/img/logo.png" alt="" width="16" height="16">расписалка</footer>`;
   sheet.innerHTML = html;
   renderDayEditor();
+  scheduleFit();
 }
 
 function renderDayEditor() {
@@ -713,6 +799,7 @@ COMPACT_MQ.addEventListener("change", () => {
 });
 window.addEventListener("resize", () => {
   if (document.body.classList.contains("preview-open")) scalePreview();
+  else if (document.body.classList.contains("mode-edit")) scheduleFit();
 });
 
 function renderControls() {
@@ -720,6 +807,8 @@ function renderControls() {
   syncCompact();
   document.querySelectorAll("#modeSeg button").forEach((b) =>
     b.classList.toggle("active", b.dataset.mode === state.mode));
+  const slotWordLabel = $("#slotWordLabel");
+  if (slotWordLabel) slotWordLabel.textContent = state.mode === "uni" ? "пар" : "уроков";
   const rowsLabel = $("#rowsLabel");
   if (rowsLabel) rowsLabel.textContent = "Строки расписания";
   const chips = $("#dayChips");
@@ -802,13 +891,13 @@ document.addEventListener("keydown", (e) => {
 listen("#modeSeg", "click", (e) => {
   const b = e.target.closest("button");
   if (!b || b.dataset.mode === state.mode) return;
-  applyTemplate(b.dataset.mode === "uni" ? "uni" : "school", false);
+  applyTemplate(b.dataset.mode, false);
 });
 listen("#dualChk", "change", (e) => {
   state.dual = e.target.checked;
   if (!state.dual) state.activeGrid = 0;
   save(); renderControls(); renderSheet();
-  if (state.dual) toast("Вверху вкладки недель I и II");
+  if (state.dual) toast("Вверху вкладки: чётная и нечётная");
 });
 listen("#weekTabs", "click", (e) => {
   const b = e.target.closest("button");
@@ -852,9 +941,9 @@ function renderSlots() {
     const row = document.createElement("div");
     row.className = "slot-row";
     row.dataset.row = String(i);
-    row.innerHTML = `<span class="grip" title="Перетащить" data-drag-row="${i}">⋮⋮</span><b>${i + 1}</b><span>${esc(state.times[i] || "")} · ${esc(kind === "lesson" ? (state.mode === "uni" ? "пара" : "урок") : (state.labels[i] || KIND_NAME[kind]))}</span>
+    row.innerHTML = `<span class="grip" title="Перетащить" data-drag-row="${i}">⋮⋮</span><b>${i + 1}</b><span>${esc(state.times[i] || "")} · ${esc(kind === "lesson" ? slotWord() : (state.labels[i] || KIND_NAME[kind]))}</span>
       <select data-kind="${i}">
-        <option value="lesson"${kind === "lesson" ? " selected" : ""}>${state.mode === "uni" ? "пара" : "урок"}</option>
+        <option value="lesson"${kind === "lesson" ? " selected" : ""}>${slotWord()}</option>
         <option value="break"${kind === "break" ? " selected" : ""}>перемена</option>
         <option value="meal"${kind === "meal" ? " selected" : ""}>завтрак/обед</option>
         <option value="walk"${kind === "walk" ? " selected" : ""}>прогулка</option>
@@ -1109,31 +1198,26 @@ function applyTemplate(kind, ask) {
   if (ask && !confirm("Заменить текущее расписание шаблоном?")) return;
   const keep = { theme: state.theme, custom: state.custom, wm: state.wm, fmt: state.fmt };
   if (kind === "empty") {
-    const mode = state.mode;
+    const mode = normalizeMode(state.mode);
     state = Object.assign(defaultState(mode), keep);
-    state.cells = [emptyGrid(), emptyGrid()];
-    state.kinds = Array.from({ length: 7 }, () => "lesson");
-    state.labels = Array.from({ length: 7 }, () => "");
-    state.rows = 7;
-    state.times = (mode === "uni" ? UNI_TIMES : SCHOOL_TIMES).slice();
-    state.showInfo = false;
-    state.info = [];
-    state.teachers = [];
-    state.paints = [emptyGrid(), emptyGrid()];
-    state.title = mode === "uni" ? "Моя группа" : "Мой класс";
-  } else if (kind === "uni") {
-    state = Object.assign(defaultState("uni"), keep);
+    if (mode !== "own") {
+      state.cells = [emptyGrid(), emptyGrid()];
+      state.kinds = Array.from({ length: 7 }, () => "lesson");
+      state.labels = Array.from({ length: 7 }, () => "");
+      state.rows = 7;
+      state.times = (mode === "uni" ? UNI_TIMES : SCHOOL_TIMES).slice();
+      state.showInfo = false;
+      state.info = [];
+      state.teachers = [];
+      state.paints = [emptyGrid(), emptyGrid()];
+      state.title = mode === "uni" ? "Моя группа" : "Мой класс";
+    }
   } else {
-    state = Object.assign(defaultState("school"), keep);
+    state = Object.assign(defaultState(kind), keep);
   }
   save(); renderControls(); renderSheet();
-  toast(kind === "empty" ? "Чистый лист" : "Шаблон подставлен — правь прямо в таблице");
+  toast(kind === "empty" || kind === "own" ? "Чистый лист" : "Пример подставлен — правь прямо в таблице");
 }
-listen("#tplChips", "click", (e) => {
-  const b = e.target.closest("[data-tpl]");
-  if (!b) return;
-  applyTemplate(b.dataset.tpl, true);
-});
 onClick("#resetBtn", () => applyTemplate("empty", true));
 
 const FMT_TARGET = { auto: 3, phone: 3, story: 3, post: 3, a4: 4 };
@@ -1198,6 +1282,7 @@ async function renderCanvas() {
   document.activeElement?.blur?.();
   const keepPreview = document.body.classList.contains("preview-open");
   document.body.classList.add("capturing");
+  resetSheetFit();
   sheet.style.transform = "none";
   sheet.classList.add("exporting");
   bakeSheetPaint(sheet);
@@ -1225,6 +1310,12 @@ async function renderCanvas() {
           clone.style.top = "auto";
           clone.style.zIndex = "1";
         }
+        const fit = doc.getElementById("sheetFit");
+        if (fit) {
+          fit.style.height = "auto";
+          fit.style.overflow = "visible";
+          fit.style.transform = "none";
+        }
       }
     });
   } finally {
@@ -1251,7 +1342,7 @@ async function downloadPng() {
     });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    const suffix = state.dual ? (state.activeGrid === 0 ? "-nedelya1" : "-nedelya2") : "";
+    const suffix = state.dual ? (state.activeGrid === 0 ? "-chetnaya" : "-nechetnaya") : "";
     const themeFile = state.theme === "minecraft" ? "pixel" : state.theme === "potter" ? "academy" : state.theme;
     a.download = `raspisanie-${themeFile}${suffix}.png`;
     a.href = url;
@@ -1287,6 +1378,7 @@ function printSheet() {
   const size = state.fmt === "a4" ? "A4 portrait" : "A4 landscape";
   tag.textContent = `@media print { @page { size: ${size}; margin: 4mm; } }`;
   document.body.classList.add("printing");
+  resetSheetFit();
   bakeSheetPaint(sheet);
   window.print();
 }
@@ -1294,11 +1386,13 @@ onClick("#printBtn", printSheet);
 onClick("#printBtnTop", printSheet);
 window.addEventListener("beforeprint", () => {
   document.body.classList.add("printing");
+  resetSheetFit();
   bakeSheetPaint(sheet);
 });
 window.addEventListener("afterprint", () => {
   document.body.classList.remove("printing");
   restoreSheetPaint();
+  scheduleFit();
 });
 
 function bytesToB64url(bytes) {
@@ -1542,6 +1636,12 @@ function metrikaGoal(name, params) {
 async function boot() {
   try {
     syncCompact();
+    const stage = $(".stage");
+    if (stage && typeof ResizeObserver === "function") {
+      new ResizeObserver(() => {
+        if (document.body.classList.contains("mode-edit")) scheduleFit();
+      }).observe(stage);
+    }
     const y = $("#year");
     if (y) y.textContent = new Date().getFullYear();
     buildShowcase();
