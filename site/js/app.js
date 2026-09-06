@@ -412,7 +412,13 @@ let editDay = 0;
 function syncCompact() {
   const on = isCompact();
   document.body.classList.toggle("compact", on);
-  document.querySelectorAll("#fmtSel option.fmt-extra").forEach((o) => { o.hidden = on; });
+  document.querySelectorAll("#fmtSel option.fmt-extra").forEach((o) => { o.hidden = true; });
+  if (state && (state.fmt === "phone" || state.fmt === "story" || state.fmt === "post")) {
+    state.fmt = "auto";
+    save();
+    const sel = $("#fmtSel");
+    if (sel) sel.value = "auto";
+  }
   if (!on) closePreview(true);
 }
 
