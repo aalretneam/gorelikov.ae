@@ -196,6 +196,10 @@ footer.site a { text-decoration: none; }
 }
 .icon-btn svg { width: 18px; height: 18px; display: block; }
 button.icon-btn { padding: 0; }
+.site-theme-btn { flex-shrink: 0; }
+.site-theme-btn .icon-moon { display: none; }
+html.site-light .site-theme-btn .icon-sun { display: none; }
+html.site-light .site-theme-btn .icon-moon { display: block; }
 .icon-btn-rub {
   font-family: Manrope, system-ui, sans-serif;
   font-weight: 800;
@@ -1135,6 +1139,89 @@ body.is-sorting * { cursor: grabbing !important; }
   padding: 12px 8px 28px;
   -webkit-overflow-scrolling: touch;
 }
+
+html.site-light {
+  color-scheme: light;
+  --bg: #f3f5fb;
+  --p1: #ffffff;
+  --p2: #e8ecf6;
+  --line: rgba(20, 28, 48, .12);
+  --tx: #141824;
+  --tx2: #5c657a;
+}
+html.site-light .btn:hover,
+html.site-light .icon-btn:hover {
+  border-color: rgba(20, 28, 48, .28);
+}
+html.site-light .blob { opacity: .18; }
+html.site-light .blob.b3 { opacity: .12; }
+html.site-light .hero .pill {
+  color: #5b21b6;
+  background: rgba(139, 92, 246, .1);
+  border-color: rgba(139, 92, 246, .28);
+}
+html.site-light .stat {
+  background: rgba(255, 255, 255, .78);
+}
+html.site-light .stat.live {
+  background: linear-gradient(180deg, rgba(139, 92, 246, .12), rgba(255, 255, 255, .82));
+  box-shadow: 0 10px 28px rgba(139, 92, 246, .12);
+}
+html.site-light .mini-card:hover {
+  box-shadow: 0 16px 40px rgba(20, 28, 48, .12);
+}
+html.site-light .topbar {
+  background: rgba(255, 255, 255, .88);
+}
+html.site-light .chip.on,
+html.site-light .week-tabs button.active,
+html.site-light .day-tab.active {
+  background: rgba(8, 145, 178, .12);
+  border-color: rgba(8, 145, 178, .42);
+  color: #0e7490;
+}
+html.site-light .tbtn .sw i { border-color: rgba(20, 28, 48, .14); }
+html.site-light .psw { box-shadow: inset 0 0 0 1px rgba(20, 28, 48, .16); }
+html.site-light .psw.on { border-color: #141824; }
+html.site-light .psw.auto {
+  color: #1f2937;
+  background: #e5e7eb;
+}
+html.site-light .stage {
+  background:
+    radial-gradient(circle at 1px 1px, rgba(20, 28, 48, .07) 1px, transparent 0) 0 0 / 26px 26px,
+    var(--bg);
+}
+html.site-light .subject-tray {
+  background: color-mix(in srgb, var(--p2) 72%, #fff);
+  --s-acc: #0e7490;
+}
+html.site-light .tray-chip.on { box-shadow: 0 0 0 2px #0e7490; }
+html.site-light .s-num .grip {
+  color: #4b5563;
+  background: #fff;
+  border-color: rgba(20, 28, 48, .12);
+  box-shadow: 0 2px 10px rgba(20, 28, 48, .12);
+}
+html.site-light #toast,
+html.site-light #donateNudge {
+  background: #fff;
+  box-shadow: 0 16px 50px rgba(20, 28, 48, .16);
+}
+html.site-light .modal {
+  background: rgba(20, 28, 48, .38);
+}
+html.site-light .modal-card {
+  background: #fff;
+  box-shadow: 0 30px 80px rgba(20, 28, 48, .16);
+}
+html.site-light .preview-scrim {
+  background: rgba(243, 245, 251, .96);
+}
+html.site-light .preview-bar {
+  background: rgba(255, 255, 255, .95);
+}
+html.site-light ::placeholder { color: var(--tx2); opacity: .85; }
 
 @media (max-width: 1100px) {
   body.mode-edit:not(.compact) { overflow: auto; }
