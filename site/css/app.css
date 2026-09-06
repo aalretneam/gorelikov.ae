@@ -196,7 +196,7 @@ footer.site a { text-decoration: none; }
 }
 .icon-btn svg { width: 18px; height: 18px; display: block; }
 button.icon-btn { padding: 0; }
-.site-theme-btn { flex-shrink: 0; }
+.site-theme-btn { flex-shrink: 0; width: 38px; height: 38px; min-width: 38px; }
 .site-theme-btn .icon-moon { display: none; }
 html.site-light .site-theme-btn .icon-sun { display: none; }
 html.site-light .site-theme-btn .icon-moon { display: block; }
@@ -227,6 +227,13 @@ body.mode-edit #editor { display: flex; }
 }
 .topbar .logo { font-size: .92rem; }
 .topbar .spacer { flex: 1; }
+.topbar-start, .topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.topbar-actions { flex-wrap: wrap; }
 .workspace { flex: 1; display: grid; grid-template-columns: 330px 1fr; min-height: 0; }
 .side { overflow-y: auto; padding: 16px; border-right: 1px solid var(--line); background: var(--p1); }
 .grp { margin-bottom: 22px; }
@@ -1260,6 +1267,13 @@ html.site-light ::placeholder { color: var(--tx2); opacity: .85; }
     overflow: visible;
   }
   body.mode-edit.compact .topbar { position: sticky; top: 0; z-index: 50; }
+  body.mode-edit.compact .topbar .spacer { display: none; }
+  body.mode-edit.compact .topbar-start {
+    flex: 1 1 100%;
+  }
+  body.mode-edit.compact .topbar-start .site-theme-btn {
+    margin-left: auto;
+  }
   body.mode-edit.compact .desktop-only,
   body.mode-edit.compact .desktop-fmt-hint { display: none !important; }
   body.mode-edit.compact .compact-only {
@@ -1338,7 +1352,7 @@ html.site-light ::placeholder { color: var(--tx2); opacity: .85; }
     grid-template-columns: repeat(7, minmax(0, 1fr));
     gap: 4px;
     padding: 8px 2px 10px;
-    position: sticky; top: 52px; z-index: 8;
+    position: sticky; top: 108px; z-index: 8;
     background: var(--bg);
   }
   .day-tab {
@@ -1395,6 +1409,7 @@ html.site-light ::placeholder { color: var(--tx2); opacity: .85; }
 @media (max-width: 940px) {
   .topbar .btn span.lbl { display: none; }
   .nav { gap: 8px; }
+  .nav .site-theme-btn { width: 36px; height: 36px; min-width: 36px; }
   .nav .btn { padding: 8px 11px; font-size: .78rem; border-radius: 10px; }
   .nav .logo { font-size: .88rem; }
   .hero { padding-top: 28px; }
