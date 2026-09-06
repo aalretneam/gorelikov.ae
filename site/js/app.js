@@ -54,6 +54,12 @@ const MAX_ROWS = 16;
 const KIND_NAME = { lesson: "урок", break: "перемена", meal: "еда", walk: "прогулка" };
 const LOGO_MARK = '<svg class="s-foot-logo" viewBox="22.765 101.148 231.971 72.043" width="48" height="15" aria-hidden="true" focusable="false"><path d="M 238.433 138.710 C 228.693 138.226 248.736 139.169 233.930 138.528 C 225.213 138.201 192.441 137.121 172.477 136.563 C 158.041 136.160 149.183 136.444 148.174 136.248 C 145.035 135.649 143.530 132.531 145.192 130.495 C 154.833 118.671 164.060 112.576 162.536 108.809 C 161.866 107.148 156.104 107.678 154.336 107.976 C 129.887 112.028 89.342 125.553 65.884 135.048 C 61.962 136.637 50.544 142.684 51.723 144.792 C 52.851 146.597 78.408 140.345 89.635 136.773 C 92.964 135.713 91.253 125.518 90.478 122.112 C 89.663 118.536 87.670 112.741 84.042 112.225 C 75.908 111.075 69.993 116.969 54.784 132.403 C 39.558 147.853 28.765 167.191 33.425 159.572"/></svg>';
 
+const OWN_SUBJECTS = [
+  "Русский язык", "Литература", "Алгебра", "Геометрия",
+  "Английский", "История", "Обществознание", "География",
+  "Физика", "Химия", "Биология", "Информатика",
+  "Физра", "ИЗО", "Музыка", "Технология", "ОБЖ", "Классный час"
+];
 const SCHOOL_DEMO = [
   ["Разговоры о важном", "Русский язык", "Алгебра", "История", "Английский", "Физра", ""],
   ["Русский язык\nкаб. 214", "Алгебра", "Физика\nкаб. 12", "Литература", "Физра", "Музыка", ""],
@@ -942,6 +948,7 @@ function renderControls() {
   renderTeachers();
   renderSlots();
   renderPalette();
+  renderSubjectTray();
   } catch (err) {
     console.error("renderControls", err);
   }
@@ -1359,6 +1366,189 @@ function bindCellSwap() {
 }
 bindCellSwap();
 
+const OWN_SUBJECTS_TRAY = OWN_SUBJECTS;
+let trayPick = null;
+function setTrayPick(name) {
+  trayPick = name || null;
+  document.body.classList.toggle("tray-pick", !!trayPick);
+  document.querySelectorAll(".tray-chip").forEach((ch) => {
+    ch.classList.toggle("on", !!(trayPick && ch.dataset.traySubj === trayPick));
+  });
+}
+function renderSubjectTray() {
+  const tray = $("#subjectTray");
+  const list = $("#subjectTrayList");
+  if (!tray || !list) return;
+  const on = state.mode === "own" && document.body.classList.contains("mode-edit");
+  tray.hidden = !on;
+  if (!on) {
+    setTrayPick(null);
+    return;
+  }
+  list.innerHTML = OWN_SUBJECTS_TRAY.map((name) => {
+    const cat = subjectCat(name);
+    return `<button type="button" class="tray-chip s-cell cat-${cat}" data-tray-subj="${esc(name)}">${esc(name)}</button>`;
+  }).join("");
+  if (trayPick) setTrayPick(trayPick);
+}
+function fillEmptyCell(r, d, name) {
+  const kind = (state.kinds && state.kinds[r]) || "lesson";
+  if (kind !== "lesson") return false;
+  const g = grid();
+  if (!g || !name) return false;
+  if (!g[r]) g[r] = Array(7).fill("");
+  const cur = g[r][d] || "";
+  if (subjectCat(cur) !== "empty") return false;
+  g[r][d] = name;
+  setPaint(r, d, "");
+  save();
+  renderSheet();
+  return true;
+}
+function bindSubjectTray() {
+  const tray = $("#subjectTray");
+  if (!tray) return;
+  const THRESH = 10;
+  const HOLD = 320;
+  let session = null;
+
+  function liveCell(el) {
+    if (!el || !el.closest) return null;
+    const cell = el.closest(".s-cell[data-r][data-d]");
+    if (!cell) return null;
+    if (sheet && sheet.contains(cell) && getComputedStyle(sheet).pointerEvents === "none") return null;
+    if (sheet && sheet.contains(cell)) return cell;
+    if (dayEditor && dayEditor.contains(cell)) return cell;
+    return null;
+  }
+  function cellFromPoint(x, y) {
+    const stack = document.elementsFromPoint ? document.elementsFromPoint(x, y) : [document.elementFromPoint(x, y)];
+    for (const el of stack) {
+      if (!el) continue;
+      if (el.classList && el.classList.contains("drag-ghost")) continue;
+      const cell = liveCell(el);
+      if (cell) return cell;
+    }
+    return null;
+  }
+  function markEmptyTargets(on) {
+    document.body.classList.toggle("tray-drag", on);
+  }
+  function endSession() {
+    if (!session) return;
+    if (session.timer) clearTimeout(session.timer);
+    if (session.chip) session.chip.classList.remove("is-drag");
+    document.querySelectorAll(".s-cell.is-over").forEach((n) => n.classList.remove("is-over"));
+    document.body.classList.remove("is-sorting");
+    markEmptyTargets(false);
+    if (session.ghost) session.ghost.remove();
+    try { session.chip.releasePointerCapture(session.pointerId); } catch (_) {}
+    session = null;
+  }
+
+  tray.addEventListener("pointerdown", (e) => {
+    if (e.button !== 0) return;
+    if (paintBrush) return;
+    const chip = e.target.closest("[data-tray-subj]");
+    if (!chip || !tray.contains(chip)) return;
+    const touch = e.pointerType === "touch" || e.pointerType === "pen";
+    session = {
+      pointerId: e.pointerId,
+      chip,
+      name: chip.dataset.traySubj,
+      startX: e.clientX,
+      startY: e.clientY,
+      started: false,
+      armed: !touch,
+      ghost: null,
+      ox: 0,
+      oy: 0,
+      timer: null,
+      touch
+    };
+    if (touch) session.timer = setTimeout(() => {
+      if (!session || session.started) return;
+      session.armed = true;
+      session.chip.classList.add("is-lift");
+    }, HOLD);
+  });
+  window.addEventListener("pointermove", (e) => {
+    if (!session || e.pointerId !== session.pointerId) return;
+    const dist = Math.hypot(e.clientX - session.startX, e.clientY - session.startY);
+    if (!session.started) {
+      if (session.touch && !session.armed) {
+        if (dist > 8) endSession();
+        return;
+      }
+      if (!session.armed || dist < THRESH) return;
+      session.started = true;
+      if (session.timer) { clearTimeout(session.timer); session.timer = null; }
+      session.chip.classList.add("is-drag");
+      session.chip.classList.remove("is-lift");
+      document.body.classList.add("is-sorting");
+      markEmptyTargets(true);
+      const ghost = session.chip.cloneNode(true);
+      ghost.classList.add("drag-ghost");
+      ghost.classList.remove("is-drag", "is-over", "is-lift", "on");
+      const r = session.chip.getBoundingClientRect();
+      ghost.style.width = r.width + "px";
+      ghost.style.height = r.height + "px";
+      ghost.style.left = r.left + "px";
+      ghost.style.top = r.top + "px";
+      session.ox = e.clientX - r.left;
+      session.oy = e.clientY - r.top;
+      document.body.appendChild(ghost);
+      session.ghost = ghost;
+      try { session.chip.setPointerCapture(e.pointerId); } catch (_) {}
+    }
+    e.preventDefault();
+    session.ghost.style.left = (e.clientX - session.ox) + "px";
+    session.ghost.style.top = (e.clientY - session.oy) + "px";
+    document.querySelectorAll(".s-cell.is-over").forEach((n) => n.classList.remove("is-over"));
+    const over = cellFromPoint(e.clientX, e.clientY);
+    if (over && over.classList.contains("cat-empty")) over.classList.add("is-over");
+  }, { passive: false });
+  window.addEventListener("pointerup", (e) => {
+    if (!session || e.pointerId !== session.pointerId) return;
+    const { name, started } = session;
+    const x = e.clientX, y = e.clientY;
+    endSession();
+    if (!started) return;
+    const blockClick = (ev) => { ev.preventDefault(); ev.stopPropagation(); };
+    window.addEventListener("click", blockClick, { capture: true, once: true });
+    setTimeout(() => window.removeEventListener("click", blockClick, true), 80);
+    const over = cellFromPoint(x, y);
+    if (!over || !over.classList.contains("cat-empty")) return;
+    fillEmptyCell(+over.dataset.r, +over.dataset.d, name);
+    setTrayPick(null);
+  });
+  window.addEventListener("pointercancel", (e) => {
+    if (!session || e.pointerId !== session.pointerId) return;
+    endSession();
+  });
+  document.addEventListener("click", (e) => {
+    if (paintBrush) return;
+    const chip = e.target.closest?.("[data-tray-subj]");
+    if (chip && tray.contains(chip)) {
+      const name = chip.dataset.traySubj;
+      setTrayPick(trayPick === name ? null : name);
+      return;
+    }
+    if (!trayPick) return;
+    const cell = liveCell(e.target);
+    if (!cell) {
+      if (!e.target.closest?.("#subjectTray")) setTrayPick(null);
+      return;
+    }
+    if (fillEmptyCell(+cell.dataset.r, +cell.dataset.d, trayPick)) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    setTrayPick(null);
+  }, true);
+}
+bindSubjectTray();
+
 document.querySelector("[data-add-slot]")?.parentElement?.addEventListener("click", (e) => {
   const b = e.target.closest("[data-add-slot]");
   if (b) addSlot(b.dataset.addSlot);
@@ -1728,13 +1918,13 @@ function b64urlToBytes(str) {
   const b64 = str.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((str.length + 3) % 4);
   return Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
 }
-function stateForShare() {
+function stateForShare(withBg = true) {
   const s = JSON.parse(JSON.stringify(state));
-  if (s.custom) s.custom.bgImage = "";
+  if (!withBg && s.custom) s.custom.bgImage = "";
   return s;
 }
 async function encodeShare() {
-  const json = JSON.stringify(stateForShare());
+  const json = JSON.stringify(stateForShare(false));
   const raw = new TextEncoder().encode(json);
   if (typeof CompressionStream === "function") {
     const stream = new Blob([raw]).stream().pipeThrough(new CompressionStream("gzip"));
@@ -1787,13 +1977,14 @@ function applySharedState(shared) {
 }
 async function shareSchedule() {
   try {
-    const payload = stateForShare();
     const hadBg = !!(state.custom && state.custom.bgImage);
     let url;
+    let photoInLink = false;
     try {
-      const id = await saveShareRemote(payload);
+      const id = await saveShareRemote(stateForShare(true));
       url = `${location.origin}/s/${id}`;
       history.replaceState(null, "", `/s/${id}`);
+      photoInLink = hadBg;
     } catch (e) {
       console.warn("short share failed, fallback to hash", e);
       const token = await encodeShare();
@@ -1802,13 +1993,13 @@ async function shareSchedule() {
     counterHit("share");
     metrikaGoal("share", { theme: state.theme });
     markScheduleCreated("share");
-    const doneMsg = hadBg
-      ? "Ссылка без фото фона — у друга будет цвет. Картинка останется у тебя и в PNG."
+    const doneMsg = hadBg && !photoInLink
+      ? "Ссылка без фото фона — не вышло залить картинку. Картинка останется у тебя и в PNG."
       : "Ссылка скопирована — кидай друзьям";
     if (navigator.share) {
       try {
         await navigator.share({ title: "Моё расписание", text: "Смотри, какое расписание я собрал(а) в Расписалке:", url });
-        if (hadBg) toast(doneMsg);
+        if (hadBg && !photoInLink) toast(doneMsg);
         return;
       } catch (err) { if (err.name === "AbortError") return; }
     }

@@ -102,7 +102,7 @@ server {
         proxy_pass http://127.0.0.1:18765;
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
-        client_max_body_size 80k;
+        client_max_body_size 512k;
     }
     location / { try_files \$uri \$uri/ =404; }
 }

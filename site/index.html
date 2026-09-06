@@ -63,7 +63,7 @@
   "description": "Конструктор красивого расписания для школы и университета с экспортом в PNG."
 }
 </script>
-<link rel="stylesheet" href="/css/app.css?v=20260914" />
+<link rel="stylesheet" href="/css/app.css?v=20260915" />
 </head>
 <body>
 
@@ -197,7 +197,7 @@
               <button class="btn sm ghost" type="button" id="cBgClear" hidden>убрать</button>
             </div>
           </div>
-          <div class="hint" id="cBgHint">JPG или PNG. Попадёт в скачанный PNG и останется на этом компьютере. В короткую ссылку фото не влезет — у друга будет цвет.</div>
+          <div class="hint" id="cBgHint">JPG или PNG. Попадёт в скачанный PNG и в короткую ссылку.</div>
           <div class="crow"><span>Карточки</span><input type="color" id="cCard" value="#1c2136" /></div>
           <div class="crow"><span>Текст</span><input type="color" id="cInk" value="#f2f4ff" /></div>
           <div class="crow"><span>Акцент</span><input type="color" id="cAcc" value="#ffd166" /></div>
@@ -254,8 +254,13 @@
         <button type="button" data-g="1">Нечётная</button>
       </div>
       <div id="dayEditor" class="day-editor"></div>
-      <div class="sheet-fit" id="sheetFit">
+      <div id="sheetFit" class="sheet-fit">
         <div class="sheet" id="sheet"></div>
+      </div>
+      <div id="subjectTray" class="subject-tray" hidden>
+        <div class="subject-tray-label">Предметы</div>
+        <div class="hint">Потяни карточку в пустую клетку. На телефоне нажми предмет, потом клетку.</div>
+        <div class="subject-tray-list" id="subjectTrayList"></div>
       </div>
     </main>
   </div>
@@ -291,6 +296,6 @@
     <button class="btn ghost" id="donateClose" type="button">Закрыть</button>
   </div>
 </div>
-<script src="/js/app.js?v=20260914" defer></script>
+<script src="/js/app.js?v=20260915" defer></script>
 </body>
 </html>

@@ -2,6 +2,8 @@
 """Short share links for Расписалка: gzipped JSON on disk, content-addressed ids."""
 from __future__ import annotations
 
+import base64
+import binascii
 import gzip
 import hashlib
 import json
@@ -19,7 +21,9 @@ from urllib.request import Request, urlopen
 
 ALPH = "23456789abcdefghijkmnpqrstuvwxyz"
 ID_RE = re.compile(r"^[23456789abcdefghijkmnpqrstuvwxyz]{8,12}$")
-MAX_BODY = 64 * 1024
+DATA_URL_RE = re.compile(r"^data:image/(jpeg|jpg|png|webp);base64,([A-Za-z0-9+/]+=*)$", re.I)
+MAX_BODY = 512 * 1024
+BG_MAX = 350 * 1024
 DATA_DIR = Path(os.environ.get("RASPISALKA_DATA", "/var/lib/raspisalka"))
 HOST = os.environ.get("RASPISALKA_HOST", "127.0.0.1")
 PORT = int(os.environ.get("RASPISALKA_PORT", "18765"))
@@ -50,14 +54,99 @@ def file_for(share_id: str) -> Path:
     return DATA_DIR / "s" / share_id[:2] / f"{share_id[2:]}.json.gz"
 
 
-def choose_id(digest: bytes, blob: bytes) -> str:
+def bg_file(share_id: str) -> Path | None:
+    parent = file_for(share_id).parent
+    stem = share_id[2:]
+    for ext in ("jpg", "jpeg", "png", "webp"):
+        path = parent / f"{stem}.bg.{ext}"
+        if path.is_file():
+            return path
+    return None
+
+
+def sniff_bg_ext(blob: bytes) -> str:
+    if blob.startswith(b"\xff\xd8\xff"):
+        return "jpg"
+    if blob.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "png"
+    if blob[:4] == b"RIFF" and blob[8:12] == b"WEBP":
+        return "webp"
+    raise ValueError("bg")
+
+
+def split_bg_image(obj: dict) -> tuple[dict, bytes | None]:
+    custom = obj.get("custom")
+    if not isinstance(custom, dict):
+        return obj, None
+    raw = custom.get("bgImage")
+    out = dict(obj)
+    out_custom = dict(custom)
+    out["custom"] = out_custom
+    out_custom["bgImage"] = ""
+    if not isinstance(raw, str) or not raw.strip():
+        return out, None
+    match = DATA_URL_RE.fullmatch(raw.strip())
+    if not match:
+        raise ValueError("bg")
+    try:
+        blob = base64.b64decode(match.group(2), validate=True)
+    except (ValueError, binascii.Error) as exc:
+        raise ValueError("bg") from exc
+    if not blob or len(blob) > BG_MAX:
+        raise ValueError("too_large")
+    sniff_bg_ext(blob)
+    return out, blob
+
+
+def attach_bg_image(obj: dict, share_id: str) -> dict:
+    path = bg_file(share_id)
+    if path is None:
+        return obj
+    ext = path.suffix.lower().lstrip(".")
+    mime = {"jpg": "image/jpeg", "jpeg": "image/jpeg", "png": "image/png", "webp": "image/webp"}.get(ext, "image/jpeg")
+    raw = path.read_bytes()
+    if not raw or len(raw) > BG_MAX:
+        return obj
+    custom = obj.get("custom")
+    if not isinstance(custom, dict):
+        custom = {}
+        obj["custom"] = custom
+    custom["bgImage"] = f"data:{mime};base64,{base64.b64encode(raw).decode('ascii')}"
+    return obj
+
+
+def write_bytes(path: Path, blob: bytes) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp = tempfile.mkstemp(prefix=".tmp-", dir=path.parent)
+    try:
+        with os.fdopen(fd, "wb") as fh:
+            fh.write(blob)
+        os.replace(tmp, path)
+    except Exception:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise
+
+
+def existing_matches(share_id: str, blob: bytes, bg_blob: bytes | None) -> bool:
+    path = file_for(share_id)
+    if not path.is_file() or path.read_bytes() != blob:
+        return False
+    current = bg_file(share_id)
+    if not bg_blob:
+        return current is None
+    return current is not None and current.read_bytes() == bg_blob
+
+
+def choose_id(digest: bytes, blob: bytes, bg_blob: bytes | None = None) -> str:
     for length in (8, 10, 12):
         share_id = id_from_digest(digest, length)
         path = file_for(share_id)
         if not path.is_file():
             return share_id
-        existing = path.read_bytes()
-        if existing == blob:
+        if existing_matches(share_id, blob, bg_blob):
             return share_id
     raise RuntimeError("id collision")
 
@@ -72,25 +161,17 @@ def validate_payload(obj: object) -> dict:
     return obj
 
 
-def save_payload(obj: dict) -> str:
+def save_payload(obj: dict, bg_blob: bytes | None = None) -> str:
     blob = blob_for(obj)
-    digest = hashlib.sha256(blob).digest()
-    share_id = choose_id(digest, blob)
+    digest = hashlib.sha256(blob + (b"\0bg" + bg_blob if bg_blob else b"")).digest()
+    share_id = choose_id(digest, blob, bg_blob)
     path = file_for(share_id)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    if path.is_file() and path.read_bytes() == blob:
+    if existing_matches(share_id, blob, bg_blob):
         return share_id
-    fd, tmp = tempfile.mkstemp(prefix=".tmp-", dir=path.parent)
-    try:
-        with os.fdopen(fd, "wb") as fh:
-            fh.write(blob)
-        os.replace(tmp, path)
-    except Exception:
-        try:
-            os.unlink(tmp)
-        except OSError:
-            pass
-        raise
+    write_bytes(path, blob)
+    if bg_blob:
+        ext = sniff_bg_ext(bg_blob)
+        write_bytes(path.parent / f"{share_id[2:]}.bg.{ext}", bg_blob)
     return share_id
 
 
@@ -104,7 +185,7 @@ def load_payload(share_id: str) -> dict | None:
     obj = json.loads(raw.decode("utf-8"))
     if not isinstance(obj, dict):
         return None
-    return obj
+    return attach_bg_image(obj, share_id)
 
 
 def allow_post(ip: str, bucket: str = "share", limit: int = 30, window: int = 600) -> bool:
@@ -261,7 +342,8 @@ class Handler(BaseHTTPRequestHandler):
             return
         try:
             obj = validate_payload(read_json_body(self, MAX_BODY))
-            share_id = save_payload(obj)
+            obj, bg_blob = split_bg_image(obj)
+            share_id = save_payload(obj, bg_blob)
         except ValueError as exc:
             code = 413 if str(exc) == "too_large" else 400
             self._send_json(code, {"error": str(exc)})
@@ -296,7 +378,26 @@ def selftest() -> None:
     other["title"] = "8 А"
     c = save_payload(other)
     assert c != a
-    print("selftest ok", a, c, "bytes", len(blob))
+    png = base64.b64decode(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
+    )
+    with_bg = dict(sample)
+    with_bg["custom"] = {"bg": "#101322", "bgImage": "data:image/png;base64," + base64.b64encode(png).decode("ascii")}
+    d = save_payload(*split_bg_image(with_bg))
+    loaded = load_payload(d)
+    assert loaded["custom"]["bgImage"].startswith("data:image/png;base64,")
+    assert base64.b64decode(loaded["custom"]["bgImage"].split(",", 1)[1]) == png
+    png2 = png[:-4] + b"\x00\x00\x00\x00"  # still png header, different tail — use second 1x1
+    png2 = base64.b64decode(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
+    )
+    with_bg2 = dict(sample)
+    with_bg2["custom"] = {"bg": "#101322", "bgImage": "data:image/png;base64," + base64.b64encode(png2).decode("ascii")}
+    e = save_payload(*split_bg_image(with_bg2))
+    assert e != d
+    again = save_payload(*split_bg_image(with_bg))
+    assert again == d
+    print("selftest ok", a, c, d, e, "bytes", len(blob))
 
 
 def main() -> None:
