@@ -1749,15 +1749,27 @@ function applyTemplate(kind, ask) {
 }
 onClick("#resetBtn", () => applyTemplate("empty", true));
 
-const FMT_TARGET = { auto: 3, phone: 3, story: 3, post: 3, a4: 4 };
+const FMT_TARGET = { auto: 3, phone: 3, story: 3, post: 3, a4: 4, a5: 4 };
 const SHEET_PAINT_PROPS = [
   "backgroundColor", "backgroundImage", "backgroundSize", "backgroundPosition",
-  "backgroundRepeat", "color", "borderTopColor", "borderRightColor",
-  "borderBottomColor", "borderLeftColor", "outlineColor", "boxShadow",
-  "textShadow", "webkitTextFillColor", "caretColor", "stroke", "fill"
+  "backgroundRepeat", "backgroundClip", "webkitBackgroundClip", "color",
+  "borderTopColor", "borderRightColor", "borderBottomColor", "borderLeftColor",
+  "outlineColor", "boxShadow", "textShadow", "webkitTextFillColor",
+  "caretColor", "stroke", "fill"
 ];
 let sheetPaintBackup = null;
 
+function clipTextFillColor(cs) {
+  const acc = (cs.getPropertyValue("--s-acc") || "").trim();
+  if (acc && acc !== "transparent") return acc;
+  const c = cs.color;
+  if (c && c !== "transparent" && c !== "rgba(0, 0, 0, 0)") return c;
+  return "#111111";
+}
+function isClipText(cs) {
+  const clip = `${cs.backgroundClip || ""} ${cs.webkitBackgroundClip || ""} ${cs.getPropertyValue("-webkit-background-clip") || ""}`.toLowerCase();
+  return clip.includes("text");
+}
 function bakeSheetPaint(root) {
   if (!root || sheetPaintBackup) return;
   const nodes = [root, ...root.querySelectorAll("*")];
@@ -1767,6 +1779,16 @@ function bakeSheetPaint(root) {
     for (const p of SHEET_PAINT_PROPS) prev[p] = el.style[p];
     saved.push({ el, prev });
     const cs = getComputedStyle(el);
+    if (isClipText(cs)) {
+      const fill = clipTextFillColor(cs);
+      el.style.backgroundImage = "none";
+      el.style.backgroundColor = "transparent";
+      el.style.backgroundClip = "border-box";
+      el.style.webkitBackgroundClip = "border-box";
+      el.style.color = fill;
+      el.style.webkitTextFillColor = fill;
+      continue;
+    }
     el.style.backgroundColor = cs.backgroundColor;
     if (cs.backgroundImage && cs.backgroundImage !== "none") {
       el.style.backgroundImage = cs.backgroundImage;
@@ -1842,6 +1864,21 @@ async function renderCanvas() {
           clone.style.left = "auto";
           clone.style.top = "auto";
           clone.style.zIndex = "1";
+          const view = doc.defaultView;
+          clone.querySelectorAll(".s-title").forEach((el) => {
+            const cs = view ? view.getComputedStyle(el) : null;
+            if (!cs) return;
+            const transparent = cs.color === "transparent" || cs.color === "rgba(0, 0, 0, 0)";
+            if (isClipText(cs) || (transparent && cs.backgroundImage && cs.backgroundImage !== "none")) {
+              const fill = clipTextFillColor(cs);
+              el.style.backgroundImage = "none";
+              el.style.backgroundColor = "transparent";
+              el.style.backgroundClip = "border-box";
+              el.style.webkitBackgroundClip = "border-box";
+              el.style.color = fill;
+              el.style.webkitTextFillColor = fill;
+            }
+          });
         }
         const fit = doc.getElementById("sheetFit");
         if (fit) {
@@ -1877,7 +1914,8 @@ async function downloadPng() {
     const a = document.createElement("a");
     const suffix = state.dual ? (state.activeGrid === 0 ? "-chetnaya" : "-nechetnaya") : "";
     const themeFile = state.theme === "minecraft" ? "pixel" : state.theme === "potter" ? "academy" : state.theme;
-    a.download = `raspisanie-${themeFile}${suffix}.png`;
+    const paper = state.fmt === "a5" ? "-a5" : state.fmt === "a4" ? "-a4" : "";
+    a.download = `raspisanie-${themeFile}${suffix}${paper}.png`;
     a.href = url;
     document.body.appendChild(a);
     a.click();
@@ -1908,7 +1946,7 @@ function printSheet() {
     tag.id = "printPage";
     document.head.appendChild(tag);
   }
-  const size = state.fmt === "a4" ? "A4 portrait" : "A4 landscape";
+  const size = state.fmt === "a4" ? "A4 portrait" : state.fmt === "a5" ? "A5 landscape" : "A4 landscape";
   tag.textContent = `@media print { @page { size: ${size}; margin: 4mm; } }`;
   document.body.classList.add("printing");
   resetSheetFit();

@@ -71,7 +71,7 @@ try {
   "description": "Конструктор красивого расписания для школы и университета с экспортом в PNG."
 }
 </script>
-<link rel="stylesheet" href="/css/app.css?v=20260921" />
+<link rel="stylesheet" href="/css/app.css?v=20260922" />
 </head>
 <body>
 
@@ -248,14 +248,15 @@ try {
       <div class="grp">
         <label>Экспорт</label>
         <select class="wide" id="fmtSel">
-          <option value="auto">Обычный (альбом А4/А5)</option>
+          <option value="auto">Альбом А4</option>
+          <option value="a5">Альбом А5</option>
           <option value="phone" class="fmt-extra" hidden>Обои на телефон</option>
           <option value="story" class="fmt-extra" hidden>Сторис 9:16</option>
           <option value="post" class="fmt-extra" hidden>Пост 4:5</option>
-          <option value="a4">Печать А4 книжная</option>
+          <option value="a4">Книжная А4</option>
         </select>
-        <div class="hint desktop-fmt-hint">Широкий лист — как альбомный А4 или А5, без пустых полей.</div>
-        <div class="hint compact-only">Обычный альбомный лист или печать А4. Предпросмотр сверху показывает весь лист.</div>
+        <div class="hint desktop-fmt-hint">Альбом А4 — широкий лист. Альбом А5 — сразу под маленькую бумагу, буквы не сжимаются. Книжная А4 — вертикальный.</div>
+        <div class="hint compact-only">Выбери А4 или А5 — лист сразу того размера, без сжатия при печати.</div>
         <label class="check" style="margin-top:8px"><input type="checkbox" id="wmChk" checked /> Подпись «расписалка» на картинке</label>
         <button class="btn primary" id="dlBtn2" type="button">Скачать PNG</button>
         <button class="btn" id="printBtn" type="button">Печать / PDF</button>
@@ -316,6 +317,6 @@ try {
     <button class="btn ghost" id="donateClose" type="button">Закрыть</button>
   </div>
 </div>
-<script src="/js/app.js?v=20260921" defer></script>
+<script src="/js/app.js?v=20260922" defer></script>
 </body>
 </html>
