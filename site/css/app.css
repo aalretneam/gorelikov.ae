@@ -196,7 +196,7 @@ footer.site a { text-decoration: none; }
 }
 .icon-btn svg { width: 18px; height: 18px; display: block; }
 button.icon-btn { padding: 0; }
-.site-theme-btn { flex-shrink: 0; width: 38px; height: 38px; min-width: 38px; }
+.site-theme-btn { flex-shrink: 0; width: 38px; height: 38px; min-width: 38px; color: var(--tx); }
 .site-theme-btn .icon-moon { display: none; }
 html.site-light .site-theme-btn .icon-sun { display: none; }
 html.site-light .site-theme-btn .icon-moon { display: block; }
@@ -1266,13 +1266,30 @@ html.site-light ::placeholder { color: var(--tx2); opacity: .85; }
     border-top: 1px solid var(--line);
     overflow: visible;
   }
-  body.mode-edit.compact .topbar { position: sticky; top: 0; z-index: 50; }
+  body.mode-edit.compact .topbar {
+    position: sticky; top: 0; z-index: 50;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 8px;
+  }
   body.mode-edit.compact .topbar .spacer { display: none; }
   body.mode-edit.compact .topbar-start {
-    flex: 1 1 100%;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) 38px;
+    align-items: center;
+    width: 100%;
+    min-width: 0;
+  }
+  body.mode-edit.compact .topbar-start .logo {
+    min-width: 0;
+    overflow: hidden;
   }
   body.mode-edit.compact .topbar-start .site-theme-btn {
-    margin-left: auto;
+    margin-left: 0;
+    grid-column: 3;
+  }
+  body.mode-edit.compact .topbar-actions {
+    width: 100%;
   }
   body.mode-edit.compact .desktop-only,
   body.mode-edit.compact .desktop-fmt-hint { display: none !important; }
