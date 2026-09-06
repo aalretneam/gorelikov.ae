@@ -324,6 +324,10 @@ body.paint-mode .s-cell .s-note { pointer-events: none; }
 }
 .crow select:disabled { opacity: .45; }
 .crow input[type=range] { width: 140px; accent-color: var(--br1); }
+.crow em {
+  font-style: normal; color: var(--tx2); font-weight: 700;
+  margin-left: 6px; font-variant-numeric: tabular-nums;
+}
 .side select.wide, .side textarea.wide, .side input.wide {
   width: 100%; background: var(--p2); border: 1px solid var(--line); color: var(--tx);
   border-radius: 12px; padding: 10px 12px; font: inherit; font-size: .88rem;
@@ -447,6 +451,7 @@ body.preview-open .subject-tray { display: none !important; }
   --s-rad: 18px;
   --s-hfont: Manrope, sans-serif;
   --s-font: Manrope, sans-serif;
+  --s-zoom: 1;
   --s-pad-x: 30px;
   width: 780px;
   background: var(--s-bg);
@@ -1102,6 +1107,81 @@ body.is-sorting * { cursor: grabbing !important; }
 .pat-dots { background-image: radial-gradient(circle at 1.5px 1.5px, var(--s-line) 1.5px, transparent 0) !important; background-size: 22px 22px !important; background-color: var(--s-bg-c, #fff) !important; }
 .pat-grid { background-image: linear-gradient(var(--s-line) 1px, transparent 1px), linear-gradient(90deg, var(--s-line) 1px, transparent 1px) !important; background-size: 24px 24px !important; background-color: var(--s-bg-c, #fff) !important; }
 .pat-lines { background-image: linear-gradient(var(--s-line) 1px, transparent 1px) !important; background-size: 100% 26px !important; background-color: var(--s-bg-c, #fff) !important; }
+
+/* Caveat sits small on the em-square, and format rules beat theme sizes.
+   .font-caveat restores a readable handwriting size. --s-zoom is for «Свой стиль». */
+.sheet.font-caveat .s-title { font-size: calc(1.58rem * var(--s-zoom, 1)); font-weight: 700; }
+.sheet.font-caveat .s-sub { font-size: calc(1.12rem * var(--s-zoom, 1)); }
+.sheet.font-caveat .s-dayh {
+  font-family: Caveat, cursive;
+  font-size: calc(1.28rem * var(--s-zoom, 1));
+  text-transform: none;
+  letter-spacing: 0;
+}
+.sheet.font-caveat .s-time { font-size: calc(1rem * var(--s-zoom, 1)); }
+.sheet.font-caveat .s-cell,
+.sheet.font-caveat .s-subj {
+  font-size: calc(1.2rem * var(--s-zoom, 1));
+  letter-spacing: .02em;
+}
+.sheet.font-caveat .s-note { font-size: calc(.96rem * var(--s-zoom, 1)); font-weight: 500; }
+.sheet.font-caveat .s-span { font-size: calc(1.08rem * var(--s-zoom, 1)); letter-spacing: .04em; }
+.sheet.font-caveat .s-span.kind-break { font-size: calc(.95rem * var(--s-zoom, 1)); }
+.sheet.font-caveat .s-box h3 { font-size: calc(1.02rem * var(--s-zoom, 1)); letter-spacing: .08em; }
+.sheet.font-caveat .s-rules li { font-size: calc(.98rem * var(--s-zoom, 1)); }
+.sheet.font-caveat .s-rules .n { font-size: calc(.78rem * var(--s-zoom, 1)); }
+.sheet.font-caveat .s-teach strong { font-size: calc(1.05rem * var(--s-zoom, 1)); }
+.sheet.font-caveat .s-teach em { font-size: calc(.92rem * var(--s-zoom, 1)); }
+.sheet.font-caveat .s-teach .room { font-size: calc(.88rem * var(--s-zoom, 1)); }
+.sheet.font-caveat .s-tag { font-size: calc(.85rem * var(--s-zoom, 1)); letter-spacing: .12em; }
+.sheet.font-caveat .s-badge { font-size: calc(.8rem * var(--s-zoom, 1)); }
+
+.sheet.fmt-auto.font-caveat .s-title { font-size: calc(1.42rem * var(--s-zoom, 1)); }
+.sheet.fmt-auto.font-caveat .s-sub { font-size: calc(1.02rem * var(--s-zoom, 1)); }
+.sheet.fmt-auto.font-caveat .s-cell,
+.sheet.fmt-auto.font-caveat .s-subj { font-size: calc(1.14rem * var(--s-zoom, 1)); }
+.sheet.fmt-auto.font-caveat .s-note { font-size: calc(.92rem * var(--s-zoom, 1)); }
+.sheet.fmt-auto.font-caveat .s-dayh { font-size: calc(1.2rem * var(--s-zoom, 1)); }
+.sheet.fmt-auto.font-caveat .s-time { font-size: calc(.96rem * var(--s-zoom, 1)); }
+.sheet.fmt-auto.font-caveat .s-rules li { font-size: calc(.9rem * var(--s-zoom, 1)); }
+.sheet.fmt-auto.font-caveat .s-teach strong { font-size: calc(.98rem * var(--s-zoom, 1)); }
+.sheet.fmt-auto.font-caveat .s-teach em { font-size: calc(.86rem * var(--s-zoom, 1)); }
+
+.sheet.fmt-a5.font-caveat .s-title { font-size: calc(1.26rem * var(--s-zoom, 1)); }
+.sheet.fmt-a5.font-caveat .s-sub { font-size: calc(.95rem * var(--s-zoom, 1)); }
+.sheet.fmt-a5.font-caveat .s-cell,
+.sheet.fmt-a5.font-caveat .s-subj { font-size: calc(1.02rem * var(--s-zoom, 1)); }
+.sheet.fmt-a5.font-caveat .s-note { font-size: calc(.82rem * var(--s-zoom, 1)); }
+.sheet.fmt-a5.font-caveat .s-dayh { font-size: calc(1.06rem * var(--s-zoom, 1)); letter-spacing: 0; }
+.sheet.fmt-a5.font-caveat .s-time { font-size: calc(.82rem * var(--s-zoom, 1)); }
+.sheet.fmt-a5.font-caveat .s-box h3 { font-size: calc(.9rem * var(--s-zoom, 1)); }
+.sheet.fmt-a5.font-caveat .s-rules li { font-size: calc(.84rem * var(--s-zoom, 1)); }
+.sheet.fmt-a5.font-caveat .s-teach strong { font-size: calc(.92rem * var(--s-zoom, 1)); }
+.sheet.fmt-a5.font-caveat .s-teach em { font-size: calc(.8rem * var(--s-zoom, 1)); }
+.sheet.fmt-a5.font-caveat .s-span { font-size: calc(.95rem * var(--s-zoom, 1)); }
+
+.sheet.th-custom:not(.font-caveat) .s-title { font-size: calc(1.35rem * var(--s-zoom, 1)); }
+.sheet.th-custom:not(.font-caveat) .s-sub { font-size: calc(.92rem * var(--s-zoom, 1)); }
+.sheet.th-custom:not(.font-caveat) .s-dayh { font-size: calc(.78rem * var(--s-zoom, 1)); }
+.sheet.th-custom:not(.font-caveat) .s-time { font-size: calc(.58rem * var(--s-zoom, 1)); }
+.sheet.th-custom:not(.font-caveat) .s-cell { font-size: calc(.82rem * var(--s-zoom, 1)); }
+.sheet.th-custom:not(.font-caveat) .s-subj { font-size: calc(.9rem * var(--s-zoom, 1)); }
+.sheet.th-custom:not(.font-caveat) .s-note { font-size: calc(.68rem * var(--s-zoom, 1)); }
+.sheet.th-custom:not(.font-caveat) .s-span { font-size: calc(.78rem * var(--s-zoom, 1)); }
+.sheet.th-custom:not(.font-caveat) .s-span.kind-break { font-size: calc(.7rem * var(--s-zoom, 1)); }
+
+.sheet.fmt-auto.th-custom:not(.font-caveat) .s-title { font-size: calc(1.2rem * var(--s-zoom, 1)); }
+.sheet.fmt-auto.th-custom:not(.font-caveat) .s-sub { font-size: calc(.8rem * var(--s-zoom, 1)); }
+.sheet.fmt-auto.th-custom:not(.font-caveat) .s-subj { font-size: calc(.82rem * var(--s-zoom, 1)); }
+.sheet.fmt-auto.th-custom:not(.font-caveat) .s-note { font-size: calc(.62rem * var(--s-zoom, 1)); }
+
+.sheet.fmt-a5.th-custom:not(.font-caveat) .s-title { font-size: calc(1.08rem * var(--s-zoom, 1)); }
+.sheet.fmt-a5.th-custom:not(.font-caveat) .s-sub { font-size: calc(.76rem * var(--s-zoom, 1)); }
+.sheet.fmt-a5.th-custom:not(.font-caveat) .s-subj { font-size: calc(.8rem * var(--s-zoom, 1)); }
+.sheet.fmt-a5.th-custom:not(.font-caveat) .s-note { font-size: calc(.64rem * var(--s-zoom, 1)); }
+.sheet.fmt-a5.th-custom:not(.font-caveat) .s-dayh { font-size: calc(.72rem * var(--s-zoom, 1)); }
+.sheet.fmt-a5.th-custom:not(.font-caveat) .s-time { font-size: calc(.58rem * var(--s-zoom, 1)); }
+.sheet.fmt-a5.th-custom:not(.font-caveat) .s-span { font-size: calc(.72rem * var(--s-zoom, 1)); }
 
 #toast {
   position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%) translateY(80px);

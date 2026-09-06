@@ -139,6 +139,16 @@ function slotWord(mode = state && state.mode) {
 function weekParity(idx) {
   return idx === 0 ? "чётная" : "нечётная";
 }
+function clampTypeScale(n) {
+  const x = Number(n);
+  if (!Number.isFinite(x)) return 100;
+  return Math.min(140, Math.max(85, Math.round(x)));
+}
+function isCaveatFont(themeId, custom) {
+  if (themeId === "notebook") return true;
+  if (themeId === "custom") return /caveat/i.test(String(custom && custom.font || ""));
+  return false;
+}
 function defaultState(mode = "school") {
   mode = normalizeMode(mode);
   if (mode === "own") {
@@ -162,7 +172,7 @@ function defaultState(mode = "school") {
       teachers: [],
       custom: {
         bg: "#101322", card: "#1c2136", ink: "#f2f4ff", acc: "#ffd166",
-        font: "Manrope, sans-serif", rad: 16, pat: "", emoji: "", bgImage: ""
+        font: "Manrope, sans-serif", rad: 16, typeScale: 100, pat: "", emoji: "", bgImage: ""
       },
       wm: true,
       fmt: "auto",
@@ -196,7 +206,7 @@ function defaultState(mode = "school") {
     teachers: uni ? [] : SCHOOL_TEACHERS.map((t) => Object.assign({}, t)),
     custom: {
       bg: "#101322", card: "#1c2136", ink: "#f2f4ff", acc: "#ffd166",
-      font: "Manrope, sans-serif", rad: 16, pat: "", emoji: "", bgImage: ""
+      font: "Manrope, sans-serif", rad: 16, typeScale: 100, pat: "", emoji: "", bgImage: ""
     },
     wm: true,
     fmt: "auto",
@@ -231,6 +241,7 @@ function hydrateState(s) {
   if (merged.showInfo == null) merged.showInfo = false;
   if (!merged.custom || typeof merged.custom !== "object") merged.custom = base.custom;
   else merged.custom = Object.assign({}, base.custom, merged.custom);
+  merged.custom.typeScale = clampTypeScale(merged.custom.typeScale);
   if (merged.custom.bgImage && !/^data:image\/(jpeg|jpg|png|webp);base64,/i.test(merged.custom.bgImage)) {
     merged.custom.bgImage = "";
   }
@@ -603,11 +614,15 @@ function renderPalette() {
 
 function applyThemeTo(el, themeId) {
   const th = THEMES.find((t) => t.id === themeId) || THEMES[0];
-  el.className = `sheet th-${th.id} fmt-${el === sheet ? state.fmt : "auto"}` + ((el === sheet && !state.wm) ? " no-wm" : "");
+  const c = state.custom || {};
+  const caveat = isCaveatFont(themeId, c);
+  el.className = `sheet th-${th.id} fmt-${el === sheet ? state.fmt : "auto"}` +
+    ((el === sheet && !state.wm) ? " no-wm" : "") +
+    (caveat ? " font-caveat" : "");
   el.removeAttribute("style");
   let decor = th.decor;
   if (themeId === "custom") {
-    const c = state.custom || {};
+    el.style.setProperty("--s-zoom", String(clampTypeScale(c.typeScale) / 100));
     el.style.setProperty("--s-bg", c.bg);
     el.style.setProperty("--s-bg-c", c.bg);
     el.style.setProperty("--s-card", c.card);
@@ -947,6 +962,9 @@ function renderControls() {
   setVal("#cBg", c.bg, "value"); setVal("#cCard", c.card, "value");
   setVal("#cInk", c.ink, "value"); setVal("#cAcc", c.acc, "value");
   setVal("#cFont", c.font, "value"); setVal("#cRad", c.rad, "value");
+  setVal("#cType", clampTypeScale(c.typeScale), "value");
+  const typeVal = $("#cTypeVal");
+  if (typeVal) typeVal.textContent = clampTypeScale(c.typeScale) + "%";
   setVal("#cPat", c.pat, "value"); setVal("#cEmoji", c.emoji, "value");
   const thumb = $("#cBgThumb");
   const clearBg = $("#cBgClear");
@@ -1642,6 +1660,13 @@ function bindCustom(id, key, transform = (v) => v) {
 }
 bindCustom("#cBg", "bg"); bindCustom("#cCard", "card"); bindCustom("#cInk", "ink"); bindCustom("#cAcc", "acc");
 bindCustom("#cFont", "font"); bindCustom("#cRad", "rad", Number); bindCustom("#cPat", "pat"); bindCustom("#cEmoji", "emoji");
+listen("#cType", "input", (e) => {
+  state.custom.typeScale = clampTypeScale(e.target.value);
+  e.target.value = state.custom.typeScale;
+  const lab = $("#cTypeVal");
+  if (lab) lab.textContent = state.custom.typeScale + "%";
+  save(); renderSheet();
+});
 listen("#fmtSel", "change", (e) => { state.fmt = e.target.value; save(); renderSheet(); });
 listen("#wmChk", "change", (e) => { state.wm = e.target.checked; save(); renderSheet(); });
 

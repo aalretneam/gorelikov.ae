@@ -71,7 +71,7 @@ try {
   "description": "Конструктор красивого расписания для школы и университета с экспортом в PNG."
 }
 </script>
-<link rel="stylesheet" href="/css/app.css?v=20260923" />
+<link rel="stylesheet" href="/css/app.css?v=20260924" />
 </head>
 <body>
 
@@ -232,6 +232,9 @@ try {
             </select>
           </div>
           <div class="crow"><span>Скругление</span><input type="range" id="cRad" min="0" max="28" value="16" /></div>
+          <div class="crow"><span>Размер текста <em id="cTypeVal">100%</em></span>
+            <input type="range" id="cType" min="85" max="140" step="5" value="100" />
+          </div>
           <div class="crow"><span>Фон-паттерн</span>
             <select id="cPat">
               <option value="">Нет</option>
@@ -317,6 +320,6 @@ try {
     <button class="btn ghost" id="donateClose" type="button">Закрыть</button>
   </div>
 </div>
-<script src="/js/app.js?v=20260923" defer></script>
+<script src="/js/app.js?v=20260924" defer></script>
 </body>
 </html>
