@@ -3108,6 +3108,7 @@ function pwOpen() {
   pwPick = null;
   const el = $("#phoneWizard");
   if (!el) return;
+  if (document.activeElement && typeof document.activeElement.blur === "function") document.activeElement.blur();
   el.hidden = false;
   document.body.classList.add("phone-wizard");
   const landing = $("#landing");
@@ -3116,6 +3117,7 @@ function pwOpen() {
   metrikaGoal("phone_wizard_open");
   metrikaGoal("phone_wizard_step", { step: 1 });
   pwRender();
+  $("#pwBackTop")?.focus();
 }
 function pwCloseSilent() {
   const dlg = $("#pwDialog");

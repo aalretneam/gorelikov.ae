@@ -1627,6 +1627,7 @@ html.site-light ::placeholder { color: var(--tx2); opacity: .85; }
 
 .phone-wizard-entry { display: none !important; }
 body.compact .phone-wizard-entry { display: inline-flex !important; }
+body.compact .nav { flex-wrap: wrap; }
 
 body.phone-wizard {
   overflow: hidden;
