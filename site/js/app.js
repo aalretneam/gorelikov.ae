@@ -1975,6 +1975,11 @@ function applySharedState(shared) {
   toast("Расписание из ссылки загружено — теперь оно твоё");
   return true;
 }
+function isAppleTouch() {
+  const ua = navigator.userAgent || "";
+  if (/iP(hone|ad|od)/i.test(ua)) return true;
+  return navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
+}
 async function shareSchedule() {
   try {
     const hadBg = !!(state.custom && state.custom.bgImage);
@@ -1996,9 +2001,15 @@ async function shareSchedule() {
     const doneMsg = hadBg && !photoInLink
       ? "Ссылка без фото фона — не вышло залить картинку. Картинка останется у тебя и в PNG."
       : "Ссылка скопирована — кидай друзьям";
+    const intro = "Смотри, какое расписание я собрал(а) в Расписалке:";
     if (navigator.share) {
       try {
-        await navigator.share({ title: "Моё расписание", text: "Смотри, какое расписание я собрал(а) в Расписалке:", url });
+        if (isAppleTouch()) {
+          // iOS Copy из шаринга берёт только text и выкидывает url
+          await navigator.share({ title: "Моё расписание", text: intro + " " + url });
+        } else {
+          await navigator.share({ title: "Моё расписание", text: intro, url });
+        }
         if (hadBg && !photoInLink) toast(doneMsg);
         return;
       } catch (err) { if (err.name === "AbortError") return; }
