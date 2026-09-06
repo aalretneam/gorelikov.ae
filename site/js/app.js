@@ -2332,6 +2332,8 @@ async function boot() {
       } catch (e) { console.error("bad share link", e); }
     } else if (location.hash === "#edit") {
       openEditor();
+    } else if (location.hash === "#phone") {
+      history.replaceState(null, "", "/");
     }
   } catch (err) {
     console.error("boot", err);
@@ -2355,4 +2357,1155 @@ async function boot() {
     console.warn("stats", err);
   }
 }
+const PW_SCHOOL_SUBJ = [
+  "Русский язык", "Литература", "Алгебра", "Геометрия", "Английский", "История",
+  "Обществознание", "География", "Физика", "Химия", "Биология", "Информатика",
+  "Физра", "ИЗО", "Музыка", "Технология", "ОБЖ", "Классный час", "Разговоры о важном"
+];
+const PW_UNI_SUBJ = [
+  "Матан", "Линал", "Прога", "Физика", "Английский", "Философия",
+  "История", "Физра", "Экономика", "Право", "Дискретная математика", "Теория вероятностей"
+];
+let phoneWizard = null;
+let pwHashLock = false;
+let pwPick = null;
+
+function pwCatalog(mode) {
+  return mode === "uni" ? PW_UNI_SUBJ : PW_SCHOOL_SUBJ;
+}
+function pwHasLsDraft() {
+  try {
+    return !!(localStorage.getItem(LS_KEY) || localStorage.getItem("raspisalka-v3") || localStorage.getItem("raspisalka-v2"));
+  } catch {
+    return false;
+  }
+}
+function pwParseMin(t) {
+  const m = String(t || "").match(/^(\d{1,2}):(\d{2})$/);
+  if (!m) return null;
+  return (+m[1]) * 60 + (+m[2]);
+}
+function pwMidTime(a, b) {
+  const pa = pwParseMin(a), pb = pwParseMin(b);
+  if (pa == null || pb == null || pb <= pa) return "12:00";
+  const mid = Math.round((pa + pb) / 2);
+  return Math.floor(mid / 60) + ":" + String(mid % 60).padStart(2, "0");
+}
+function pwBuildFrame(mode, lessonN, pauses) {
+  const n = Math.max(1, Math.min(MAX_ROWS, Number(lessonN) || 1));
+  if (!pauses) {
+    const src = mode === "uni" ? UNI_TIMES : SCHOOL_TIMES;
+    return {
+      rows: n,
+      kinds: Array.from({ length: n }, () => "lesson"),
+      labels: Array.from({ length: n }, () => ""),
+      times: src.slice(0, n)
+    };
+  }
+  if (mode === "school") {
+    const kinds = [], labels = [], times = [];
+    let lessons = 0;
+    for (let i = 0; i < SCHOOL_KINDS.length && lessons < n && kinds.length < MAX_ROWS; i++) {
+      const k = SCHOOL_KINDS[i];
+      if (k === "lesson") {
+        kinds.push("lesson");
+        labels.push("");
+        times.push(SCHOOL_SLOT_TIMES[i] || SCHOOL_TIMES[lessons] || "");
+        lessons++;
+      } else {
+        kinds.push(k);
+        labels.push(SCHOOL_LABELS[i] || KIND_NAME[k] || "");
+        times.push(SCHOOL_SLOT_TIMES[i] || "");
+      }
+    }
+    while (lessons < n && kinds.length < MAX_ROWS) {
+      kinds.push("lesson");
+      labels.push("");
+      times.push(SCHOOL_TIMES[lessons] || "");
+      lessons++;
+    }
+    return { rows: kinds.length, kinds, labels, times };
+  }
+  const src = mode === "uni" ? UNI_TIMES : SCHOOL_TIMES;
+  const pauseLabel = mode === "uni" ? "Перерыв" : "Перемена";
+  if (n === 1) {
+    return { rows: 1, kinds: ["lesson"], labels: [""], times: [src[0] || ""] };
+  }
+  const first = Math.floor(n / 2);
+  const kinds = [], labels = [], times = [];
+  for (let i = 0; i < first; i++) {
+    kinds.push("lesson"); labels.push(""); times.push(src[i] || "");
+  }
+  kinds.push("break");
+  labels.push(pauseLabel);
+  times.push(pwMidTime(src[first - 1], src[first]));
+  for (let i = 0; i < n - first; i++) {
+    kinds.push("lesson"); labels.push(""); times.push(src[first + i] || "");
+  }
+  return { rows: kinds.length, kinds, labels, times };
+}
+function pwMaxLessonN(mode, pauses) {
+  for (let n = MAX_ROWS; n >= 1; n--) {
+    if (pwBuildFrame(mode, n, pauses).rows <= MAX_ROWS) return n;
+  }
+  return 1;
+}
+function pwRemapCells(oldKinds, oldCells, newKinds) {
+  const take = [];
+  (oldKinds || []).forEach((k, r) => {
+    if (k === "lesson") {
+      take.push([
+        ((oldCells[0] || [])[r] || []).slice(),
+        ((oldCells[1] || [])[r] || []).slice()
+      ]);
+    }
+  });
+  const c0 = emptyGrid(), c1 = emptyGrid();
+  let i = 0;
+  (newKinds || []).forEach((k, r) => {
+    if (k !== "lesson") return;
+    const src = take[i++] || [Array(7).fill(""), Array(7).fill("")];
+    c0[r] = (src[0] || []).concat(["", "", "", "", "", "", ""]).slice(0, 7);
+    c1[r] = (src[1] || []).concat(["", "", "", "", "", "", ""]).slice(0, 7);
+  });
+  return [c0, c1];
+}
+function pwData() {
+  return phoneWizard.committed ? state : phoneWizard.session;
+}
+function pwPersist() {
+  if (phoneWizard && phoneWizard.committed) save();
+}
+function pwApplyFrame() {
+  const s = pwData();
+  const maxN = pwMaxLessonN(s.mode, s.pauses);
+  if (s.lessonN > maxN) s.lessonN = maxN;
+  if (s.lessonN < 1) s.lessonN = 1;
+  const frame = pwBuildFrame(s.mode, s.lessonN, s.pauses);
+  const nextCells = pwRemapCells(s.kinds, s.cells, frame.kinds);
+  s.kinds = frame.kinds;
+  s.labels = frame.labels;
+  s.times = frame.times;
+  s.rows = frame.rows;
+  s.cells = nextCells;
+  pwPersist();
+}
+function pwModeDefaults(mode) {
+  mode = normalizeMode(mode);
+  if (mode === "uni") return { days: [1, 1, 1, 1, 1, 1, 0], lessonN: 4, pauses: false, theme: "neon" };
+  if (mode === "own") return { days: [1, 1, 1, 1, 1, 0, 0], lessonN: 7, pauses: false, theme: "minimal" };
+  return { days: [1, 1, 1, 1, 1, 0, 0], lessonN: 7, pauses: true, theme: "y2k" };
+}
+function pwNewSession() {
+  const d = pwModeDefaults("school");
+  const frame = pwBuildFrame("school", d.lessonN, d.pauses);
+  return {
+    mode: "school",
+    days: d.days.slice(),
+    dual: false,
+    activeGrid: 0,
+    lessonN: d.lessonN,
+    pauses: d.pauses,
+    subjects: [],
+    extraSubjects: [],
+    theme: d.theme,
+    kinds: frame.kinds,
+    labels: frame.labels,
+    times: frame.times,
+    rows: frame.rows,
+    cells: [emptyGrid(), emptyGrid()],
+    editDay: 0
+  };
+}
+function pwSetMode(mode) {
+  const s = pwData();
+  if (s.mode === mode) return;
+  const d = pwModeDefaults(mode);
+  s.mode = mode;
+  s.days = d.days.slice();
+  s.dual = false;
+  s.activeGrid = 0;
+  s.lessonN = d.lessonN;
+  s.pauses = d.pauses;
+  s.subjects = [];
+  s.extraSubjects = [];
+  s.cells = [emptyGrid(), emptyGrid()];
+  s.editDay = 0;
+  if (!phoneWizard.themeTouched) s.theme = d.theme;
+  const frame = pwBuildFrame(mode, s.lessonN, s.pauses);
+  s.kinds = frame.kinds;
+  s.labels = frame.labels;
+  s.times = frame.times;
+  s.rows = frame.rows;
+  pwPersist();
+}
+function pwSnapshot() {
+  if (phoneWizard.committed) return state;
+  const s = phoneWizard.session;
+  const base = defaultState(s.mode);
+  return {
+    v: 4,
+    mode: s.mode,
+    theme: s.theme,
+    title: base.title,
+    sub: base.sub,
+    days: s.days.slice(),
+    rows: s.rows,
+    times: s.times.slice(),
+    kinds: s.kinds.slice(),
+    labels: s.labels.slice(),
+    dayLabels: ["", "", "", "", "", "", ""],
+    dual: !!s.dual,
+    activeGrid: s.dual ? s.activeGrid : 0,
+    cells: s.cells,
+    showInfo: false,
+    info: [],
+    teachers: [],
+    custom: Object.assign({}, base.custom),
+    wm: true,
+    fmt: "auto",
+    paints: [emptyGrid(), emptyGrid()]
+  };
+}
+function pwFillSheet(el) {
+  if (!el) return;
+  const bak = state;
+  state = pwSnapshot();
+  try {
+    const days = activeDayIdx();
+    const decor = applyThemeTo(el, state.theme);
+    const badge = state.dual ? `<span class="s-badge">${weekParity(state.activeGrid)}</span>` : "";
+    let html = `
+    <header class="s-head">
+      <h2 class="s-title">${esc(state.title)}</h2>
+      <div class="s-tagrow"><span class="s-tag">расписание</span>${badge}</div>
+      <div class="s-sub">${esc(state.sub)}</div>
+    </header>
+    <div class="s-grid" style="--days:${days.length}">
+      <div class="s-headrow">
+        <div class="s-corner"></div>`;
+    for (const d of days) html += `<div class="s-dayh">${esc(dayLabel(d))}</div>`;
+    html += `</div>`;
+    const g = grid() || emptyGrid();
+    for (let r = 0; r < state.rows; r++) {
+      const kind = (state.kinds && state.kinds[r]) || "lesson";
+      const row = g[r] || [];
+      html += `<div class="s-row">`;
+      html += `<div class="s-num"><span class="s-time">${esc(state.times[r] || "")}</span></div>`;
+      if (kind === "lesson") {
+        for (const d of days) {
+          const val = row[d] || "";
+          const look = paintClassAndStyle(val, r, d);
+          html += `<div class="${look.cls}"${look.style}><span class="s-subj">${esc(splitCell(val).subj)}</span></div>`;
+        }
+      } else {
+        html += `<div class="s-span kind-${kind}">${esc(state.labels[r] || KIND_NAME[kind])}</div>`;
+      }
+      html += `</div>`;
+    }
+    html += `</div><footer class="s-foot">${LOGO_MARK}расписалка</footer>`;
+    if (state.theme === "custom") {
+      const chars = emojiChars(decor, 4);
+      if (chars.length) html = `<div class="s-decor">${chars.map((e) => `<i>${esc(e)}</i>`).join("")}</div>` + html;
+    }
+    el.innerHTML = html;
+    el.classList.add("exporting");
+  } finally {
+    state = bak;
+  }
+}
+function pwScalePreview() {
+  const port = $("#pwPreview");
+  const el = phoneWizard && phoneWizard.committed && phoneWizard.phase === "result" ? sheet : $("#pwSheet");
+  if (!port || !el || port.hidden) return;
+  el.style.transform = "none";
+  const wrap = port.parentElement;
+  const availW = Math.max(80, (wrap && wrap.clientWidth) || port.clientWidth || 300);
+  const availH = Math.max(80, (wrap && wrap.clientHeight) || port.clientHeight || 200);
+  const sw = el.offsetWidth || 1123;
+  const sh = el.offsetHeight || 400;
+  const scale = Math.min(1, Math.max(0.12, Math.min(availW / sw, availH / sh)));
+  el.style.transformOrigin = "top center";
+  el.style.transform = `scale(${scale})`;
+  port.style.width = Math.ceil(sw * scale) + "px";
+  port.style.height = Math.ceil(sh * scale) + "px";
+}
+function pwAsk(text, buttons) {
+  return new Promise((resolve) => {
+    const box = $("#pwDialog");
+    const act = $("#pwDialogActions");
+    const p = $("#pwDialogText");
+    if (!box || !act || !p) { resolve(buttons[buttons.length - 1]?.id); return; }
+    p.textContent = text;
+    act.innerHTML = "";
+    buttons.forEach((b) => {
+      const el = document.createElement("button");
+      el.type = "button";
+      el.className = "btn" + (b.primary ? " primary" : "");
+      el.textContent = b.label;
+      el.onclick = () => { box.hidden = true; resolve(b.id); };
+      act.appendChild(el);
+    });
+    box.hidden = false;
+  });
+}
+function pwEnabledDays() {
+  const days = pwData().days || [];
+  return days.map((on, i) => (on ? i : -1)).filter((i) => i >= 0);
+}
+function pwEnsureDay() {
+  const s = pwData();
+  const days = pwEnabledDays();
+  if (!days.length) { s.editDay = 0; return; }
+  if (!days.includes(s.editDay)) s.editDay = days[0];
+}
+function pwDayHasSubject(d) {
+  const s = pwData();
+  const g = (s.cells[s.dual ? s.activeGrid : 0] || []);
+  for (let r = 0; r < s.rows; r++) {
+    if ((s.kinds[r] || "lesson") !== "lesson") continue;
+    if (String((g[r] || [])[d] || "").trim()) return true;
+  }
+  return false;
+}
+function pwGridHasAny(gi) {
+  const s = pwData();
+  const g = s.cells[gi] || [];
+  for (let r = 0; r < s.rows; r++) {
+    if ((s.kinds[r] || "lesson") !== "lesson") continue;
+    const row = g[r] || [];
+    if (row.some((v) => String(v || "").trim())) return true;
+  }
+  return false;
+}
+function pwSetCell(r, d, name) {
+  const s = pwData();
+  if ((s.kinds[r] || "lesson") !== "lesson") return;
+  const gi = s.dual ? s.activeGrid : 0;
+  if (!s.cells[gi]) s.cells[gi] = emptyGrid();
+  if (!s.cells[gi][r]) s.cells[gi][r] = Array(7).fill("");
+  s.cells[gi][r][d] = name || "";
+  pwPersist();
+}
+function pwSwapCells(r1, d1, r2, d2) {
+  const s = pwData();
+  if ((s.kinds[r1] || "lesson") !== "lesson" || (s.kinds[r2] || "lesson") !== "lesson") return;
+  const gi = s.dual ? s.activeGrid : 0;
+  const g = s.cells[gi];
+  if (!g[r1]) g[r1] = Array(7).fill("");
+  if (!g[r2]) g[r2] = Array(7).fill("");
+  const tmp = g[r1][d1] || "";
+  g[r1][d1] = g[r2][d2] || "";
+  g[r2][d2] = tmp;
+  pwPersist();
+}
+function pwSubjectOnGrid(name) {
+  const s = pwData();
+  for (const g of s.cells) {
+    for (let r = 0; r < s.rows; r++) {
+      if ((s.kinds[r] || "lesson") !== "lesson") continue;
+      const row = g[r] || [];
+      for (let d = 0; d < 7; d++) {
+        if (splitCell(row[d]).subj === name) return true;
+      }
+    }
+  }
+  return false;
+}
+function pwClearSubjectCells(name) {
+  const s = pwData();
+  s.cells.forEach((g) => {
+    for (let r = 0; r < s.rows; r++) {
+      if ((s.kinds[r] || "lesson") !== "lesson") continue;
+      if (!g[r]) continue;
+      for (let d = 0; d < 7; d++) {
+        if (splitCell(g[r][d]).subj === name) g[r][d] = "";
+      }
+    }
+  });
+  pwPersist();
+}
+function pwAddSubject(raw) {
+  const name = String(raw || "").replace(/\s+/g, " ").trim();
+  if (!name) return false;
+  const s = pwData();
+  if (!s.subjects.includes(name)) s.subjects.push(name);
+  const cat = pwCatalog(s.mode);
+  if (!cat.includes(name) && !s.extraSubjects.includes(name)) s.extraSubjects.push(name);
+  pwPersist();
+  return true;
+}
+function pwSetPick(name) {
+  pwPick = name || null;
+  $("#phoneWizard")?.classList.toggle("pw-pick", !!pwPick);
+  document.querySelectorAll("#phoneWizard [data-pw-subj]").forEach((ch) => {
+    ch.classList.toggle("on", !!(pwPick && ch.dataset.pwSubj === pwPick));
+  });
+}
+function pwSlotWord() {
+  const m = pwData().mode;
+  if (m === "uni") return "пар";
+  if (m === "own") return "строк";
+  return "уроков";
+}
+function pwPauseLabel() {
+  const m = pwData().mode;
+  if (m === "uni") return "Перерыв между парами";
+  if (m === "own") return "Перемены";
+  return "Перемены и еда";
+}
+function pwPauseHint() {
+  const s = pwData();
+  if (s.mode === "uni") return s.pauses ? "Один перерыв посередине" : "Только пары";
+  if (s.mode === "own") return s.pauses ? "Одна перемена посередине" : "Только занятия";
+  return s.pauses ? "Завтрак, перемены и обед как в смене" : "Только уроки";
+}
+function pwModeHint() {
+  const m = pwData().mode;
+  if (m === "uni") return "Пары, есть суббота";
+  if (m === "own") return "Пустая сетка — сам решаешь дни и строки";
+  return "Уроки, пять дней, звонки как в школе";
+}
+
+function pwShowCustom(on) {
+  const bar = $("#pwCustomBar");
+  if (!bar) return;
+  bar.hidden = !on;
+  if (on) {
+    const inp = $("#pwCustomInput");
+    if (inp) { inp.value = ""; inp.focus(); }
+  }
+}
+function pwCommitCustom() {
+  const inp = $("#pwCustomInput");
+  const ok = pwAddSubject(inp ? inp.value : "");
+  pwShowCustom(false);
+  if (ok) pwRender();
+}
+
+function pwMountResultSheet() {
+  const port = $("#pwPreview");
+  if (!sheet || !port) return;
+  port.innerHTML = "";
+  port.appendChild(sheet);
+  sheet.classList.add("exporting");
+  requestAnimationFrame(() => {
+    pwScalePreview();
+    requestAnimationFrame(pwScalePreview);
+  });
+}
+function pwRestoreSheet() {
+  if (!sheet) return;
+  sheet.classList.remove("exporting");
+  sheet.style.transform = "";
+  sheetHome();
+}
+
+function pwRenderPreview() {
+  const wrap = $("#pwPreviewWrap");
+  const port = $("#pwPreview");
+  const el = $("#pwSheet");
+  if (!wrap || !port || !el) return;
+  wrap.hidden = false;
+  if (phoneWizard.committed && phoneWizard.phase === "result") {
+    el.hidden = true;
+    pwMountResultSheet();
+    return;
+  }
+  el.hidden = false;
+  if (sheet && port.contains(sheet)) pwRestoreSheet();
+  if (!port.contains(el)) {
+    port.innerHTML = "";
+    port.appendChild(el);
+  }
+  pwFillSheet(el);
+  requestAnimationFrame(() => {
+    pwScalePreview();
+    requestAnimationFrame(pwScalePreview);
+  });
+}
+
+function pwChipHtml(name, extraCls) {
+  const cat = subjectCat(name);
+  return `<button type="button" class="pw-chip s-cell cat-${cat}${extraCls || ""}" data-pw-subj="${esc(name)}">${esc(name)}</button>`;
+}
+
+function pwRender() {
+  if (!phoneWizard) return;
+  const root = $("#phoneWizard");
+  if (!root) return;
+  const step = phoneWizard.step;
+  const phase = phoneWizard.phase || "steps";
+  const head = $("#pwHead");
+  const q = $("#pwQuestion");
+  const lead = $("#pwLead");
+  const body = $("#pwBody");
+  const layout = $("#pwLayout");
+  const result = $("#pwResult");
+  const preview = $("#pwPreviewWrap");
+  const foot = $("#pwFoot");
+  const next = $("#pwNext");
+  const back = $("#pwBack");
+  if (head) head.hidden = phase === "result";
+  if (foot) foot.hidden = phase === "result";
+  if (result) result.hidden = phase !== "result";
+  if (layout) layout.hidden = !(phase === "steps" && step === 4);
+  if (preview) preview.hidden = !(phase === "steps" && (step === 1 || step === 2 || step === 5) || phase === "result");
+  body.classList.toggle("pw-grow", phase === "steps" && (step === 3 || step === 5));
+  pwShowCustom(false);
+  if (phase === "result") {
+    if (q) q.hidden = true;
+    if (lead) lead.hidden = true;
+    body.innerHTML = "";
+    pwRenderResult();
+    return;
+  }
+  if (q) q.hidden = false;
+  const dots = $("#pwDots");
+  const stepN = $("#pwStepN");
+  if (stepN) stepN.textContent = `${step} из 5`;
+  if (dots) {
+    dots.innerHTML = [1, 2, 3, 4, 5].map((i) => `<i class="${i <= step ? "on" : ""}"></i>`).join("");
+  }
+  if (next) next.textContent = step === 5 ? "Готово" : "Далее";
+  if (back) back.textContent = "Назад";
+  let skip = $("#pwSkip");
+  if (!skip && foot) {
+    skip = document.createElement("p");
+    skip.id = "pwSkip";
+    skip.className = "pw-skip";
+    foot.parentNode.insertBefore(skip, foot);
+  }
+  if (skip) {
+    const empty = step === 3 && !(pwData().subjects || []).length;
+    skip.hidden = !(phase === "steps" && empty);
+    skip.textContent = "Можно пропустить — добавишь на сетке";
+  }
+  if (step === 1) pwRenderStep1();
+  else if (step === 2) pwRenderStep2();
+  else if (step === 3) pwRenderStep3();
+  else if (step === 4) pwRenderStep4();
+  else pwRenderStep5();
+}
+
+function pwRenderStep1() {
+  $("#pwQuestion").textContent = "Какое расписание делаем?";
+  const hint = pwModeHint();
+  const lead = $("#pwLead");
+  const draft = phoneWizard.hadDraft ? "Черновик на сайте не трогаем, пока не нажмёшь «Готово»." : "";
+  lead.hidden = !draft;
+  lead.textContent = draft;
+  const mode = pwData().mode;
+  $("#pwBody").innerHTML = `<div class="seg" id="pwModeSeg">
+    <button type="button" data-pw-mode="school"${mode === "school" ? " class=\"active\"" : ""}>Школа</button>
+    <button type="button" data-pw-mode="uni"${mode === "uni" ? " class=\"active\"" : ""}>Универ</button>
+    <button type="button" data-pw-mode="own"${mode === "own" ? " class=\"active\"" : ""}>Свой</button>
+  </div>
+  <p class="pw-lead">${esc(hint)}</p>`;
+  pwRenderPreview();
+}
+function pwRenderStep2() {
+  const s = pwData();
+  $("#pwQuestion").textContent = "Какие дни и сколько занятий?";
+  const lead = $("#pwLead");
+  lead.hidden = false;
+  lead.textContent = pwPauseHint();
+  const days = DAY_NAMES.map((n, i) =>
+    `<button type="button" class="chip${s.days[i] ? " on" : ""}" data-pw-day="${i}">${n}</button>`).join("");
+  $("#pwBody").innerHTML = `
+    <div class="pw-days">${days}</div>
+    <label class="check"><input type="checkbox" id="pwDual"${s.dual ? " checked" : ""} /> Две недели (чётная / нечётная)</label>
+    <div class="pw-row">
+      <span>${pwSlotWord()}</span>
+      <div class="pw-stepper">
+        <button type="button" id="pwMinus">−</button>
+        <b id="pwLessonN">${s.lessonN}</b>
+        <button type="button" id="pwPlus">+</button>
+      </div>
+    </div>
+    <label class="check"><input type="checkbox" id="pwPauses"${s.pauses ? " checked" : ""} /> ${pwPauseLabel()}</label>`;
+  pwRenderPreview();
+}
+function pwRenderStep3() {
+  const s = pwData();
+  $("#pwQuestion").textContent = "Какие предметы?";
+  const lead = $("#pwLead");
+  lead.hidden = !s.subjects.length;
+  lead.textContent = s.subjects.length ? "" : "";
+  lead.hidden = true;
+  const yours = s.subjects.length
+    ? s.subjects.map((n) => pwChipHtml(n, " on")).join("")
+    : `<span class="pw-empty">Ткни предметы ниже</span>`;
+  const cat = pwCatalog(s.mode).concat(s.extraSubjects);
+  const catalog = cat.map((n) => pwChipHtml(n, s.subjects.includes(n) ? " on" : "")).join("");
+  $("#pwBody").innerHTML = `
+    <div class="pw-yours" id="pwYours">${yours}</div>
+    <div class="pw-catalog" id="pwCatalog">${catalog}
+      <button type="button" class="pw-chip add" id="pwAddOwn">+ свой</button>
+    </div>`;
+  $("#pwPreviewWrap").hidden = true;
+  $("#pwLayout").hidden = true;
+}
+function pwRenderStep4() {
+  $("#pwQuestion").textContent = "Расставь по дням";
+  $("#pwLead").hidden = true;
+  $("#pwBody").innerHTML = "";
+  $("#pwPreviewWrap").hidden = true;
+  const s = pwData();
+  pwEnsureDay();
+  const layout = $("#pwLayout");
+  layout.hidden = false;
+  const weeks = s.dual
+    ? `<div class="pw-weeks">
+        <button type="button" data-pw-grid="0"${s.activeGrid === 0 ? " class=\"active\"" : ""}>Чётная</button>
+        <button type="button" data-pw-grid="1"${s.activeGrid === 1 ? " class=\"active\"" : ""}>Нечётная</button>
+      </div>` : "";
+  const tabs = pwEnabledDays().map((i) =>
+    `<button type="button" data-pw-edit-day="${i}" class="${i === s.editDay ? "active" : ""}${pwDayHasSubject(i) ? " has" : ""}">${DAY_NAMES[i]}</button>`).join("");
+  const d = s.editDay;
+  const g = s.cells[s.dual ? s.activeGrid : 0] || emptyGrid();
+  let slots = "";
+  for (let r = 0; r < s.rows; r++) {
+    const kind = s.kinds[r] || "lesson";
+    const time = esc(s.times[r] || "");
+    if (kind === "lesson") {
+      const val = (g[r] || [])[d] || "";
+      const cls = `s-cell cat-${subjectCat(val)}`;
+      const subj = esc(splitCell(val).subj);
+      slots += `<div class="pw-slot" data-row="${r}">
+        <span class="pw-time">${time}</span>
+        <div class="${cls}" data-r="${r}" data-d="${d}"><span class="s-subj">${subj}</span></div>
+      </div>`;
+    } else {
+      slots += `<div class="pw-slot is-span" data-row="${r}">
+        <span class="pw-time">${time}</span>
+        <div class="s-span kind-${kind}">${esc(s.labels[r] || KIND_NAME[kind])}</div>
+      </div>`;
+    }
+  }
+  const pal = s.subjects.map((n) => pwChipHtml(n, pwPick === n ? " on" : "")).join("");
+  layout.innerHTML = `${weeks}
+    <div class="pw-day-tabs">${tabs}</div>
+    <div class="pw-slots">${slots}</div>
+    <div class="pw-palette">
+      ${pal}
+      <button type="button" class="pw-chip add" id="pwAddOwn">+</button>
+    </div>`;
+  if (!phoneWizard.layoutHint) {
+    phoneWizard.layoutHint = true;
+    toast("Нажми предмет, потом клетку");
+  }
+}
+function pwRenderStep5() {
+  const s = pwData();
+  $("#pwQuestion").textContent = "Как будет выглядеть?";
+  $("#pwLead").hidden = true;
+  const tape = THEMES.map((t) =>
+    `<button type="button" class="tbtn${s.theme === t.id ? " active" : ""}" data-pw-theme="${t.id}">
+      <span class="nm">${t.name}</span>
+      <span class="sw">${t.sw.map((c) => `<i style="background:${c}"></i>`).join("")}</span>
+    </button>`).join("");
+  $("#pwBody").innerHTML = `<div class="pw-themes">${tape}</div>`;
+  pwRenderPreview();
+}
+function pwRenderResult() {
+  const box = $("#pwResult");
+  if (!box) return;
+  box.hidden = false;
+  $("#pwPreviewWrap").hidden = false;
+  box.innerHTML = `<div class="pw-result-actions">
+    <button type="button" class="btn primary" id="pwDl">Скачать PNG</button>
+    <button type="button" class="btn" id="pwShare">Ссылка</button>
+    <button type="button" class="btn" id="pwFix">Поправить раскладку</button>
+    <button type="button" class="btn" id="pwOpenEditor">Открыть в редакторе</button>
+    <button type="button" class="btn ghost" id="pwHome">На главную</button>
+  </div>`;
+  pwRenderPreview();
+}
+
+async function pwMaybeCopyOdd() {
+  if (!phoneWizard || phoneWizard.oddAsked) return;
+  const s = pwData();
+  if (!s.dual || s.activeGrid !== 1) return;
+  if (!pwGridHasAny(0) || pwGridHasAny(1)) {
+    phoneWizard.oddAsked = true;
+    return;
+  }
+  phoneWizard.oddAsked = true;
+  const ans = await pwAsk("Скопировать чётную неделю на нечётную?", [
+    { id: "yes", label: "Да", primary: true },
+    { id: "no", label: "Нет" }
+  ]);
+  if (ans === "yes") {
+    s.cells[1] = JSON.parse(JSON.stringify(s.cells[0]));
+    pwPersist();
+    pwRender();
+  }
+}
+
+function pwCommit() {
+  const s = phoneWizard.session;
+  const base = defaultState(s.mode);
+  const next = Object.assign(base, {
+    v: 4,
+    mode: s.mode,
+    days: s.days.slice(),
+    dual: !!s.dual,
+    activeGrid: s.dual ? s.activeGrid : 0,
+    rows: s.rows,
+    kinds: s.kinds.slice(),
+    labels: s.labels.slice(),
+    times: s.times.slice(),
+    cells: JSON.parse(JSON.stringify(s.cells)),
+    theme: s.theme,
+    custom: Object.assign({}, base.custom),
+    fmt: "auto",
+    wm: true,
+    title: base.title,
+    sub: base.sub,
+    showInfo: false,
+    info: [],
+    teachers: [],
+    paints: [emptyGrid(), emptyGrid()]
+  });
+  state = next;
+  save();
+  phoneWizard.committed = true;
+  phoneWizard.session = state;
+  metrikaGoal("phone_wizard_done");
+  markScheduleCreated("phone_wizard");
+  renderSheet();
+}
+
+function pwPushHash() {
+  if (location.hash === "#phone") return;
+  pwHashLock = true;
+  history.pushState({ phoneWizard: true }, "", "#phone");
+  pwHashLock = false;
+}
+function pwClearHash() {
+  pwHashLock = true;
+  history.replaceState(null, "", "/");
+  pwHashLock = false;
+}
+
+function pwOpen() {
+  if (!isCompact()) {
+    toast("На широком экране открой «Создать»");
+    return;
+  }
+  if (phoneWizard) return;
+  phoneWizard = {
+    step: 1,
+    phase: "steps",
+    session: pwNewSession(),
+    committed: false,
+    themeTouched: false,
+    oddAsked: false,
+    layoutHint: false,
+    hadDraft: pwHasLsDraft()
+  };
+  pwPick = null;
+  const el = $("#phoneWizard");
+  if (!el) return;
+  el.hidden = false;
+  document.body.classList.add("phone-wizard");
+  const landing = $("#landing");
+  if (landing) { landing.setAttribute("aria-hidden", "true"); landing.inert = true; }
+  pwPushHash();
+  metrikaGoal("phone_wizard_open");
+  metrikaGoal("phone_wizard_step", { step: 1 });
+  pwRender();
+}
+function pwCloseSilent() {
+  const dlg = $("#pwDialog");
+  if (dlg) dlg.hidden = true;
+  pwSetPick(null);
+  pwRestoreSheet();
+  const el = $("#phoneWizard");
+  if (el) el.hidden = true;
+  document.body.classList.remove("phone-wizard");
+  document.documentElement.style.removeProperty("--pw-kb");
+  const landing = $("#landing");
+  if (landing) {
+    landing.removeAttribute("aria-hidden");
+    landing.inert = false;
+  }
+  phoneWizard = null;
+  pwClearHash();
+  window.scrollTo(0, 0);
+}
+function pwCloseExit() {
+  if (!phoneWizard) return;
+  if (!phoneWizard.committed) metrikaGoal("phone_wizard_exit");
+  pwCloseSilent();
+}
+async function pwCloseBtn() {
+  if (!phoneWizard) return;
+  if (phoneWizard.phase === "result") {
+    pwCloseSilent();
+    return;
+  }
+  if (phoneWizard.step === 1 && !phoneWizard.committed) {
+    pwCloseExit();
+    return;
+  }
+  const ans = await pwAsk("Сбросить эту сборку?", [
+    { id: "yes", label: "Да", primary: true },
+    { id: "no", label: "Нет" }
+  ]);
+  if (ans === "yes") pwCloseExit();
+}
+function pwGo(step) {
+  if (!phoneWizard) return;
+  phoneWizard.phase = "steps";
+  phoneWizard.step = step;
+  metrikaGoal("phone_wizard_step", { step });
+  pwRender();
+}
+function pwBack() {
+  if (!phoneWizard) return;
+  if (phoneWizard.phase === "result") {
+    pwGo(5);
+    return;
+  }
+  if (phoneWizard.step <= 1) {
+    pwCloseExit();
+    return;
+  }
+  pwGo(phoneWizard.step - 1);
+}
+async function pwNext() {
+  if (!phoneWizard) return;
+  if (phoneWizard.step < 5) {
+    pwGo(phoneWizard.step + 1);
+    return;
+  }
+  if (!phoneWizard.committed) pwCommit();
+  phoneWizard.phase = "result";
+  pwRender();
+}
+
+function pwBind() {
+  document.querySelectorAll("[data-open-phone-wizard]").forEach((b) => {
+    b.addEventListener("click", (e) => {
+      e.preventDefault();
+      pwOpen();
+    });
+  });
+  onClick("#pwBackTop", pwBack);
+  onClick("#pwBack", pwBack);
+  onClick("#pwClose", () => { pwCloseBtn(); });
+  onClick("#pwNext", () => { pwNext(); });
+  onClick("#pwCustomAdd", pwCommitCustom);
+  listen("#pwCustomInput", "keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); pwCommitCustom(); }
+  });
+  listen("#phoneWizard", "click", async (e) => {
+    if (!phoneWizard) return;
+    const modeBtn = e.target.closest("[data-pw-mode]");
+    if (modeBtn) {
+      pwSetMode(modeBtn.dataset.pwMode);
+      pwRender();
+      return;
+    }
+    const dayBtn = e.target.closest("[data-pw-day]");
+    if (dayBtn) {
+      const i = +dayBtn.dataset.pwDay;
+      const s = pwData();
+      const on = !s.days[i];
+      if (!on && pwEnabledDays().length <= 1) {
+        toast("Хотя бы один день оставь");
+        return;
+      }
+      s.days[i] = on ? 1 : 0;
+      pwEnsureDay();
+      pwPersist();
+      pwRender();
+      return;
+    }
+    if (e.target.id === "pwMinus" || e.target.id === "pwPlus") {
+      const s = pwData();
+      const maxN = pwMaxLessonN(s.mode, s.pauses);
+      s.lessonN += e.target.id === "pwPlus" ? 1 : -1;
+      s.lessonN = Math.max(1, Math.min(maxN, s.lessonN));
+      pwApplyFrame();
+      pwRender();
+      return;
+    }
+    const addOwn = e.target.closest("#pwAddOwn");
+    if (addOwn) {
+      pwShowCustom(true);
+      return;
+    }
+    const yours = e.target.closest("#pwYours [data-pw-subj]");
+    if (yours && phoneWizard.step === 3) {
+      const name = yours.dataset.pwSubj;
+      const s = pwData();
+      if (pwSubjectOnGrid(name)) {
+        const ans = await pwAsk(`Убрать «${name}» с расписания?`, [
+          { id: "cells", label: "С клеток тоже", primary: true },
+          { id: "list", label: "Только из списка" },
+          { id: "cancel", label: "Отмена" }
+        ]);
+        if (ans === "cancel") return;
+        if (ans === "cells") pwClearSubjectCells(name);
+      }
+      s.subjects = s.subjects.filter((n) => n !== name);
+      pwPersist();
+      pwRender();
+      return;
+    }
+    const catChip = e.target.closest("#pwCatalog [data-pw-subj]");
+    if (catChip && phoneWizard.step === 3) {
+      pwAddSubject(catChip.dataset.pwSubj);
+      pwRender();
+      return;
+    }
+    const themeBtn = e.target.closest("[data-pw-theme]");
+    if (themeBtn) {
+      pwData().theme = themeBtn.dataset.pwTheme;
+      phoneWizard.themeTouched = true;
+      pwPersist();
+      pwRender();
+      return;
+    }
+    const gridBtn = e.target.closest("[data-pw-grid]");
+    if (gridBtn) {
+      pwData().activeGrid = +gridBtn.dataset.pwGrid;
+      pwPersist();
+      pwRender();
+      pwMaybeCopyOdd();
+      return;
+    }
+    const editDay = e.target.closest("[data-pw-edit-day]");
+    if (editDay) {
+      pwData().editDay = +editDay.dataset.pwEditDay;
+      pwRender();
+      return;
+    }
+    if (e.target.id === "pwDl") {
+      await downloadPng();
+      if (phoneWizard && phoneWizard.phase === "result") pwMountResultSheet();
+      return;
+    }
+    if (e.target.id === "pwShare") {
+      await shareSchedule();
+      return;
+    }
+    if (e.target.id === "pwFix") {
+      pwGo(4);
+      return;
+    }
+    if (e.target.id === "pwOpenEditor") {
+      pwCloseSilent();
+      openEditor();
+      return;
+    }
+    if (e.target.id === "pwHome") {
+      pwCloseSilent();
+      return;
+    }
+  });
+  listen("#phoneWizard", "change", (e) => {
+    if (!phoneWizard) return;
+    if (e.target.id === "pwDual") {
+      const s = pwData();
+      s.dual = e.target.checked;
+      if (!s.dual) s.activeGrid = 0;
+      pwPersist();
+      pwRender();
+      return;
+    }
+    if (e.target.id === "pwPauses") {
+      const s = pwData();
+      s.pauses = e.target.checked;
+      pwApplyFrame();
+      pwRender();
+    }
+  });
+
+  const layoutRoot = $("#pwLayout");
+  if (layoutRoot) {
+    let pwSkipClick = false;
+    layoutRoot.addEventListener("click", (e) => {
+      if (pwSkipClick) return;
+      if (!phoneWizard || phoneWizard.step !== 4) return;
+      const chip = e.target.closest("[data-pw-subj]");
+      if (chip && layoutRoot.contains(chip)) {
+        const name = chip.dataset.pwSubj;
+        pwSetPick(pwPick === name ? null : name);
+        return;
+      }
+      const cell = e.target.closest(".s-cell[data-r][data-d]");
+      if (!cell || !layoutRoot.contains(cell)) return;
+      const r = +cell.dataset.r, d = +cell.dataset.d;
+      const s = pwData();
+      if ((s.kinds[r] || "lesson") !== "lesson") return;
+      const gi = s.dual ? s.activeGrid : 0;
+      const cur = ((s.cells[gi] || [])[r] || [])[d] || "";
+      if (pwPick) {
+        pwSetCell(r, d, pwPick);
+        pwRender();
+        pwSetPick(pwPick);
+        return;
+      }
+      if (String(cur).trim()) {
+        pwSetCell(r, d, "");
+        pwRender();
+      }
+    });
+    (function bindPwDrag() {
+      const THRESH = 10;
+      const HOLD = 320;
+      let session = null;
+      function cellFromPoint(x, y) {
+        const stack = document.elementsFromPoint ? document.elementsFromPoint(x, y) : [document.elementFromPoint(x, y)];
+        for (const n of stack) {
+          if (!n || n.classList.contains("drag-ghost")) continue;
+          const cell = n.closest?.(".s-cell[data-r][data-d]");
+          if (cell && layoutRoot.contains(cell)) return cell;
+        }
+        return null;
+      }
+      function end() {
+        if (!session) return;
+        if (session.timer) clearTimeout(session.timer);
+        session.el.classList.remove("is-drag", "is-lift");
+        document.querySelectorAll("#pwLayout .s-cell.is-over").forEach((n) => n.classList.remove("is-over"));
+        document.body.classList.remove("is-sorting");
+        if (session.ghost) session.ghost.remove();
+        try { session.el.releasePointerCapture(session.pointerId); } catch (_) {}
+        session = null;
+      }
+      layoutRoot.addEventListener("pointerdown", (e) => {
+        if (e.button !== 0 || !phoneWizard || phoneWizard.step !== 4) return;
+        const chip = e.target.closest("[data-pw-subj]");
+        const cell = e.target.closest(".s-cell[data-r][data-d]");
+        const el = chip || cell;
+        if (!el || !layoutRoot.contains(el)) return;
+        if (cell && (pwData().kinds[+cell.dataset.r] || "lesson") !== "lesson") return;
+        if (cell) {
+          const s = pwData();
+          const gi = s.dual ? s.activeGrid : 0;
+          const cur = ((s.cells[gi] || [])[+cell.dataset.r] || [])[+cell.dataset.d] || "";
+          if (!String(cur).trim() && !chip) return;
+        }
+        const touch = e.pointerType === "touch" || e.pointerType === "pen";
+        session = {
+          pointerId: e.pointerId, el, chip: !!chip,
+          name: chip ? chip.dataset.pwSubj : "",
+          r: cell ? +cell.dataset.r : -1,
+          d: cell ? +cell.dataset.d : -1,
+          startX: e.clientX, startY: e.clientY,
+          started: false, armed: !touch, ghost: null, ox: 0, oy: 0, timer: null, touch
+        };
+        if (touch) session.timer = setTimeout(() => {
+          if (!session || session.started) return;
+          session.armed = true;
+          session.el.classList.add("is-lift");
+        }, HOLD);
+      });
+      window.addEventListener("pointermove", (e) => {
+        if (!session || e.pointerId !== session.pointerId) return;
+        const dist = Math.hypot(e.clientX - session.startX, e.clientY - session.startY);
+        if (!session.started) {
+          if (session.touch && !session.armed) {
+            if (dist > 8) end();
+            return;
+          }
+          if (!session.armed || dist < THRESH) return;
+          session.started = true;
+          if (session.timer) { clearTimeout(session.timer); session.timer = null; }
+          session.el.classList.add("is-drag");
+          session.el.classList.remove("is-lift");
+          document.body.classList.add("is-sorting");
+          const ghost = session.el.cloneNode(true);
+          ghost.classList.add("drag-ghost");
+          ghost.classList.remove("is-drag", "is-over", "is-lift", "on");
+          const r = session.el.getBoundingClientRect();
+          ghost.style.width = r.width + "px";
+          ghost.style.height = r.height + "px";
+          ghost.style.left = r.left + "px";
+          ghost.style.top = r.top + "px";
+          session.ox = e.clientX - r.left;
+          session.oy = e.clientY - r.top;
+          document.body.appendChild(ghost);
+          session.ghost = ghost;
+          try { session.el.setPointerCapture(e.pointerId); } catch (_) {}
+        }
+        e.preventDefault();
+        session.ghost.style.left = (e.clientX - session.ox) + "px";
+        session.ghost.style.top = (e.clientY - session.oy) + "px";
+        document.querySelectorAll("#pwLayout .s-cell.is-over").forEach((n) => n.classList.remove("is-over"));
+        const over = cellFromPoint(e.clientX, e.clientY);
+        if (over && over !== session.el) over.classList.add("is-over");
+      }, { passive: false });
+      window.addEventListener("pointerup", (e) => {
+        if (!session || e.pointerId !== session.pointerId) return;
+        const { started, chip, name, r, d } = session;
+        const x = e.clientX, y = e.clientY;
+        end();
+        if (!started || !phoneWizard || phoneWizard.step !== 4) return;
+        const over = cellFromPoint(x, y);
+        if (!over) return;
+        pwSkipClick = true;
+        setTimeout(() => { pwSkipClick = false; }, 80);
+        const r2 = +over.dataset.r, d2 = +over.dataset.d;
+        if (chip) {
+          pwSetCell(r2, d2, name);
+          pwSetPick(name);
+          pwRender();
+          pwSetPick(name);
+          return;
+        }
+        if (r >= 0 && !(r === r2 && d === d2)) {
+          pwSwapCells(r, d, r2, d2);
+          pwRender();
+        }
+      });
+      window.addEventListener("pointercancel", (e) => {
+        if (!session || e.pointerId !== session.pointerId) return;
+        end();
+      });
+    })();
+  }
+
+  COMPACT_MQ.addEventListener("change", () => {
+    if (phoneWizard && !isCompact()) {
+      if (!phoneWizard.committed) metrikaGoal("phone_wizard_exit");
+      pwCloseSilent();
+      toast("На широком экране открой «Создать»");
+    }
+  });
+  window.addEventListener("resize", () => {
+    if (phoneWizard) pwScalePreview();
+  });
+  window.addEventListener("popstate", () => {
+    if (pwHashLock) return;
+    if (!phoneWizard) return;
+    pwBack();
+    if (phoneWizard) pwPushHash();
+  });
+  const vv = window.visualViewport;
+  if (vv) {
+    const syncKb = () => {
+      if (!phoneWizard) return;
+      const kb = Math.max(0, window.innerHeight - vv.height - (vv.offsetTop || 0));
+      document.documentElement.style.setProperty("--pw-kb", kb + "px");
+    };
+    vv.addEventListener("resize", syncKb);
+    vv.addEventListener("scroll", syncKb);
+  }
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape" || !phoneWizard) return;
+    if (!$("#pwDialog")?.hidden) {
+      $("#pwDialog").hidden = true;
+      return;
+    }
+    pwCloseBtn();
+  });
+}
+pwBind();
+
 boot();

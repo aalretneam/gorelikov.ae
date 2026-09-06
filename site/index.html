@@ -71,7 +71,7 @@ try {
   "description": "Конструктор красивого расписания для школы и университета с экспортом в PNG."
 }
 </script>
-<link rel="stylesheet" href="/css/app.css?v=20260924" />
+<link rel="stylesheet" href="/css/app.css?v=20260925" />
 </head>
 <body>
 
@@ -86,6 +86,7 @@ try {
         <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A7.5 7.5 0 1 1 9.5 4 6 6 0 0 0 20 14.5z"/></svg>
       </button>
       <button class="btn sm primary" type="button" data-open-editor>Создать</button>
+      <button class="btn sm phone-wizard-entry" type="button" data-open-phone-wizard>С телефона</button>
     </nav>
 
     <section class="hero">
@@ -94,6 +95,7 @@ try {
       <p class="sub">Собери расписание для школы или универа, выбери готовый стиль или сделай свой. Скачай PNG на телефон, распечатай или кинь ссылку в чат класса.</p>
       <div class="cta-row">
         <button class="btn primary" type="button" data-open-editor>Собрать расписание →</button>
+        <button class="btn phone-wizard-entry" type="button" data-open-phone-wizard>Создать с телефона</button>
         <a class="btn" href="#styles">Посмотреть стили</a>
       </div>
       <div class="stats">
@@ -320,6 +322,42 @@ try {
     <button class="btn ghost" id="donateClose" type="button">Закрыть</button>
   </div>
 </div>
-<script src="/js/app.js?v=20260924" defer></script>
+<div id="phoneWizard" hidden>
+  <div class="pw-shell">
+    <header class="pw-head" id="pwHead">
+      <button type="button" class="pw-icon" id="pwBackTop" aria-label="Назад">←</button>
+      <div class="pw-progress">
+        <span id="pwStepN">1 из 5</span>
+        <span class="pw-dots" id="pwDots" aria-hidden="true"></span>
+      </div>
+      <button type="button" class="pw-icon" id="pwClose" aria-label="Закрыть">✕</button>
+    </header>
+    <h2 class="pw-q" id="pwQuestion"></h2>
+    <p class="pw-lead" id="pwLead" hidden></p>
+    <div class="pw-body" id="pwBody"></div>
+    <div class="pw-preview-wrap" id="pwPreviewWrap">
+      <div class="pw-preview" id="pwPreview">
+        <div class="sheet" id="pwSheet"></div>
+      </div>
+    </div>
+    <div class="pw-layout" id="pwLayout" hidden></div>
+    <div class="pw-result" id="pwResult" hidden></div>
+    <div class="pw-custom-bar" id="pwCustomBar" hidden>
+      <input type="text" id="pwCustomInput" maxlength="40" placeholder="Название предмета" autocomplete="off" enterkeyhint="done" />
+      <button type="button" class="btn sm primary" id="pwCustomAdd">Добавить</button>
+    </div>
+    <div class="pw-foot" id="pwFoot">
+      <button type="button" class="btn" id="pwBack">Назад</button>
+      <button type="button" class="btn primary" id="pwNext">Далее</button>
+    </div>
+  </div>
+  <div class="pw-dialog" id="pwDialog" hidden>
+    <div class="pw-dialog-card">
+      <p id="pwDialogText"></p>
+      <div class="pw-dialog-actions" id="pwDialogActions"></div>
+    </div>
+  </div>
+</div>
+<script src="/js/app.js?v=20260925" defer></script>
 </body>
 </html>
