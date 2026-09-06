@@ -21,6 +21,7 @@ from urllib.request import Request, urlopen
 
 ALPH = "23456789abcdefghijkmnpqrstuvwxyz"
 ID_RE = re.compile(r"^[23456789abcdefghijkmnpqrstuvwxyz]{8,12}$")
+STAT_RE = re.compile(r"^/api/stat/(get|hit)/(visits|created|thanks|download|share)$")
 DATA_URL_RE = re.compile(r"^data:image/(jpeg|jpg|png|webp);base64,([A-Za-z0-9+/]+=*)$", re.I)
 MAX_BODY = 512 * 1024
 BG_MAX = 350 * 1024
@@ -30,7 +31,17 @@ PORT = int(os.environ.get("RASPISALKA_PORT", "18765"))
 
 _post_hits: dict[str, list[float]] = {}
 _hits_lock = threading.Lock()
+_stats_lock = threading.Lock()
 MAX_CONTACT = 4 * 1024
+STAT_KEYS = ("visits", "created", "thanks", "download", "share")
+STAT_FLOOR = {
+    "visits": 136,
+    "created": 14,
+    "thanks": 4,
+    "download": 20,
+    "share": 17,
+}
+ABACUS_NS = os.environ.get("RASPISALKA_ABACUS_NS", "gorelikov.ae")
 
 
 def id_from_digest(digest: bytes, length: int = 8) -> str:
@@ -252,6 +263,73 @@ def client_ip(handler: BaseHTTPRequestHandler) -> str:
     return handler.client_address[0]
 
 
+def stats_file() -> Path:
+    return DATA_DIR / "stats.json"
+
+
+def abacus_get(key: str) -> int | None:
+    url = f"https://abacus.jasoncameron.dev/get/{ABACUS_NS}/{key}"
+    req = Request(url, headers={"User-Agent": "raspisalka-share/1"}, method="GET")
+    try:
+        with urlopen(req, timeout=4) as resp:
+            raw = json.loads(resp.read().decode("utf-8"))
+    except (HTTPError, URLError, TimeoutError, json.JSONDecodeError, OSError, ValueError):
+        return None
+    try:
+        n = int(raw.get("value"))
+    except (TypeError, ValueError, AttributeError):
+        return None
+    return n if n >= 0 else None
+
+
+def seed_stats() -> dict[str, int]:
+    stats = {k: 0 for k in STAT_KEYS}
+    if os.environ.get("RASPISALKA_STAT_IMPORT", "1") != "0":
+        for key in STAT_KEYS:
+            remote = abacus_get(key)
+            stats[key] = max(int(STAT_FLOOR.get(key, 0)), 0 if remote is None else remote)
+    return stats
+
+
+def read_stats_unlocked() -> dict[str, int]:
+    path = stats_file()
+    if not path.is_file():
+        stats = seed_stats()
+        write_stats_unlocked(stats)
+        return stats
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        stats = seed_stats()
+        write_stats_unlocked(stats)
+        return stats
+    if not isinstance(raw, dict):
+        stats = seed_stats()
+        write_stats_unlocked(stats)
+        return stats
+    stats = {}
+    for key in STAT_KEYS:
+        try:
+            stats[key] = max(0, int(raw.get(key, 0)))
+        except (TypeError, ValueError):
+            stats[key] = 0
+    return stats
+
+
+def write_stats_unlocked(stats: dict[str, int]) -> None:
+    payload = {k: int(stats.get(k, 0)) for k in STAT_KEYS}
+    write_bytes(stats_file(), json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8"))
+
+
+def stat_value(key: str, bump: bool) -> int:
+    with _stats_lock:
+        stats = read_stats_unlocked()
+        if bump:
+            stats[key] = int(stats.get(key, 0)) + 1
+            write_stats_unlocked(stats)
+        return int(stats.get(key, 0))
+
+
 class Handler(BaseHTTPRequestHandler):
     server_version = "raspisalka-share/1"
 
@@ -288,6 +366,14 @@ class Handler(BaseHTTPRequestHandler):
             return
         if path == "/api/contact":
             self._send_json(200, {"ok": True, "configured": telegram_configured()})
+            return
+        stat = STAT_RE.fullmatch(path)
+        if stat:
+            kind, key = stat.group(1), stat.group(2)
+            bump = kind == "hit"
+            if bump and not allow_post(client_ip(self), "stat", limit=40, window=120):
+                bump = False
+            self._send_json(200, {"value": stat_value(key, bump)})
             return
         prefix = "/api/share/"
         if path.startswith(prefix):
@@ -397,6 +483,12 @@ def selftest() -> None:
     assert e != d
     again = save_payload(*split_bg_image(with_bg))
     assert again == d
+    os.environ["RASPISALKA_STAT_IMPORT"] = "0"
+    assert stat_value("visits", False) == 0
+    assert stat_value("visits", True) == 1
+    assert stat_value("visits", False) == 1
+    assert stat_value("created", True) == 1
+    assert stat_value("created", False) == 1
     print("selftest ok", a, c, d, e, "bytes", len(blob))
 
 

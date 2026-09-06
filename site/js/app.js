@@ -331,21 +331,37 @@ function subjectCat(raw) {
   return "p" + (h % 8);
 }
 
-async function counterFetch(kind, action) {
+async function fetchCounterUrl(url, ms) {
   const ctrl = new AbortController();
-  const t = setTimeout(() => ctrl.abort(), 2500);
+  const t = setTimeout(() => ctrl.abort(), ms);
   try {
-    const r = await fetch(
-      `https://abacus.jasoncameron.dev/${kind}/${encodeURIComponent(CONFIG.abacusNs)}/${encodeURIComponent(action)}`,
-      { cache: "no-store", signal: ctrl.signal }
-    );
+    const r = await fetch(url, { cache: "no-store", signal: ctrl.signal });
+    if (!r.ok) return null;
     const j = await r.json();
-    return Number(j.value) || 0;
-  } catch { return null; }
-  finally { clearTimeout(t); }
+    const n = Number(j && j.value);
+    return Number.isFinite(n) ? n : null;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(t);
+  }
+}
+async function counterFetch(kind, action) {
+  const key = encodeURIComponent(action);
+  const own = `${shareApiBase()}/api/stat/${kind}/${key}`;
+  const n = await fetchCounterUrl(own, 2500);
+  if (n != null) return n;
+  return fetchCounterUrl(
+    `https://abacus.jasoncameron.dev/${kind}/${encodeURIComponent(CONFIG.abacusNs)}/${key}`,
+    4000
+  );
 }
 async function counterHit(action) {
-  if (!isProdHost()) return counterGet(action);
+  if (!isProdHost()) {
+    const n = await fetchCounterUrl(`${shareApiBase()}/api/stat/hit/${encodeURIComponent(action)}`, 1500);
+    if (n != null) return n;
+    return counterGet(action);
+  }
   return counterFetch("hit", action);
 }
 async function counterGet(action) {
@@ -377,10 +393,7 @@ function setCreatedStat(n) {
 function setVisitsStat(n) {
   const visitsEl = $("#statVisits");
   const foot = $("#statFooter");
-  if (!n) {
-    if (visitsEl) visitsEl.textContent = "live";
-    return;
-  }
+  if (n == null || Number.isNaN(Number(n))) return;
   if (visitsEl) visitsEl.textContent = fmtCount(n);
   const created = $("#statCreated")?.textContent;
   const createdBit = created && created !== "…" && created !== "0" ? ` · ${created} расписаний` : "";
@@ -2272,7 +2285,6 @@ async function boot() {
     }
     const created = await counterGet("created");
     if (created != null) setCreatedStat(created);
-    else if ($("#statCreated")) $("#statCreated").textContent = "0";
     setVisitsStat(visits);
     const thanks = await counterGet("thanks");
     setThanksStat(thanks);
