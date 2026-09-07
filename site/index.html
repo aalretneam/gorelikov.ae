@@ -27,7 +27,7 @@
 <noscript><div><img src="https://mc.yandex.ru/watch/112279782" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
 <!-- /Yandex.Metrika counter -->
 <title>Расписалка — красивое расписание для школы и универа</title>
-<meta name="description" content="Бесплатный конструктор расписания: 13 стилей + свой дизайн. PNG на телефон, печать PDF, ссылка другу. Школа и универ, две недели. Без регистрации." />
+<meta name="description" content="Бесплатный конструктор расписания: 13 стилей + свой дизайн. PNG, PDF, ссылка другу и файл в календарь. Школа и универ, две недели. Без регистрации." />
 <meta name="theme-color" content="#0a0c13" />
 <script>
 try {
@@ -37,6 +37,7 @@ try {
   }
 } catch (e) {}
 </script>
+<meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-title" content="Расписалка" />
 <link rel="canonical" href="https://gorelikov.ae/" />
@@ -71,7 +72,7 @@ try {
   "description": "Конструктор красивого расписания для школы и университета с экспортом в PNG."
 }
 </script>
-<link rel="stylesheet" href="/css/app.css?v=20261006" />
+<link rel="stylesheet" href="/css/app.css?v=20261007" />
 </head>
 <body>
 
@@ -104,7 +105,7 @@ try {
         <div class="stat live"><b id="statCreated">…</b><span>создано расписаний</span></div>
         <div class="stat"><b id="statVisits">…</b><span>заходов на сайт</span></div>
         <div class="stat"><b>13 + ∞</b><span>стилей, включая свой</span></div>
-        <div class="stat"><b>3</b><span>формата: PDF под печать · PNG под заставку · ссылка другу</span></div>
+        <div class="stat"><b>4</b><span>формата: PNG · PDF · ссылка · календарь</span></div>
       </div>
     </section>
 
@@ -116,7 +117,7 @@ try {
     <div class="steps">
       <div class="step"><div class="n">1</div><b>Заполни прямо в таблице</b><p>Кликай по ячейкам и пиши предметы — верхняя строка название, нижняя — кабинет или учитель.</p></div>
       <div class="step"><div class="n">2</div><b>Выбери или собери стиль</b><p>13 готовых тем или конструктор: свои цвета, шрифт, фото на фоне и эмодзи в углах. Предметы сами красятся по смыслу — или залей любой урок из палитры.</p></div>
-      <div class="step"><div class="n">3</div><b>Скачай и поставь</b><p>PNG под заставку, PDF под печать или ссылка другу — он откроет то же расписание и сможет сохранить или переделать.</p></div>
+      <div class="step"><div class="n">3</div><b>Скачай и поставь</b><p>PNG под заставку, PDF под печать, ссылка другу или файл в календарь телефона — с уроками и напоминаниями.</p></div>
     </div>
 
     <footer class="site">
@@ -264,10 +265,10 @@ try {
         <div class="hint compact-only">Выбери А4 или А5 — лист сразу того размера, без сжатия при печати.</div>
         <label class="check" style="margin-top:8px"><input type="checkbox" id="wmChk" checked /> Подпись «расписалка» на картинке</label>
         <button class="btn primary" id="dlBtn2" type="button">Скачать PNG</button>
+        <button class="btn" id="calBtn" type="button">В календарь</button>
         <button class="btn" id="printBtn" type="button">Печать / PDF</button>
         <button class="btn" id="shareBtn2" type="button">Ссылка на расписание</button>
-        <button class="btn" id="calBtn" type="button">В календарь</button>
-        <div class="hint">По ссылке друг откроет то же расписание и сможет сохранить или переделать. Ссылку видит кто угодно, у кого она есть. Лежит на сервере, удалить по кнопке нельзя — не пиши туда личное. «В календарь» скачает .ics — открой файл на телефоне, уроки появятся с напоминаниями.</div>
+        <div class="hint">По ссылке друг откроет то же расписание и сможет сохранить или переделать. Ссылку видит кто угодно, у кого она есть. Лежит на сервере, удалить по кнопке нельзя — не пиши туда личное. «В календарь» — файл .ics: на iPhone Поделиться → Календарь, на Android открой файл.</div>
       </div>
 
       <div class="grp">
@@ -314,16 +315,25 @@ try {
 <div class="modal" id="calModal" hidden>
   <div class="modal-card cal-card">
     <h3>Экспорт в календарь</h3>
-    <p class="cal-hint">Скачай файл и открой на телефоне — события добавятся в календарь с напоминаниями.</p>
+    <p class="cal-hint">На iPhone: скачай файл → Поделиться → Календарь. На Android открой .ics — уроки появятся с напоминаниями.</p>
+    <p class="cal-empty" id="calEmpty" hidden>Сначала расставь предметы по дням — иначе в календаре нечего ставить.</p>
     <div class="cal-field">
       <label for="calStart">Дата начала</label>
-      <input type="date" id="calStart" required />
-      <span class="cal-field-hint">Первый день занятий</span>
+      <input type="date" id="calStart" lang="ru" required />
+      <span class="cal-field-hint">Первый день занятий · день.месяц.год</span>
     </div>
     <div class="cal-field">
       <label for="calEnd">Дата окончания</label>
-      <input type="date" id="calEnd" />
+      <input type="date" id="calEnd" lang="ru" />
       <span class="cal-field-hint">Последний день четверти или семестра — необязательно</span>
+    </div>
+    <div class="cal-field" id="calParityWrap" hidden>
+      <span id="calParityLabel">Неделя даты начала</span>
+      <div class="cal-seg" role="radiogroup" aria-labelledby="calParityLabel">
+        <label class="check"><input type="radio" name="calParity" value="even" checked /> Чётная</label>
+        <label class="check"><input type="radio" name="calParity" value="odd" /> Нечётная</label>
+      </div>
+      <span class="cal-field-hint">Как в школе в эту дату — от этого пляшет повтор раз в две недели</span>
     </div>
     <div class="cal-field">
       <label for="calDuration">Длительность урока</label>
@@ -334,6 +344,7 @@ try {
         <option value="40">40 минут</option>
         <option value="30">30 минут</option>
       </select>
+      <span class="cal-field-hint">Не длиннее, чем до следующего звонка</span>
     </div>
     <div class="cal-field">
       <label for="calTz">Часовой пояс</label>
@@ -359,12 +370,13 @@ try {
 <div class="modal" id="donateModal" hidden>
   <div class="modal-card donate-card">
     <h3>Поддержать проект.</h3>
-    <p>Расписалка без рекламы и регистрации. Если зашла - можно поддержать, чтобы покрыть хостинг и вдохновить на новые проекты.</p>
+    <p>Расписалка без рекламы и регистрации. Если зашло — можно поддержать, чтобы покрыть хостинг и вдохновить на новые проекты.</p>
     <div class="donate-qr" id="donateQrBox" hidden>
       <img id="donateQr" src="/img/donate-qr.png" alt="QR для доната по СБП" width="220" height="220">
       <span class="donate-qr-cap">СБП — отсканируй в приложении банка</span>
     </div>
     <a class="btn hot" id="donateGo" href="#" target="_blank" rel="noopener" hidden>Открыть донат</a>
+    <p class="donate-mail" id="donateMailWrap" hidden>Или перевод на <a id="donateMail" href="mailto:artem@gorelikov.ae">artem@gorelikov.ae</a></p>
     <button class="btn ghost" id="donateClose" type="button">Закрыть</button>
   </div>
 </div>
@@ -417,6 +429,7 @@ try {
     </div>
   </div>
 </div>
-<script src="/js/app.js?v=20261006" defer></script>
+<script src="/js/calendar-ics.js?v=20261007" defer></script>
+<script src="/js/app.js?v=20261007" defer></script>
 </body>
 </html>

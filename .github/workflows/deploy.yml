@@ -19,21 +19,11 @@ jobs:
         id: creds
         env:
           KEY: ${{ secrets.VPS_SSH_KEY }}
-          HOST: ${{ secrets.VPS_HOST }}
-          USER: ${{ secrets.VPS_USER }}
         run: |
-          HOST="${HOST:-159.194.227.211}"
-          USER="${USER:-root}"
-          echo "host=$HOST" >> "$GITHUB_OUTPUT"
-          echo "user=$USER" >> "$GITHUB_OUTPUT"
-          if [ -z "$KEY" ]; then
+          set -euo pipefail
+          if [ -z "${KEY:-}" ]; then
             echo "ready=no" >> "$GITHUB_OUTPUT"
-            echo "::notice::VPS_SSH_KEY нет — GitHub не пушит на Beget. Сайт сам подтянет main таймером raspisalka-deploy (раз в минуту), если на сервере уже ставили install.sh."
-            echo "Один раз, пока таймера нет:"
-            echo "  ssh root@159.194.227.211"
-            echo "  git -C /opt/gorelikov.ae remote set-url origin https://github.com/aalretneam/gorelikov.ae.git"
-            echo "  git -C /opt/gorelikov.ae pull origin main"
-            echo "  bash /opt/gorelikov.ae/deploy/install.sh"
+            echo "::notice::VPS_SSH_KEY нет — GitHub не пушит на Beget. Сайт сам подтянет main таймером raspisalka-deploy (раз в минуту)."
           else
             echo "ready=yes" >> "$GITHUB_OUTPUT"
           fi
@@ -43,8 +33,8 @@ jobs:
         uses: easingthemes/ssh-deploy@v5.0.3
         with:
           SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_KEY }}
-          REMOTE_HOST: ${{ steps.creds.outputs.host }}
-          REMOTE_USER: ${{ steps.creds.outputs.user }}
+          REMOTE_HOST: "159.194.227.211"
+          REMOTE_USER: "root"
           REMOTE_PORT: "22"
           SOURCE: "./"
           TARGET: "/opt/gorelikov.ae/"

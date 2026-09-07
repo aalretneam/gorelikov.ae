@@ -1291,6 +1291,18 @@ body.is-sorting * { cursor: grabbing !important; }
 }
 .cal-actions { display: flex; gap: 10px; margin-top: 18px; }
 .cal-actions .btn { flex: 1; margin-top: 0; width: auto; }
+.cal-actions .btn:disabled { opacity: .45; pointer-events: none; cursor: not-allowed; }
+.cal-empty {
+  text-align: left; font-size: .86rem; font-weight: 700; line-height: 1.4;
+  color: #fecaca; background: rgba(248, 113, 113, .12);
+  border: 1px solid rgba(248, 113, 113, .28);
+  border-radius: 12px; padding: 10px 12px; margin: 0 0 14px;
+}
+.cal-empty[hidden] { display: none !important; }
+.cal-seg { display: flex; gap: 14px; flex-wrap: wrap; }
+.cal-seg .check { margin: 0; }
+.donate-mail { margin: 12px 0 0; font-size: .84rem; color: var(--tx2); }
+.donate-mail a { color: var(--tx); font-weight: 800; }
 
 .compact-only, .day-editor { display: none !important; }
 
@@ -1390,6 +1402,11 @@ html.site-light .modal {
 html.site-light .modal-card {
   background: #fff;
   box-shadow: 0 30px 80px rgba(20, 28, 48, .16);
+}
+html.site-light .cal-empty {
+  color: #9f1239;
+  background: rgba(244, 63, 94, .08);
+  border-color: rgba(190, 18, 60, .25);
 }
 html.site-light .preview-scrim {
   background: rgba(243, 245, 251, .96);

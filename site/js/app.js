@@ -50,6 +50,7 @@ function emojiChars(raw, max = 4) {
 const SCHOOL_TIMES = ["8:30", "9:25", "10:20", "11:20", "12:20", "13:15", "14:10", "15:05", "16:00", "16:55"];
 const UNI_TIMES = ["9:00", "10:40", "12:20", "14:30", "16:10", "17:50", "19:30", "21:00", "21:30", "22:00"];
 const LS_KEY = "raspisalka-v4";
+const PW_DRAFT_KEY = "raspisalka-pw-draft";
 const UI_THEME_KEY = "raspisalka-ui-theme";
 const SITE_THEME_COLOR = { dark: "#0a0c13", light: "#f3f5fb" };
 const MAX_ROWS = 16;
@@ -1780,7 +1781,7 @@ function applyTemplate(kind, ask) {
 }
 onClick("#resetBtn", () => applyTemplate("empty", true));
 
-const FMT_TARGET = { auto: 3, phone: 3, story: 3, post: 3, a4: 4, a5: 4 };
+const FMT_TARGET = { auto: 3, a4: 4, a5: 4 };
 const SHEET_PAINT_PROPS = [
   "backgroundColor", "backgroundImage", "backgroundSize", "backgroundPosition",
   "backgroundRepeat", "backgroundClip", "webkitBackgroundClip", "color",
@@ -1878,16 +1879,24 @@ async function renderCanvas() {
   if (document.fonts?.ready) { try { await document.fonts.ready; } catch {} }
   document.activeElement?.blur?.();
   const keepPreview = document.body.classList.contains("preview-open");
+  const host = exportHost();
+  const clone = sheet.cloneNode(true);
+  clone.id = "sheetCapture";
+  clone.classList.add("exporting");
+  clone.style.transform = "none";
+  clone.style.opacity = "1";
+  clone.style.position = "relative";
+  clone.style.left = "auto";
+  clone.style.top = "auto";
+  clone.style.zIndex = "1";
+  host.innerHTML = "";
+  host.appendChild(clone);
   document.body.classList.add("capturing");
-  exportHost().appendChild(sheet);
-  resetSheetFit();
-  sheet.style.transform = "none";
-  sheet.classList.add("exporting");
-  bakeSheetPaint(sheet);
+  bakeSheetPaint(clone);
   try {
     await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
-    const bg = getComputedStyle(sheet).backgroundColor;
-    return await window.html2canvas(sheet, {
+    const bg = getComputedStyle(clone).backgroundColor;
+    return await window.html2canvas(clone, {
       scale: FMT_TARGET[state.fmt] || 3,
       backgroundColor: (bg && bg !== "rgba(0, 0, 0, 0)" && bg !== "transparent") ? bg : "#ffffff",
       useCORS: true,
@@ -1899,17 +1908,17 @@ async function renderCanvas() {
       scrollY: 0,
       onclone(doc) {
         doc.querySelectorAll(".grip").forEach((g) => g.remove());
-        const clone = doc.getElementById("sheet");
-        if (clone) {
-          clone.style.overflow = "hidden";
-          clone.style.opacity = "1";
-          clone.style.transform = "none";
-          clone.style.position = "relative";
-          clone.style.left = "auto";
-          clone.style.top = "auto";
-          clone.style.zIndex = "1";
+        const cap = doc.getElementById("sheetCapture");
+        if (cap) {
+          cap.style.overflow = "hidden";
+          cap.style.opacity = "1";
+          cap.style.transform = "none";
+          cap.style.position = "relative";
+          cap.style.left = "auto";
+          cap.style.top = "auto";
+          cap.style.zIndex = "1";
           const view = doc.defaultView;
-          clone.querySelectorAll(".s-title").forEach((el) => {
+          cap.querySelectorAll(".s-title").forEach((el) => {
             const cs = view ? view.getComputedStyle(el) : null;
             if (!cs) return;
             const transparent = cs.color === "transparent" || cs.color === "rgba(0, 0, 0, 0)";
@@ -1924,27 +1933,15 @@ async function renderCanvas() {
             }
           });
         }
-        const fit = doc.getElementById("sheetFit");
-        if (fit) {
-          fit.style.height = "auto";
-          fit.style.overflow = "visible";
-          fit.style.transform = "none";
-        }
       }
     });
   } finally {
     restoreSheetPaint();
-    sheet.classList.remove("exporting");
+    host.innerHTML = "";
     document.body.classList.remove("capturing");
-    if (keepPreview && isCompact()) {
-      const port = $("#previewPort");
-      if (port) port.appendChild(sheet);
-      requestAnimationFrame(scalePreview);
-    } else if (wizardShot && phoneWizard && phoneWizard.phase === "result") {
-      pwMountResultSheet();
-    } else {
-      sheetHome();
-    }
+    if (keepPreview && isCompact()) requestAnimationFrame(scalePreview);
+    else if (wizardShot && phoneWizard && phoneWizard.phase === "result") requestAnimationFrame(pwScalePreview);
+    else scheduleFit();
   }
 }
 async function downloadPng() {
@@ -2253,6 +2250,16 @@ function openDonate(e) {
   } else if (go) {
     go.hidden = true;
   }
+  const mail = $("#donateMail");
+  const mailWrap = $("#donateMailWrap");
+  const addr = (CONFIG.donateEmail || "").trim();
+  if (mail && mailWrap && addr) {
+    mail.href = "mailto:" + addr;
+    mail.textContent = addr;
+    mailWrap.hidden = false;
+  } else if (mailWrap) {
+    mailWrap.hidden = true;
+  }
   const modal = $("#donateModal");
   if (modal) modal.hidden = false;
 }
@@ -2303,137 +2310,31 @@ document.addEventListener("keydown", (e) => {
   hideDonateNudge();
 });
 
-const CAL_TZONES = [
-  ["Europe/Kaliningrad", "Калининград (UTC+2)"],
-  ["Europe/Moscow", "Москва (UTC+3)"],
-  ["Europe/Samara", "Самара (UTC+4)"],
-  ["Asia/Yekaterinburg", "Екатеринбург (UTC+5)"],
-  ["Asia/Omsk", "Омск (UTC+6)"],
-  ["Asia/Krasnoyarsk", "Красноярск (UTC+7)"],
-  ["Asia/Irkutsk", "Иркутск (UTC+8)"],
-  ["Asia/Yakutsk", "Якутск (UTC+9)"],
-  ["Asia/Vladivostok", "Владивосток (UTC+10)"],
-  ["Asia/Magadan", "Магадан (UTC+11)"],
-  ["Asia/Kamchatka", "Камчатка (UTC+12)"]
-];
-const CAL_BYDAY = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"];
-
-function calPad(n) { return String(n).padStart(2, "0"); }
-function calParseYmd(s) {
-  const m = String(s || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (!m) return null;
-  return { y: +m[1], m: +m[2], d: +m[3] };
-}
-function calYmdInput(ymd) {
-  return `${ymd.y}-${calPad(ymd.m)}-${calPad(ymd.d)}`;
-}
-function calWeekdayMon0(ymd) {
-  const js = new Date(Date.UTC(ymd.y, ymd.m - 1, ymd.d)).getUTCDay();
-  return js === 0 ? 6 : js - 1;
-}
-function calAddDays(ymd, n) {
-  const dt = new Date(Date.UTC(ymd.y, ymd.m - 1, ymd.d + n));
-  return { y: dt.getUTCFullYear(), m: dt.getUTCMonth() + 1, d: dt.getUTCDate() };
-}
-function calFirstWeekdayOnOrAfter(start, dayIndex) {
-  const w = calWeekdayMon0(start);
-  let diff = dayIndex - w;
-  if (diff < 0) diff += 7;
-  return calAddDays(start, diff);
-}
-function calIsoWeek(ymd) {
-  const d = new Date(Date.UTC(ymd.y, ymd.m - 1, ymd.d));
-  const dayNum = d.getUTCDay() || 7;
-  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-  return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
-}
-function calParseHm(t) {
-  const m = String(t || "").trim().match(/^(\d{1,2}):(\d{2})$/);
-  if (!m) return [8, 30];
-  return [Math.min(23, +m[1]), Math.min(59, +m[2])];
-}
-function calLocalStamp(ymd, hm) {
-  return `${ymd.y}${calPad(ymd.m)}${calPad(ymd.d)}T${calPad(hm[0])}${calPad(hm[1])}00`;
-}
-function calAddMinutes(ymd, hm, minutes) {
-  let total = hm[0] * 60 + hm[1] + Number(minutes || 0);
-  let days = Math.floor(total / (24 * 60));
-  total -= days * 24 * 60;
-  if (total < 0) { total += 24 * 60; days -= 1; }
-  return { ymd: calAddDays(ymd, days), hm: [Math.floor(total / 60), total % 60] };
-}
-function calStampUTC(date) {
-  return date.toISOString().replace(/[-:]/g, "").replace(/\.\d+/, "");
-}
-function calCompact(ymd) {
-  return `${ymd.y}${calPad(ymd.m)}${calPad(ymd.d)}`;
-}
-function escapeICS(str) {
-  return String(str || "")
-    .replace(/\\/g, "\\\\")
-    .replace(/;/g, "\\;")
-    .replace(/,/g, "\\,")
-    .replace(/\r\n/g, "\n")
-    .replace(/\n/g, "\\n");
-}
-function foldICSLine(line) {
-  const enc = new TextEncoder();
-  const dec = new TextDecoder();
-  const bytes = enc.encode(line);
-  if (bytes.length <= 75) return line;
-  const parts = [];
-  let i = 0;
-  while (i < bytes.length) {
-    const max = i === 0 ? 75 : 74;
-    let end = Math.min(i + max, bytes.length);
-    while (end > i && (bytes[end] & 0xc0) === 0x80) end--;
-    if (end === i) end = Math.min(i + max, bytes.length);
-    const chunk = dec.decode(bytes.slice(i, end));
-    parts.push(i === 0 ? chunk : " " + chunk);
-    i = end;
-  }
-  return parts.join("\r\n");
-}
-function calCellEmpty(val) {
-  const subj = splitCell(val).subj.trim();
-  return !subj || subj === "—" || subj === "-" || subj === "+";
-}
-function calHasLessons(st) {
-  const grids = st.dual ? [0, 1] : [0];
-  return grids.some((gi) => {
-    const g = (st.cells && st.cells[gi]) || [];
-    return (st.kinds || []).some((kind, r) => {
-      if ((kind || "lesson") !== "lesson") return false;
-      const row = g[r] || [];
-      return row.some((c, d) => st.days[d] && !calCellEmpty(c));
-    });
-  });
-}
-function calNearestMonday() {
-  const now = new Date();
-  const ymd = { y: now.getFullYear(), m: now.getMonth() + 1, d: now.getDate() };
-  return calAddDays(ymd, (7 - calWeekdayMon0(ymd)) % 7);
+function calApi() {
+  return globalThis.RaspisalkaCal;
 }
 function getDefaultCalendarOptions(st) {
+  const Cal = calApi();
   let timezone = "Europe/Moscow";
   try {
     const detected = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    if (detected && detected !== "UTC" && detected !== "Etc/UTC") timezone = detected;
+    if (detected && detected !== "UTC" && detected !== "Etc/UTC") timezone = Cal.resolveTz(detected);
   } catch {}
   return {
-    startDate: calYmdInput(calNearestMonday()),
+    startDate: Cal.ymdInput(Cal.nearestMonday()),
     endDate: "",
     duration: st.mode === "uni" ? 90 : 45,
     timezone,
-    reminder: 15
+    reminder: 15,
+    startParity: "even"
   };
 }
 function fillCalTimezoneSelect(selected) {
+  const Cal = calApi();
   const sel = $("#calTz");
-  if (!sel) return;
-  const known = new Map(CAL_TZONES);
-  let html = CAL_TZONES.map(([id, label]) =>
+  if (!sel || !Cal) return;
+  const known = new Map(Cal.TZONES.map((row) => [row[0], row[1]]));
+  let html = Cal.TZONES.map(([id, label]) =>
     `<option value="${esc(id)}">${esc(label)}</option>`).join("");
   if (selected && !known.has(selected)) {
     html = `<option value="${esc(selected)}">${esc(selected)}</option>` + html;
@@ -2443,90 +2344,25 @@ function fillCalTimezoneSelect(selected) {
   if (![...sel.options].some((o) => o.value === sel.value)) sel.value = "Europe/Moscow";
 }
 function readCalOptions() {
+  const Cal = calApi();
+  const parityEl = document.querySelector("input[name=calParity]:checked");
   return {
     startDate: ($("#calStart") && $("#calStart").value) || "",
     endDate: ($("#calEnd") && $("#calEnd").value) || "",
     duration: Math.max(5, Math.min(180, Number($("#calDuration") && $("#calDuration").value) || 45)),
-    timezone: ($("#calTz") && $("#calTz").value) || "Europe/Moscow",
-    reminder: Math.max(0, Number($("#calReminder") && $("#calReminder").value) || 0)
+    timezone: Cal.resolveTz(($("#calTz") && $("#calTz").value) || "Europe/Moscow"),
+    reminder: Math.max(0, Number($("#calReminder") && $("#calReminder").value) || 0),
+    startParity: (parityEl && parityEl.value) === "odd" ? "odd" : "even"
   };
 }
 function validateCalendarExport(st, options) {
-  const errors = [];
-  if (!options.startDate || !calParseYmd(options.startDate)) errors.push("Укажи дату начала занятий");
-  const start = calParseYmd(options.startDate);
-  const end = options.endDate ? calParseYmd(options.endDate) : null;
-  if (options.endDate && !end) errors.push("Дата окончания не похожа на дату");
-  if (start && end && options.endDate < options.startDate) errors.push("Дата окончания раньше даты начала");
-  if (!calHasLessons(st)) errors.push("Расписание пустое — нечего экспортировать");
-  return errors;
+  return calApi().validate(st, options);
 }
 function generateICS(st, options) {
-  const start = calParseYmd(options.startDate);
-  const tz = options.timezone || "Europe/Moscow";
-  const duration = options.duration;
-  const reminder = options.reminder;
-  const dtstamp = calStampUTC(new Date());
-  const until = options.endDate && calParseYmd(options.endDate)
-    ? `${calCompact(calParseYmd(options.endDate))}T235959Z` : null;
-  const calName = `${st.title || "Расписание"} · Расписание`;
-  const lines = [
-    "BEGIN:VCALENDAR",
-    "VERSION:2.0",
-    "PRODID:-//Raspisalka//gorelikov.ae//RU",
-    "CALSCALE:GREGORIAN",
-    "METHOD:PUBLISH",
-    `X-WR-CALNAME:${escapeICS(calName)}`,
-    `X-WR-TIMEZONE:${tz}`
-  ];
-  const dual = !!st.dual;
-  const startEven = calIsoWeek(start) % 2 === 0;
-  const grids = dual ? [0, 1] : [0];
-  let count = 0;
-  grids.forEach((gi) => {
-    let gridStart = start;
-    if (dual) {
-      const gridEven = gi === 0;
-      if (startEven !== gridEven) gridStart = calAddDays(start, 7);
-    }
-    (st.days || []).forEach((on, dayIndex) => {
-      if (!on) return;
-      const first = calFirstWeekdayOnOrAfter(gridStart, dayIndex);
-      (st.kinds || []).forEach((kind, slotIndex) => {
-        if ((kind || "lesson") !== "lesson") return;
-        const g = (st.cells && st.cells[gi]) || [];
-        const val = (g[slotIndex] || [])[dayIndex] || "";
-        if (calCellEmpty(val)) return;
-        const parsed = splitCell(val);
-        const hm = calParseHm((st.times || [])[slotIndex]);
-        const endAt = calAddMinutes(first, hm, duration);
-        const uid = `raspisalka-${gi}-${dayIndex}-${slotIndex}-${calCompact(first)}@gorelikov.ae`;
-        let rrule = `RRULE:FREQ=WEEKLY;BYDAY=${CAL_BYDAY[dayIndex]}`;
-        if (dual) rrule += ";INTERVAL=2";
-        if (until) rrule += `;UNTIL=${until}`;
-        lines.push("BEGIN:VEVENT");
-        lines.push(`UID:${uid}`);
-        lines.push(`DTSTAMP:${dtstamp}`);
-        lines.push(`DTSTART;TZID=${tz}:${calLocalStamp(first, hm)}`);
-        lines.push(`DTEND;TZID=${tz}:${calLocalStamp(endAt.ymd, endAt.hm)}`);
-        lines.push(rrule);
-        lines.push(`SUMMARY:${escapeICS(parsed.subj.trim())}`);
-        if (parsed.note.trim()) lines.push(`LOCATION:${escapeICS(parsed.note.trim())}`);
-        if (st.title) lines.push(`DESCRIPTION:${escapeICS(st.title)}\\ngorelikov.ae`);
-        if (reminder > 0) {
-          lines.push("BEGIN:VALARM");
-          lines.push("ACTION:DISPLAY");
-          lines.push(`TRIGGER:-PT${reminder}M`);
-          lines.push(`DESCRIPTION:${escapeICS(parsed.subj.trim())} через ${reminder} мин`);
-          lines.push("END:VALARM");
-        }
-        lines.push("END:VEVENT");
-        count++;
-      });
-    });
-  });
-  lines.push("END:VCALENDAR");
-  return { ics: lines.map(foldICSLine).join("\r\n") + "\r\n", count };
+  return calApi().generateICS(st, options);
+}
+function calHasLessons(st) {
+  return calApi().hasLessons(st);
 }
 function getICSFilename(st) {
   const title = (st.title || "raspisanie").trim();
@@ -2537,9 +2373,11 @@ function getICSFilename(st) {
     .slice(0, 30) || "raspisanie";
   return `${safe}.ics`;
 }
-function downloadICS(content, filename) {
-  const blob = new Blob([content], { type: "text/calendar;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
+function icsBlob(content) {
+  return new Blob([content], { type: "text/calendar;charset=utf-8" });
+}
+function downloadICSLink(content, filename) {
+  const url = URL.createObjectURL(icsBlob(content));
   const a = document.createElement("a");
   a.href = url;
   a.download = filename;
@@ -2547,6 +2385,22 @@ function downloadICS(content, filename) {
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 2500);
+}
+async function downloadICS(content, filename) {
+  if (isAppleTouch() && navigator.share && typeof File === "function") {
+    try {
+      const file = new File([icsBlob(content)], filename, { type: "text/calendar" });
+      const payload = { files: [file], title: filename };
+      if (!navigator.canShare || navigator.canShare(payload)) {
+        await navigator.share(payload);
+        return "share";
+      }
+    } catch (err) {
+      if (err && err.name === "AbortError") return "abort";
+    }
+  }
+  downloadICSLink(content, filename);
+  return "download";
 }
 function closeCalModal() {
   const m = $("#calModal");
@@ -2566,26 +2420,44 @@ function openCalModal(e) {
   if (end) end.value = "";
   if (dur) dur.value = String(opts.duration);
   if (rem) rem.value = String(opts.reminder);
+  const even = document.querySelector("input[name=calParity][value=even]");
+  if (even) even.checked = true;
+  const parityWrap = $("#calParityWrap");
+  if (parityWrap) parityWrap.hidden = !state.dual;
+  const has = calHasLessons(state);
+  const empty = $("#calEmpty");
+  const dl = $("#calDownload");
+  if (empty) empty.hidden = has;
+  if (dl) dl.disabled = !has;
   modal.hidden = false;
 }
-function doCalendarExport() {
+async function doCalendarExport() {
   const options = readCalOptions();
   const errors = validateCalendarExport(state, options);
   if (errors.length) {
     toast(errors[0]);
     return;
   }
-  const start = calParseYmd(options.startDate);
+  const start = calApi().parseYmd(options.startDate);
   const { ics, count } = generateICS(state, options);
   if (!count) {
-    toast("Расписание пустое — нечего экспортировать");
+    toast("Сначала расставь предметы по дням — иначе в календаре нечего ставить");
     return;
   }
-  downloadICS(ics, getICSFilename(state));
+  const how = await downloadICS(ics, getICSFilename(state));
+  if (how === "abort") return;
   closeCalModal();
-  toast(calWeekdayMon0(start) !== 0
-    ? "Файл скачан. Начало не понедельник — уроки встанут на ближайшие дни недели"
-    : "Файл календаря скачан — открой его на телефоне");
+  let msg;
+  if (how === "share") {
+    msg = "Если календарь не открылся — Поделиться → Календарь";
+  } else if (isAppleTouch()) {
+    msg = "Файл скачан. На iPhone: Поделиться → Календарь";
+  } else {
+    msg = calApi().weekdayMon0(start) !== 0
+      ? "Файл скачан. Начало не понедельник — уроки встанут на ближайшие дни недели"
+      : "Файл календаря скачан — открой его на телефоне";
+  }
+  toast(msg);
   metrikaGoal("calendar_export", { mode: state.mode, dual: !!state.dual, lessons_count: count });
   markScheduleCreated("calendar_export");
 }
@@ -2686,6 +2558,7 @@ const PW_UNI_SUBJ = [
 let phoneWizard = null;
 let pwHashLock = false;
 let pwPick = null;
+let pwAskDone = null;
 
 function pwCatalog(mode) {
   return mode === "uni" ? PW_UNI_SUBJ : PW_SCHOOL_SUBJ;
@@ -2829,8 +2702,42 @@ function pwHydrateWizard(s) {
 function pwData() {
   return pwHydrateWizard(phoneWizard.committed ? state : phoneWizard.session);
 }
+function pwSaveDraft() {
+  if (!phoneWizard || phoneWizard.committed) return;
+  try {
+    localStorage.setItem(PW_DRAFT_KEY, JSON.stringify({
+      step: phoneWizard.step,
+      themeTouched: !!phoneWizard.themeTouched,
+      oddAsked: !!phoneWizard.oddAsked,
+      session: phoneWizard.session
+    }));
+  } catch {}
+}
+function pwClearDraft() {
+  try { localStorage.removeItem(PW_DRAFT_KEY); } catch {}
+}
+function pwReadDraft() {
+  try {
+    const raw = localStorage.getItem(PW_DRAFT_KEY);
+    if (!raw) return null;
+    const data = JSON.parse(raw);
+    if (!data || typeof data !== "object") return null;
+    const session = pwHydrateWizard(data.session || data);
+    if (!session || typeof session !== "object") return null;
+    const step = Math.max(1, Math.min(5, Number(data.step) || 1));
+    return {
+      session,
+      step,
+      themeTouched: !!data.themeTouched,
+      oddAsked: !!data.oddAsked
+    };
+  } catch {
+    return null;
+  }
+}
 function pwPersist() {
   if (phoneWizard && phoneWizard.committed) save();
+  else pwSaveDraft();
 }
 function pwApplyFrame() {
   const s = pwData();
@@ -3170,10 +3077,17 @@ function pwScalePreview() {
 }
 function pwAsk(text, buttons) {
   return new Promise((resolve) => {
+    if (typeof pwAskDone === "function") pwAskDone(null);
     const box = $("#pwDialog");
     const act = $("#pwDialogActions");
     const p = $("#pwDialogText");
-    if (!box || !act || !p) { resolve(buttons[buttons.length - 1]?.id); return; }
+    const finish = (id) => {
+      if (pwAskDone !== finish) return;
+      pwAskDone = null;
+      resolve(id);
+    };
+    pwAskDone = finish;
+    if (!box || !act || !p) { finish(buttons[buttons.length - 1]?.id); return; }
     p.textContent = text;
     act.innerHTML = "";
     buttons.forEach((b) => {
@@ -3181,7 +3095,7 @@ function pwAsk(text, buttons) {
       el.type = "button";
       el.className = "btn" + (b.primary ? " primary" : "");
       el.textContent = b.label;
-      el.onclick = () => { box.hidden = true; resolve(b.id); };
+      el.onclick = () => { box.hidden = true; finish(b.id); };
       act.appendChild(el);
     });
     box.hidden = false;
@@ -3667,6 +3581,7 @@ function pwCommit() {
   });
   state = next;
   save();
+  pwClearDraft();
   phoneWizard.committed = true;
   phoneWizard.session = state;
   if (first) {
@@ -3688,7 +3603,7 @@ function pwClearHash() {
   pwHashLock = false;
 }
 
-function pwOpen() {
+async function pwOpen() {
   if (!isCompact()) {
     toast("На широком экране открой «Создать»");
     return;
@@ -3717,10 +3632,28 @@ function pwOpen() {
   metrikaGoal("phone_wizard_step", { step: 1 });
   pwRender();
   $("#pwBackTop")?.focus();
+  const draft = pwReadDraft();
+  if (!draft || !phoneWizard) return;
+  const ans = await pwAsk("Продолжить незаконченную сборку?", [
+    { id: "yes", label: "Да", primary: true },
+    { id: "no", label: "Нет" }
+  ]);
+  if (!phoneWizard) return;
+  if (ans === "yes") {
+    phoneWizard.session = draft.session;
+    phoneWizard.step = draft.step;
+    phoneWizard.themeTouched = draft.themeTouched;
+    phoneWizard.oddAsked = draft.oddAsked;
+    metrikaGoal("phone_wizard_step", { step: phoneWizard.step });
+    pwRender();
+  } else if (ans === "no") {
+    pwClearDraft();
+  }
 }
 function pwCloseSilent() {
   const dlg = $("#pwDialog");
   if (dlg) dlg.hidden = true;
+  if (typeof pwAskDone === "function") pwAskDone(null);
   pwCloseClock();
   pwSetPick(null);
   pwRestoreSheet();
@@ -3739,7 +3672,10 @@ function pwCloseSilent() {
 }
 function pwCloseExit() {
   if (!phoneWizard) return;
-  if (!phoneWizard.committed) metrikaGoal("phone_wizard_exit");
+  if (!phoneWizard.committed) {
+    pwSaveDraft();
+    metrikaGoal("phone_wizard_exit");
+  }
   pwCloseSilent();
 }
 async function pwCloseBtn() {
@@ -3756,7 +3692,10 @@ async function pwCloseBtn() {
     { id: "yes", label: "Да", primary: true },
     { id: "no", label: "Нет" }
   ]);
-  if (ans === "yes") pwCloseExit();
+  if (ans !== "yes" || !phoneWizard) return;
+  pwClearDraft();
+  if (!phoneWizard.committed) metrikaGoal("phone_wizard_exit");
+  pwCloseSilent();
 }
 function pwGo(step) {
   if (!phoneWizard) return;
@@ -3764,6 +3703,7 @@ function pwGo(step) {
   phoneWizard.phase = "steps";
   phoneWizard.step = step;
   metrikaGoal("phone_wizard_step", { step });
+  pwPersist();
   pwRender();
 }
 function pwBack() {
@@ -4131,8 +4071,7 @@ function pwBind() {
 
   COMPACT_MQ.addEventListener("change", () => {
     if (phoneWizard && !isCompact()) {
-      if (!phoneWizard.committed) metrikaGoal("phone_wizard_exit");
-      pwCloseSilent();
+      pwCloseExit();
       toast("На широком экране открой «Создать»");
     }
   });
@@ -4159,6 +4098,7 @@ function pwBind() {
     if (e.key !== "Escape" || !phoneWizard) return;
     if (!$("#pwDialog")?.hidden) {
       $("#pwDialog").hidden = true;
+      if (typeof pwAskDone === "function") pwAskDone(null);
       return;
     }
     pwCloseBtn();
