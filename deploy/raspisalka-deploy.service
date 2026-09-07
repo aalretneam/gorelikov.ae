@@ -1,0 +1,12 @@
+[Unit]
+Description=Raspisalka: подтянуть main с GitHub и выложить на Beget
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+Nice=10
+ExecStart=/opt/gorelikov.ae/deploy/pull-main.sh
+
+[Install]
+WantedBy=multi-user.target

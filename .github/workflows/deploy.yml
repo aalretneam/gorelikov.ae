@@ -5,6 +5,10 @@ on:
     branches: [main]
   workflow_dispatch:
 
+concurrency:
+  group: deploy-beget
+  cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -18,11 +22,18 @@ jobs:
           HOST: ${{ secrets.VPS_HOST }}
           USER: ${{ secrets.VPS_USER }}
         run: |
-          if [ -z "$KEY" ] || [ -z "$HOST" ] || [ -z "$USER" ]; then
+          HOST="${HOST:-159.194.227.211}"
+          USER="${USER:-root}"
+          echo "host=$HOST" >> "$GITHUB_OUTPUT"
+          echo "user=$USER" >> "$GITHUB_OUTPUT"
+          if [ -z "$KEY" ]; then
             echo "ready=no" >> "$GITHUB_OUTPUT"
-            echo "GitHub → Beget не настроен (нет VPS_SSH_KEY / VPS_HOST / VPS_USER)."
-            echo "VPS_HOST должен быть 159.194.227.211 (Beget), не Vultr 208.76.221.48."
-            echo "Вручную: ssh root@159.194.227.211 && git -C /opt/gorelikov.ae pull origin main && bash /opt/gorelikov.ae/deploy/install.sh"
+            echo "::notice::VPS_SSH_KEY нет — GitHub не пушит на Beget. Сайт сам подтянет main таймером raspisalka-deploy (раз в минуту), если на сервере уже ставили install.sh."
+            echo "Один раз, пока таймера нет:"
+            echo "  ssh root@159.194.227.211"
+            echo "  git -C /opt/gorelikov.ae remote set-url origin https://github.com/aalretneam/gorelikov.ae.git"
+            echo "  git -C /opt/gorelikov.ae pull origin main"
+            echo "  bash /opt/gorelikov.ae/deploy/install.sh"
           else
             echo "ready=yes" >> "$GITHUB_OUTPUT"
           fi
@@ -32,8 +43,8 @@ jobs:
         uses: easingthemes/ssh-deploy@v5.0.3
         with:
           SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_KEY }}
-          REMOTE_HOST: ${{ secrets.VPS_HOST }}
-          REMOTE_USER: ${{ secrets.VPS_USER }}
+          REMOTE_HOST: ${{ steps.creds.outputs.host }}
+          REMOTE_USER: ${{ steps.creds.outputs.user }}
           REMOTE_PORT: "22"
           SOURCE: "./"
           TARGET: "/opt/gorelikov.ae/"
