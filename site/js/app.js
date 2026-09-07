@@ -2758,12 +2758,12 @@ function pwPauseHint() {
   const s = pwData();
   if (s.mode === "uni") return s.pauses ? "Один перерыв посередине" : "Только пары";
   if (s.mode === "own") return s.pauses ? "Одна перемена посередине" : "Только занятия";
-  return s.pauses ? "Завтрак, перемены и обед как в смене" : "Только уроки";
+  return s.pauses ? "" : "Только уроки";
 }
 function pwModeHint() {
   const m = pwData().mode;
   if (m === "uni") return "Пары, есть суббота";
-  if (m === "own") return "Пустая сетка — сам решаешь дни и строки";
+  if (m === "own") return "Пустая сетка для настройки под себя";
   return "Уроки, пять дней, звонки как в школе";
 }
 
@@ -2892,9 +2892,8 @@ function pwRenderStep1() {
   $("#pwQuestion").textContent = "Какое расписание делаем?";
   const hint = pwModeHint();
   const lead = $("#pwLead");
-  const draft = phoneWizard.hadDraft ? "Черновик на сайте не трогаем, пока не нажмёшь «Готово»." : "";
-  lead.hidden = !draft;
-  lead.textContent = draft;
+  lead.hidden = true;
+  lead.textContent = "";
   const mode = pwData().mode;
   $("#pwBody").innerHTML = `<div class="seg" id="pwModeSeg">
     <button type="button" data-pw-mode="school"${mode === "school" ? " class=\"active\"" : ""}>Школа</button>
@@ -2908,8 +2907,9 @@ function pwRenderStep2() {
   const s = pwData();
   $("#pwQuestion").textContent = "Какие дни и сколько занятий?";
   const lead = $("#pwLead");
-  lead.hidden = false;
-  lead.textContent = pwPauseHint();
+  const hint = pwPauseHint();
+  lead.hidden = !hint;
+  lead.textContent = hint;
   const days = DAY_NAMES.map((n, i) =>
     `<button type="button" class="chip${s.days[i] ? " on" : ""}" data-pw-day="${i}">${n}</button>`).join("");
   $("#pwBody").innerHTML = `
@@ -2951,6 +2951,8 @@ function pwRenderStep4() {
   $("#pwLead").hidden = true;
   $("#pwBody").innerHTML = "";
   $("#pwPreviewWrap").hidden = true;
+  const palPrev = $("#pwLayout .pw-palette");
+  if (palPrev && phoneWizard) phoneWizard.paletteScroll = palPrev.scrollTop;
   const s = pwData();
   pwEnsureDay();
   const layout = $("#pwLayout");
@@ -2991,6 +2993,13 @@ function pwRenderStep4() {
       ${pal}
       <button type="button" class="pw-chip add" id="pwAddOwn">+</button>
     </div>`;
+  const palEl = $("#pwLayout .pw-palette");
+  if (palEl) {
+    palEl.scrollTop = phoneWizard.paletteScroll || 0;
+    palEl.addEventListener("scroll", () => {
+      if (phoneWizard) phoneWizard.paletteScroll = palEl.scrollTop;
+    }, { passive: true });
+  }
   if (!phoneWizard.layoutHint) {
     phoneWizard.layoutHint = true;
     toast("Нажми предмет, потом клетку");
@@ -3000,12 +3009,22 @@ function pwRenderStep5() {
   const s = pwData();
   $("#pwQuestion").textContent = "Как будет выглядеть?";
   $("#pwLead").hidden = true;
+  const keep = phoneWizard.themeScroll || 0;
   const tape = THEMES.map((t) =>
     `<button type="button" class="tbtn${s.theme === t.id ? " active" : ""}" data-pw-theme="${t.id}">
       <span class="nm">${t.name}</span>
       <span class="sw">${t.sw.map((c) => `<i style="background:${c}"></i>`).join("")}</span>
     </button>`).join("");
   $("#pwBody").innerHTML = `<div class="pw-themes">${tape}</div>`;
+  const tapeEl = $("#pwBody .pw-themes");
+  if (tapeEl) {
+    const restore = () => { tapeEl.scrollLeft = keep; };
+    restore();
+    requestAnimationFrame(restore);
+    tapeEl.addEventListener("scroll", () => {
+      if (phoneWizard) phoneWizard.themeScroll = tapeEl.scrollLeft;
+    }, { passive: true });
+  }
   pwRenderPreview();
 }
 function pwRenderResult() {
@@ -3266,9 +3285,16 @@ function pwBind() {
     }
     const themeBtn = e.target.closest("[data-pw-theme]");
     if (themeBtn) {
+      const tape = themeBtn.closest(".pw-themes");
+      if (tape) phoneWizard.themeScroll = tape.scrollLeft;
       pwData().theme = themeBtn.dataset.pwTheme;
       phoneWizard.themeTouched = true;
       pwPersist();
+      if (phoneWizard.step === 5 && tape) {
+        tape.querySelectorAll(".tbtn").forEach((b) => b.classList.toggle("active", b === themeBtn));
+        pwRenderPreview();
+        return;
+      }
       pwRender();
       return;
     }
