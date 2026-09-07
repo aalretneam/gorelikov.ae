@@ -361,26 +361,25 @@ async function fetchCounterUrl(url, ms) {
     clearTimeout(t);
   }
 }
-async function counterFetch(kind, action) {
-  const key = encodeURIComponent(action);
-  const own = `${shareApiBase()}/api/stat/${kind}/${key}`;
-  const n = await fetchCounterUrl(own, 2500);
-  if (n != null) return n;
-  return fetchCounterUrl(
-    `https://abacus.jasoncameron.dev/${kind}/${encodeURIComponent(CONFIG.abacusNs)}/${key}`,
-    4000
-  );
+function counterOwnUrl(kind, action) {
+  return `${shareApiBase()}/api/stat/${kind}/${encodeURIComponent(action)}`;
+}
+function counterAbacusUrl(kind, action) {
+  return `https://abacus.jasoncameron.dev/${kind}/${encodeURIComponent(CONFIG.abacusNs)}/${encodeURIComponent(action)}`;
+}
+function counterTimeout() {
+  const h = location.hostname;
+  return h === "localhost" || h === "127.0.0.1" ? 1500 : 4000;
 }
 async function counterHit(action) {
-  if (!isProdHost()) {
-    const n = await fetchCounterUrl(`${shareApiBase()}/api/stat/hit/${encodeURIComponent(action)}`, 1500);
-    if (n != null) return n;
-    return counterGet(action);
-  }
-  return counterFetch("hit", action);
+  const n = await fetchCounterUrl(counterOwnUrl("hit", action), counterTimeout());
+  if (n != null) return n;
+  return counterGet(action);
 }
 async function counterGet(action) {
-  return counterFetch("get", action);
+  const own = await fetchCounterUrl(counterOwnUrl("get", action), counterTimeout());
+  if (own != null) return own;
+  return fetchCounterUrl(counterAbacusUrl("get", action), 4000);
 }
 let thanksCount = 0;
 function setThanksStat(n) {
@@ -2474,7 +2473,22 @@ function metrikaHit(url, referer) {
   metrikaCall("hit", url, opts);
 }
 
+async function loadLiveStats() {
+  try {
+    const visitsP = counterHit("visits");
+    const createdP = counterGet("created");
+    const thanksP = counterGet("thanks");
+    setVisitsStat(await visitsP);
+    const created = await createdP;
+    if (created != null) setCreatedStat(created);
+    setThanksStat(await thanksP);
+  } catch (err) {
+    console.warn("stats", err);
+  }
+}
+
 async function boot() {
+  const statsP = loadLiveStats();
   try {
     syncCompact();
     const stage = $(".stage");
@@ -2516,24 +2530,7 @@ async function boot() {
   } catch (err) {
     console.error("boot", err);
   }
-
-  try {
-    let visits = null;
-    const cached = sessionStorage.getItem("rv");
-    if (!cached) {
-      visits = await counterHit("visits");
-      if (visits) { try { sessionStorage.setItem("rv", String(visits)); } catch {} }
-    } else {
-      visits = Number(cached);
-    }
-    const created = await counterGet("created");
-    if (created != null) setCreatedStat(created);
-    setVisitsStat(visits);
-    const thanks = await counterGet("thanks");
-    setThanksStat(thanks);
-  } catch (err) {
-    console.warn("stats", err);
-  }
+  await statsP;
 }
 const PW_SCHOOL_SUBJ = [
   "Русский язык", "Литература", "Алгебра", "Геометрия", "Английский", "История",
@@ -3269,7 +3266,10 @@ function pwRenderPreview() {
     return;
   }
   el.hidden = false;
-  if (sheet && port.contains(sheet)) pwRestoreSheet();
+  if (sheet && port.contains(sheet)) {
+    sheet.hidden = true;
+    pwRestoreSheet();
+  }
   if (el.parentElement !== port) port.appendChild(el);
   pwFillSheet(el);
   requestAnimationFrame(() => {

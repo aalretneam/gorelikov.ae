@@ -34,12 +34,21 @@ _hits_lock = threading.Lock()
 _stats_lock = threading.Lock()
 MAX_CONTACT = 4 * 1024
 STAT_KEYS = ("visits", "created", "thanks", "download", "share")
+# Нижняя граница: не показывать меньше уже накопленного, если stats.json пересоздали.
 STAT_FLOOR = {
-    "visits": 136,
-    "created": 14,
+    "visits": 187,
+    "created": 27,
     "thanks": 4,
-    "download": 20,
-    "share": 17,
+    "download": 34,
+    "share": 20,
+}
+# Лимит хитов на IP. visits выше — школьный Wi‑Fi и мобильный NAT делят один адрес.
+STAT_HIT_LIMIT = {
+    "visits": (800, 60),
+    "created": (60, 120),
+    "thanks": (40, 120),
+    "download": (80, 120),
+    "share": (80, 120),
 }
 ABACUS_NS = os.environ.get("RASPISALKA_ABACUS_NS", "gorelikov.ae")
 
@@ -291,20 +300,35 @@ def seed_stats() -> dict[str, int]:
     return stats
 
 
+def apply_stat_floor(stats: dict[str, int]) -> tuple[dict[str, int], bool]:
+    lifted = False
+    out = dict(stats)
+    for key in STAT_KEYS:
+        floor = int(STAT_FLOOR.get(key, 0))
+        cur = int(out.get(key, 0))
+        if cur < floor:
+            out[key] = floor
+            lifted = True
+    return out, lifted
+
+
 def read_stats_unlocked() -> dict[str, int]:
     path = stats_file()
     if not path.is_file():
         stats = seed_stats()
+        stats, _ = apply_stat_floor(stats)
         write_stats_unlocked(stats)
         return stats
     try:
         raw = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, UnicodeDecodeError, json.JSONDecodeError):
         stats = seed_stats()
+        stats, _ = apply_stat_floor(stats)
         write_stats_unlocked(stats)
         return stats
     if not isinstance(raw, dict):
         stats = seed_stats()
+        stats, _ = apply_stat_floor(stats)
         write_stats_unlocked(stats)
         return stats
     stats = {}
@@ -313,6 +337,9 @@ def read_stats_unlocked() -> dict[str, int]:
             stats[key] = max(0, int(raw.get(key, 0)))
         except (TypeError, ValueError):
             stats[key] = 0
+    stats, lifted = apply_stat_floor(stats)
+    if lifted:
+        write_stats_unlocked(stats)
     return stats
 
 
@@ -371,8 +398,10 @@ class Handler(BaseHTTPRequestHandler):
         if stat:
             kind, key = stat.group(1), stat.group(2)
             bump = kind == "hit"
-            if bump and not allow_post(client_ip(self), "stat", limit=40, window=120):
-                bump = False
+            if bump:
+                limit, window = STAT_HIT_LIMIT.get(key, (40, 120))
+                if not allow_post(client_ip(self), f"stat:{key}", limit=limit, window=window):
+                    bump = False
             self._send_json(200, {"value": stat_value(key, bump)})
             return
         prefix = "/api/share/"
@@ -484,11 +513,23 @@ def selftest() -> None:
     again = save_payload(*split_bg_image(with_bg))
     assert again == d
     os.environ["RASPISALKA_STAT_IMPORT"] = "0"
+    saved_floor = dict(STAT_FLOOR)
+    STAT_FLOOR.update({k: 0 for k in STAT_KEYS})
     assert stat_value("visits", False) == 0
     assert stat_value("visits", True) == 1
     assert stat_value("visits", False) == 1
     assert stat_value("created", True) == 1
     assert stat_value("created", False) == 1
+    DATA_DIR = Path(tempfile.mkdtemp(prefix="raspisalka-floor-"))
+    STAT_FLOOR.update({k: 0 for k in STAT_KEYS})
+    STAT_FLOOR["visits"] = 50
+    seed = {k: 0 for k in STAT_KEYS}
+    seed["visits"] = 12
+    write_stats_unlocked(seed)
+    assert stat_value("visits", False) == 50
+    assert stat_value("visits", True) == 51
+    STAT_FLOOR.clear()
+    STAT_FLOOR.update(saved_floor)
     print("selftest ok", a, c, d, e, "bytes", len(blob))
 
 
