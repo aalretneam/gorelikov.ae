@@ -3495,7 +3495,6 @@ function pwRenderStep5() {
   const s = pwData();
   $("#pwQuestion").textContent = "Как будет выглядеть?";
   $("#pwLead").hidden = true;
-  const keep = phoneWizard.themeScroll || 0;
   const tape = THEMES.map((t) =>
     `<button type="button" class="tbtn${s.theme === t.id ? " active" : ""}" data-pw-theme="${t.id}">
       <span class="nm">${t.name}</span>
@@ -3504,7 +3503,12 @@ function pwRenderStep5() {
   $("#pwBody").innerHTML = `<div class="pw-themes">${tape}</div>`;
   const tapeEl = $("#pwBody .pw-themes");
   if (tapeEl) {
-    const restore = () => { tapeEl.scrollLeft = keep; };
+    const activeBtn = tapeEl.querySelector(".tbtn.active");
+    const restore = () => {
+      if (!activeBtn) return;
+      const left = activeBtn.offsetLeft - (tapeEl.clientWidth - activeBtn.offsetWidth) / 2;
+      tapeEl.scrollLeft = Math.max(0, left);
+    };
     restore();
     requestAnimationFrame(restore);
     tapeEl.addEventListener("scroll", () => {
