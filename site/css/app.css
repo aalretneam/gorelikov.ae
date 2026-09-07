@@ -1798,9 +1798,10 @@ body.phone-wizard #landing { pointer-events: none; }
   line-height: 1.1;
 }
 .pw-slot .s-cell {
-  min-height: 24px; height: 24px; padding: 0 6px;
+  min-height: 24px; height: auto; max-height: 36px; padding: 2px 6px;
   pointer-events: auto; user-select: none;
   font-size: .76rem;
+  overflow: hidden;
 }
 .pw-slot .s-cell .s-subj { font-size: .76rem; min-height: 0; line-height: 1.15; }
 .pw-slot .s-span {
@@ -1813,7 +1814,7 @@ body.phone-wizard #landing { pointer-events: none; }
   line-height: 12px;
 }
 .pw-palette {
-  flex: 1 1 0; min-height: 0;
+  flex: 1 1 0; min-height: 32%;
   display: flex; flex-wrap: wrap; gap: 8px;
   align-content: flex-start; align-items: flex-start;
   overflow: auto; padding: 8px 6px 6px;
