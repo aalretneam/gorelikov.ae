@@ -71,7 +71,7 @@ try {
   "description": "Конструктор красивого расписания для школы и университета с экспортом в PNG."
 }
 </script>
-<link rel="stylesheet" href="/css/app.css?v=20261001" />
+<link rel="stylesheet" href="/css/app.css?v=20261002" />
 </head>
 <body>
 
@@ -87,7 +87,7 @@ try {
       </button>
       <div class="nav-cta">
         <button class="btn sm primary" type="button" data-open-editor>Создать</button>
-        <button class="btn sm primary phone-wizard-entry" type="button" data-open-phone-wizard>С телефона</button>
+        <button class="btn sm hot phone-wizard-entry" type="button" data-open-phone-wizard>С телефона</button>
       </div>
     </nav>
 
@@ -97,7 +97,7 @@ try {
       <p class="sub">Собери расписание для школы или универа, выбери готовый стиль или сделай свой. Скачай PNG на телефон, распечатай или кинь ссылку в чат класса.</p>
       <div class="cta-row">
         <button class="btn primary" type="button" data-open-editor>Собрать расписание →</button>
-        <button class="btn phone-wizard-entry" type="button" data-open-phone-wizard>Создать с телефона</button>
+        <button class="btn hot phone-wizard-entry" type="button" data-open-phone-wizard>Создать с телефона</button>
         <a class="btn" href="#styles">Посмотреть стили</a>
       </div>
       <div class="stats">
@@ -146,6 +146,7 @@ try {
     </div>
     <div class="spacer"></div>
     <div class="topbar-actions">
+      <button class="btn sm" id="pwEditorReturn" type="button" hidden>Вернуться</button>
       <button class="btn sm primary" id="dlBtn" type="button">скачать PNG</button>
       <button class="btn sm compact-only" id="previewBtn" type="button">предпросмотр</button>
       <button class="btn sm" id="shareBtn" type="button">ссылка</button>
@@ -350,6 +351,19 @@ try {
       <button type="button" class="btn primary" id="pwNext">Далее</button>
     </div>
   </div>
+  <div class="pw-clock" id="pwClock" hidden>
+    <div class="pw-clock-card">
+      <p class="pw-clock-title">Время</p>
+      <div class="pw-clock-cols">
+        <div class="pw-clock-col" id="pwClockH"></div>
+        <div class="pw-clock-col" id="pwClockM"></div>
+      </div>
+      <div class="pw-clock-actions">
+        <button type="button" class="btn" id="pwClockCancel">Отмена</button>
+        <button type="button" class="btn primary" id="pwClockOk">Готово</button>
+      </div>
+    </div>
+  </div>
   <div class="pw-dialog" id="pwDialog" hidden>
     <div class="pw-dialog-card">
       <p id="pwDialogText"></p>
@@ -357,6 +371,6 @@ try {
     </div>
   </div>
 </div>
-<script src="/js/app.js?v=20261001" defer></script>
+<script src="/js/app.js?v=20261002" defer></script>
 </body>
 </html>

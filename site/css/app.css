@@ -41,6 +41,19 @@ a { color: inherit; }
 .btn.hot {
   background: linear-gradient(135deg, var(--hot), #ff7a45);
   border: 0; color: #fff;
+  box-shadow: 0 8px 28px rgba(255, 77, 141, .32);
+}
+#exportHost {
+  position: fixed;
+  left: 0; top: 0;
+  z-index: 200;
+  pointer-events: none;
+  overflow: visible;
+}
+body.capturing #phoneWizard { visibility: hidden; }
+body.capturing #exportHost .sheet {
+  transform: none !important;
+  opacity: 1 !important;
 }
 .btn.sm { padding: 8px 13px; border-radius: 11px; font-size: .84rem; }
 .btn[data-thanks] b {
@@ -1427,6 +1440,11 @@ html.site-light ::placeholder { color: var(--tx2); opacity: .85; }
   body.mode-edit.compact .topbar-actions {
     width: 100%;
   }
+  body.mode-edit.compact #pwEditorReturn:not([hidden]) {
+    display: flex !important;
+    width: 100%;
+    order: -1;
+  }
   body.mode-edit.compact .desktop-only,
   body.mode-edit.compact .desktop-fmt-hint { display: none !important; }
   body.mode-edit.compact .compact-only {
@@ -1674,6 +1692,7 @@ body.phone-wizard #landing { pointer-events: none; }
   background: var(--bg); color: var(--tx);
   padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
   box-sizing: border-box;
+  overflow: hidden;
 }
 #phoneWizard[hidden] { display: none !important; }
 .pw-shell {
@@ -1773,16 +1792,69 @@ body.phone-wizard #landing { pointer-events: none; }
 }
 .pw-time-row {
   display: grid;
-  grid-template-columns: 5.6em minmax(0, 1fr);
+  grid-template-columns: 6.2em minmax(0, 1fr);
   gap: 8px; align-items: center;
 }
-.pw-time-row input {
+.pw-clock-btn {
+  width: 100%;
+  background: var(--p1); border: 1px solid var(--line); color: var(--tx);
+  border-radius: 12px; padding: 9px 6px; font: inherit; font-weight: 800;
+  text-align: center; font-size: .95rem;
+}
+.pw-kind {
   width: 100%;
   background: var(--p1); border: 1px solid var(--line); color: var(--tx);
   border-radius: 12px; padding: 9px 8px; font: inherit; font-weight: 800;
-  text-align: center; font-size: .9rem;
+  font-size: .82rem;
 }
 .pw-time-row span { font-size: .78rem; font-weight: 700; color: var(--tx2); min-width: 0; }
+.pw-clock {
+  position: absolute; inset: 0; z-index: 6;
+  background: rgba(8, 10, 18, .55);
+  display: flex; align-items: flex-end; justify-content: center;
+  padding: 16px;
+}
+.pw-clock-card {
+  width: min(420px, 100%);
+  background: var(--p1);
+  border: 1px solid var(--line);
+  border-radius: 22px 22px 16px 16px;
+  padding: 14px 14px 16px;
+  box-shadow: 0 -12px 40px rgba(0,0,0,.28);
+}
+.pw-clock-title {
+  margin: 0 0 10px; text-align: center;
+  font-weight: 800; font-size: .82rem; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--tx2);
+}
+.pw-clock-cols {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+  height: 11.2em;
+}
+.pw-clock-col {
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--p2);
+  scroll-snap-type: y mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+.pw-clock-col button {
+  display: block; width: 100%;
+  height: 2.8em; scroll-snap-align: center;
+  background: transparent; color: var(--tx);
+  font: inherit; font-weight: 800; font-size: 1.05rem;
+  border-radius: 0;
+}
+.pw-clock-col button.on {
+  background: rgba(139,92,246,.22);
+  color: #fff;
+}
+.pw-clock-actions { display: flex; gap: 8px; margin-top: 12px; }
+.pw-clock-actions .btn { flex: 1; margin: 0; }
+html.site-light .pw-clock { background: rgba(20, 28, 48, .38); }
+html.site-light .pw-clock-card { background: #fff; }
+html.site-light .pw-clock-col button.on { color: #4c1d95; }
 .pw-yours {
   display: flex; flex-wrap: wrap; gap: 8px; flex: none;
   min-height: 44px; margin: 0 0 2px;
