@@ -1781,6 +1781,12 @@ body.phone-wizard #landing { pointer-events: none; }
   content: ""; position: absolute; top: 5px; right: 6px;
   width: 6px; height: 6px; border-radius: 50%; background: var(--ok);
 }
+.pw-split {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
 .pw-slots {
   flex: 2 1 0; min-height: 0; overflow: auto;
   display: flex; flex-direction: column; gap: 3px;
@@ -1814,7 +1820,7 @@ body.phone-wizard #landing { pointer-events: none; }
   line-height: 12px;
 }
 .pw-palette {
-  flex: 1 1 0; min-height: 32%;
+  flex: 1 1 0; min-height: 0;
   display: flex; flex-wrap: wrap; gap: 8px;
   align-content: flex-start; align-items: flex-start;
   overflow: auto; padding: 8px 6px 6px;

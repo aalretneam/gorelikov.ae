@@ -2988,10 +2988,12 @@ function pwRenderStep4() {
   const pal = s.subjects.map((n) => pwChipHtml(n, pwPick === n ? " on" : "")).join("");
   layout.innerHTML = `${weeks}
     <div class="pw-day-tabs">${tabs}</div>
-    <div class="pw-slots">${slots}</div>
-    <div class="pw-palette">
-      ${pal}
-      <button type="button" class="pw-chip add" id="pwAddOwn">+</button>
+    <div class="pw-split">
+      <div class="pw-slots">${slots}</div>
+      <div class="pw-palette">
+        ${pal}
+        <button type="button" class="pw-chip add" id="pwAddOwn">+</button>
+      </div>
     </div>`;
   const palEl = $("#pwLayout .pw-palette");
   if (palEl) {
