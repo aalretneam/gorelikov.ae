@@ -1873,7 +1873,7 @@ function exportHost() {
 }
 async function renderCanvas() {
   await loadHtml2Canvas();
-  const wizardShot = !!(phoneWizard && phoneWizard.phase === "result" && !phoneWizard.parked);
+  const wizardShot = !!(phoneWizard && phoneWizard.phase === "result");
   if (isCompact()) renderSheet();
   if (document.fonts?.ready) { try { await document.fonts.ready; } catch {} }
   document.activeElement?.blur?.();
@@ -1940,7 +1940,7 @@ async function renderCanvas() {
       const port = $("#previewPort");
       if (port) port.appendChild(sheet);
       requestAnimationFrame(scalePreview);
-    } else if (wizardShot && phoneWizard && phoneWizard.phase === "result" && !phoneWizard.parked) {
+    } else if (wizardShot && phoneWizard && phoneWizard.phase === "result") {
       pwMountResultSheet();
     } else {
       sheetHome();
@@ -2185,7 +2185,6 @@ function openEditor(opts) {
     renderControls();
     renderSheet();
     window.scrollTo(0, 0);
-    pwSyncEditorReturn();
     metrikaGoal("editor_open");
   } catch (err) {
     console.error("openEditor", err);
@@ -2193,10 +2192,6 @@ function openEditor(opts) {
   }
 }
 function openLanding() {
-  if (phoneWizard && phoneWizard.parked) {
-    pwReturnToSave();
-    return;
-  }
   closePreview(true);
   document.body.classList.remove("mode-edit");
   const landing = $("#landing");
@@ -2210,10 +2205,6 @@ function openLanding() {
   window.scrollTo(0, 0);
 }
 onClick("#backBtn", openLanding);
-onClick("#pwEditorReturn", (e) => {
-  e.preventDefault();
-  if (phoneWizard && phoneWizard.parked) pwReturnToSave();
-});
 listen("#logoHome", "click", (e) => {
   e.preventDefault();
   openLanding();
@@ -2693,41 +2684,6 @@ function pwApplyClock(close) {
   pwRenderPreview();
   if (close) pwCloseClock();
 }
-function pwSyncEditorReturn() {
-  const b = $("#pwEditorReturn");
-  if (b) b.hidden = !(phoneWizard && phoneWizard.parked);
-}
-function pwParkToEditor() {
-  if (!phoneWizard) return;
-  pwCloseClock();
-  phoneWizard.parked = true;
-  pwRestoreSheet();
-  const el = $("#phoneWizard");
-  if (el) el.hidden = true;
-  document.body.classList.remove("phone-wizard");
-  document.documentElement.style.removeProperty("--pw-kb");
-  openEditor();
-}
-function pwReturnToSave() {
-  if (!phoneWizard) return;
-  closePreview(true);
-  document.body.classList.remove("mode-edit");
-  const landing = $("#landing");
-  if (landing) {
-    landing.setAttribute("aria-hidden", "true");
-    landing.inert = true;
-  }
-  phoneWizard.parked = false;
-  phoneWizard.phase = "result";
-  const el = $("#phoneWizard");
-  if (el) el.hidden = false;
-  document.body.classList.add("phone-wizard");
-  pwSyncEditorReturn();
-  renderSheet();
-  pwPushHash();
-  pwRender();
-  window.scrollTo(0, 0);
-}
 function pwModeDefaults(mode) {
   mode = normalizeMode(mode);
   if (mode === "uni") return { days: [1, 1, 1, 1, 1, 1, 0], lessonN: 4, pauses: false, theme: "neon" };
@@ -3110,17 +3066,13 @@ function pwRender() {
   if (q) q.hidden = false;
   const dots = $("#pwDots");
   const stepN = $("#pwStepN");
-  if (stepN) stepN.textContent = phoneWizard.fromResult ? "Раскладка" : `${step} из 5`;
+  if (stepN) stepN.textContent = `${step} из 5`;
   if (dots) {
-    dots.hidden = !!phoneWizard.fromResult;
-    if (!phoneWizard.fromResult) {
-      dots.innerHTML = [1, 2, 3, 4, 5].map((i) => `<i class="${i <= step ? "on" : ""}"></i>`).join("");
-    }
+    dots.hidden = false;
+    dots.innerHTML = [1, 2, 3, 4, 5].map((i) => `<i class="${i <= step ? "on" : ""}"></i>`).join("");
   }
-  if (next) {
-    next.textContent = (phoneWizard.fromResult && step === 4) || step === 5 ? "Готово" : "Далее";
-  }
-  if (back) back.textContent = phoneWizard.fromResult && step === 4 ? "К сохранению" : "Назад";
+  if (next) next.textContent = step === 5 ? "Готово" : "Далее";
+  if (back) back.textContent = "Назад";
   let skip = $("#pwSkip");
   if (!skip && foot) {
     skip = document.createElement("p");
@@ -3318,8 +3270,7 @@ function pwRenderResult() {
   box.innerHTML = `<div class="pw-result-actions">
     <button type="button" class="btn primary" id="pwDl">Скачать PNG</button>
     <button type="button" class="btn" id="pwShare">Ссылка</button>
-    <button type="button" class="btn" id="pwFix">Поправить раскладку</button>
-    <button type="button" class="btn" id="pwOpenEditor">Открыть в редакторе</button>
+    <button type="button" class="btn" id="pwResultBack">Назад</button>
     <button type="button" class="btn ghost" id="pwHome">На главную</button>
   </div>`;
   pwRenderPreview();
@@ -3406,9 +3357,7 @@ function pwOpen() {
     themeTouched: false,
     oddAsked: false,
     layoutHint: false,
-    hadDraft: pwHasLsDraft(),
-    fromResult: false,
-    parked: false
+    hadDraft: pwHasLsDraft()
   };
   pwPick = null;
   const el = $("#phoneWizard");
@@ -3440,7 +3389,6 @@ function pwCloseSilent() {
     landing.inert = false;
   }
   phoneWizard = null;
-  pwSyncEditorReturn();
   pwClearHash();
   window.scrollTo(0, 0);
 }
@@ -3474,16 +3422,9 @@ function pwGo(step) {
   pwRender();
 }
 function pwBack() {
-  if (!phoneWizard || phoneWizard.parked) return;
+  if (!phoneWizard) return;
   if (phoneWizard.phase === "result") {
     pwGo(5);
-    return;
-  }
-  if (phoneWizard.fromResult && phoneWizard.step === 4) {
-    phoneWizard.fromResult = false;
-    phoneWizard.phase = "result";
-    renderSheet();
-    pwRender();
     return;
   }
   if (phoneWizard.step <= 1) {
@@ -3493,15 +3434,7 @@ function pwBack() {
   pwGo(phoneWizard.step - 1);
 }
 async function pwNext() {
-  if (!phoneWizard || phoneWizard.parked) return;
-  if (phoneWizard.fromResult && phoneWizard.step === 4) {
-    phoneWizard.fromResult = false;
-    if (!phoneWizard.committed) pwCommit();
-    phoneWizard.phase = "result";
-    renderSheet();
-    pwRender();
-    return;
-  }
+  if (!phoneWizard) return;
   if (phoneWizard.step < 5) {
     pwGo(phoneWizard.step + 1);
     return;
@@ -3651,15 +3584,8 @@ function pwBind() {
       await shareSchedule();
       return;
     }
-    if (e.target.id === "pwFix") {
-      pwCloseClock();
-      pwRestoreSheet();
-      phoneWizard.fromResult = true;
-      pwGo(4);
-      return;
-    }
-    if (e.target.id === "pwOpenEditor") {
-      pwParkToEditor();
+    if (e.target.id === "pwResultBack") {
+      pwGo(5);
       return;
     }
     if (e.target.id === "pwHome") {
@@ -3699,8 +3625,12 @@ function pwBind() {
     }
     const kindSel = e.target.closest("[data-pw-kind]");
     if (kindSel) {
-      pwSetRowKind(+kindSel.dataset.pwKind, kindSel.value);
-      pwRender();
+      const r = +kindSel.dataset.pwKind;
+      const ok = pwSetRowKind(r, kindSel.value);
+      if (!ok) kindSel.value = pwKindValue(pwData(), r);
+      const n = $("#pwLessonN");
+      if (n) n.textContent = String(pwData().lessonN);
+      pwRenderPreview();
     }
   });
 
@@ -3852,7 +3782,6 @@ function pwBind() {
 
   COMPACT_MQ.addEventListener("change", () => {
     if (phoneWizard && !isCompact()) {
-      if (phoneWizard.parked) return;
       if (!phoneWizard.committed) metrikaGoal("phone_wizard_exit");
       pwCloseSilent();
       toast("На широком экране открой «Создать»");
@@ -3864,10 +3793,6 @@ function pwBind() {
   window.addEventListener("popstate", () => {
     if (pwHashLock) return;
     if (!phoneWizard) return;
-    if (phoneWizard.parked) {
-      pwReturnToSave();
-      return;
-    }
     pwBack();
     if (phoneWizard) pwPushHash();
   });
