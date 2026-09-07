@@ -72,7 +72,7 @@ try {
   "description": "Конструктор красивого расписания для школы и университета с экспортом в PNG."
 }
 </script>
-<link rel="stylesheet" href="/css/app.css?v=20261007" />
+<link rel="stylesheet" href="/css/app.css?v=20261008" />
 </head>
 <body>
 
@@ -87,8 +87,8 @@ try {
         <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A7.5 7.5 0 1 1 9.5 4 6 6 0 0 0 20 14.5z"/></svg>
       </button>
       <div class="nav-cta">
-        <button class="btn sm primary" type="button" data-open-editor>Создать</button>
-        <button class="btn sm hot phone-wizard-entry" type="button" data-open-phone-wizard>С телефона</button>
+        <button class="btn sm primary" type="button" data-open-editor>В таблице</button>
+        <button class="btn sm hot" type="button" data-open-phone-wizard>По шагам</button>
       </div>
     </nav>
 
@@ -97,10 +97,11 @@ try {
       <h1>Расписание, которое<br /><span class="grad">всегда под рукой</span></h1>
       <p class="sub">Собери расписание для школы или универа, выбери готовый стиль или сделай свой. Скачай PNG на телефон, распечатай или кинь ссылку в чат класса.</p>
       <div class="cta-row">
-        <button class="btn primary" type="button" data-open-editor>Собрать расписание →</button>
-        <button class="btn hot phone-wizard-entry" type="button" data-open-phone-wizard>Создать с телефона</button>
+        <button class="btn hot" type="button" data-open-phone-wizard>По шагам</button>
+        <button class="btn primary" type="button" data-open-editor>В таблице</button>
         <a class="btn" href="#styles">Посмотреть стили</a>
       </div>
+      <p class="cta-ways">Мастер по шагам — как на телефоне. Таблица — все дни сразу.</p>
       <div class="stats">
         <div class="stat live"><b id="statCreated">…</b><span>создано расписаний</span></div>
         <div class="stat"><b id="statVisits">…</b><span>заходов на сайт</span></div>
@@ -376,7 +377,6 @@ try {
       <span class="donate-qr-cap">СБП — отсканируй в приложении банка</span>
     </div>
     <a class="btn hot" id="donateGo" href="#" target="_blank" rel="noopener" hidden>Открыть донат</a>
-    <p class="donate-mail" id="donateMailWrap" hidden>Или перевод на <a id="donateMail" href="mailto:artem@gorelikov.ae">artem@gorelikov.ae</a></p>
     <button class="btn ghost" id="donateClose" type="button">Закрыть</button>
   </div>
 </div>
@@ -429,7 +429,7 @@ try {
     </div>
   </div>
 </div>
-<script src="/js/calendar-ics.js?v=20261007" defer></script>
-<script src="/js/app.js?v=20261007" defer></script>
+<script src="/js/calendar-ics.js?v=20261008" defer></script>
+<script src="/js/app.js?v=20261008" defer></script>
 </body>
 </html>

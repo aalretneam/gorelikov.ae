@@ -109,7 +109,11 @@ body.capturing #exportHost .sheet {
   max-width: 640px; margin: 0 auto 30px; line-height: 1.55;
 }
 .hero .cta-row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
-.hero .btn.primary { padding: 15px 28px; font-size: 1.02rem; border-radius: 16px; }
+.hero .btn.primary,
+.hero .btn.hot { padding: 15px 28px; font-size: 1.02rem; border-radius: 16px; }
+.cta-ways {
+  margin: 14px 0 0; color: var(--tx2); font-size: .86rem; font-weight: 600;
+}
 .stats { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 34px; }
 .stat {
   min-width: 140px; flex: 1 1 140px; max-width: 240px; padding: 14px 20px; border-radius: 16px;
@@ -1301,8 +1305,6 @@ body.is-sorting * { cursor: grabbing !important; }
 .cal-empty[hidden] { display: none !important; }
 .cal-seg { display: flex; gap: 14px; flex-wrap: wrap; }
 .cal-seg .check { margin: 0; }
-.donate-mail { margin: 12px 0 0; font-size: .84rem; color: var(--tx2); }
-.donate-mail a { color: var(--tx); font-weight: 800; }
 
 .compact-only, .day-editor { display: none !important; }
 
@@ -1608,6 +1610,7 @@ html.site-light ::placeholder { color: var(--tx2); opacity: .85; }
   }
   .day-slot .s-span { grid-column: 3; }
   .day-editor-hint { margin: 4px 2px 0; }
+  .pw-shell { width: 100%; }
 }
 
 @media (max-width: 940px) {
@@ -1695,8 +1698,6 @@ html.site-light ::placeholder { color: var(--tx2); opacity: .85; }
 }
 
 .nav-cta { display: contents; }
-.phone-wizard-entry { display: none !important; }
-body.compact .phone-wizard-entry { display: flex !important; }
 body.compact .nav-cta {
   display: flex;
   flex-direction: column;
@@ -1721,6 +1722,7 @@ body.phone-wizard #landing { pointer-events: none; }
 
 #phoneWizard {
   position: fixed; inset: 0; z-index: 85;
+  display: flex; justify-content: center;
   background: var(--bg); color: var(--tx);
   padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
   box-sizing: border-box;
@@ -1730,11 +1732,13 @@ body.phone-wizard #landing { pointer-events: none; }
 .pw-shell {
   height: 100%;
   max-height: 100dvh;
+  width: min(440px, 100%);
   display: flex; flex-direction: column;
   min-height: 0;
   padding: 8px 14px 10px;
   box-sizing: border-box;
   padding-bottom: calc(10px + var(--pw-kb, 0px));
+  background: var(--bg);
 }
 .pw-head {
   display: flex; align-items: center; gap: 8px;
@@ -2041,3 +2045,16 @@ html.site-light .pw-clock-col button.on { color: #4c1d95; }
 html.site-light .pw-dialog { background: rgba(20, 28, 48, .38); }
 html.site-light .pw-dialog-card { background: #fff; }
 html.site-light .pw-weeks button.active { color: #0e7490; }
+
+@media (min-width: 721px) {
+  #phoneWizard {
+    background: rgba(6, 8, 18, .62);
+    padding: 0;
+  }
+  html.site-light #phoneWizard {
+    background: rgba(20, 28, 48, .42);
+  }
+  .pw-shell {
+    box-shadow: 0 0 0 1px var(--line), 0 18px 64px rgba(0, 0, 0, .38);
+  }
+}

@@ -3,7 +3,6 @@ const CONFIG = {
   site: "gorelikov.ae",
   abacusNs: "gorelikov.ae",
   donateUrl: "",
-  donateEmail: "artem@gorelikov.ae",
   donateQr: "/img/donate-qr.png",
   metrikaId: 112279782
 };
@@ -2250,16 +2249,6 @@ function openDonate(e) {
   } else if (go) {
     go.hidden = true;
   }
-  const mail = $("#donateMail");
-  const mailWrap = $("#donateMailWrap");
-  const addr = (CONFIG.donateEmail || "").trim();
-  if (mail && mailWrap && addr) {
-    mail.href = "mailto:" + addr;
-    mail.textContent = addr;
-    mailWrap.hidden = false;
-  } else if (mailWrap) {
-    mailWrap.hidden = true;
-  }
   const modal = $("#donateModal");
   if (modal) modal.hidden = false;
 }
@@ -2522,7 +2511,7 @@ async function boot() {
     } else if (location.hash === "#edit") {
       openEditor();
     } else if (location.hash === "#phone") {
-      history.replaceState(null, "", "/");
+      pwOpen();
     }
   } catch (err) {
     console.error("boot", err);
@@ -3604,10 +3593,6 @@ function pwClearHash() {
 }
 
 async function pwOpen() {
-  if (!isCompact()) {
-    toast("На широком экране открой «Создать»");
-    return;
-  }
   if (phoneWizard) return;
   phoneWizard = {
     step: 1,
@@ -3746,6 +3731,10 @@ function pwBind() {
   });
   listen("#phoneWizard", "click", async (e) => {
     if (!phoneWizard) return;
+    if (e.target.id === "phoneWizard") {
+      pwCloseBtn();
+      return;
+    }
     const modeBtn = e.target.closest("[data-pw-mode]");
     if (modeBtn) {
       pwSetMode(modeBtn.dataset.pwMode);
@@ -4070,10 +4059,7 @@ function pwBind() {
   }
 
   COMPACT_MQ.addEventListener("change", () => {
-    if (phoneWizard && !isCompact()) {
-      pwCloseExit();
-      toast("На широком экране открой «Создать»");
-    }
+    if (phoneWizard) pwScalePreview();
   });
   window.addEventListener("resize", () => {
     if (phoneWizard) pwScalePreview();
