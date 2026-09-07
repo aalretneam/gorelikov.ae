@@ -1246,7 +1246,7 @@ body.is-sorting * { cursor: grabbing !important; }
 #donateNudge p { margin: 0; flex: 1 1 200px; line-height: 1.35; }
 
 .modal {
-  position: fixed; inset: 0; z-index: 80;
+  position: fixed; inset: 0; z-index: 120;
   background: rgba(6,8,14,.72); backdrop-filter: blur(8px);
   display: grid; place-items: center; padding: 20px;
 }
