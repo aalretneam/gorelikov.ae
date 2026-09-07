@@ -438,11 +438,13 @@ let editDay = 0;
 function syncCompact() {
   const on = isCompact();
   document.body.classList.toggle("compact", on);
-  document.querySelectorAll("#fmtSel option.fmt-extra").forEach((o) => { o.hidden = true; });
+  const sel = $("#fmtSel");
+  if (sel) {
+    sel.querySelectorAll("option[value='phone'], option[value='story'], option[value='post']").forEach((o) => o.remove());
+  }
   if (state && (state.fmt === "phone" || state.fmt === "story" || state.fmt === "post")) {
     state.fmt = "auto";
     save();
-    const sel = $("#fmtSel");
     if (sel) sel.value = "auto";
   }
   if (!on) closePreview(true);
