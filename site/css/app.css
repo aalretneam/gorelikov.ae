@@ -1274,6 +1274,24 @@ body.is-sorting * { cursor: grabbing !important; }
 }
 .donate-band .cta-row { margin-top: 0; }
 
+.cal-card { width: min(400px, 100%); }
+.cal-hint { color: var(--tx2); font-size: .88rem; margin: 0 0 16px; line-height: 1.45; }
+.cal-field { margin-bottom: 14px; text-align: left; }
+.cal-field label {
+  display: block; font-weight: 700; font-size: .84rem; margin-bottom: 6px;
+}
+.cal-field input,
+.cal-field select {
+  width: 100%; box-sizing: border-box;
+  background: var(--p2); border: 1px solid var(--line); color: var(--tx);
+  border-radius: 12px; padding: 10px 12px; font: inherit; font-size: .9rem;
+}
+.cal-field-hint {
+  display: block; font-size: .72rem; color: var(--tx2); margin-top: 4px; font-weight: 600;
+}
+.cal-actions { display: flex; gap: 10px; margin-top: 18px; }
+.cal-actions .btn { flex: 1; margin-top: 0; width: auto; }
+
 .compact-only, .day-editor { display: none !important; }
 
 .preview-scrim {

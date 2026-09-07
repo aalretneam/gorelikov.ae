@@ -2296,9 +2296,305 @@ document.addEventListener("keydown", (e) => {
     closePreview();
     return;
   }
+  const cal = $("#calModal");
+  if (cal && !cal.hidden) { cal.hidden = true; return; }
   const modal = $("#donateModal");
-  if (modal && !modal.hidden) modal.hidden = true;
+  if (modal && !modal.hidden) { modal.hidden = true; return; }
   hideDonateNudge();
+});
+
+const CAL_TZONES = [
+  ["Europe/Kaliningrad", "Калининград (UTC+2)"],
+  ["Europe/Moscow", "Москва (UTC+3)"],
+  ["Europe/Samara", "Самара (UTC+4)"],
+  ["Asia/Yekaterinburg", "Екатеринбург (UTC+5)"],
+  ["Asia/Omsk", "Омск (UTC+6)"],
+  ["Asia/Krasnoyarsk", "Красноярск (UTC+7)"],
+  ["Asia/Irkutsk", "Иркутск (UTC+8)"],
+  ["Asia/Yakutsk", "Якутск (UTC+9)"],
+  ["Asia/Vladivostok", "Владивосток (UTC+10)"],
+  ["Asia/Magadan", "Магадан (UTC+11)"],
+  ["Asia/Kamchatka", "Камчатка (UTC+12)"]
+];
+const CAL_BYDAY = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"];
+
+function calPad(n) { return String(n).padStart(2, "0"); }
+function calParseYmd(s) {
+  const m = String(s || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return null;
+  return { y: +m[1], m: +m[2], d: +m[3] };
+}
+function calYmdInput(ymd) {
+  return `${ymd.y}-${calPad(ymd.m)}-${calPad(ymd.d)}`;
+}
+function calWeekdayMon0(ymd) {
+  const js = new Date(Date.UTC(ymd.y, ymd.m - 1, ymd.d)).getUTCDay();
+  return js === 0 ? 6 : js - 1;
+}
+function calAddDays(ymd, n) {
+  const dt = new Date(Date.UTC(ymd.y, ymd.m - 1, ymd.d + n));
+  return { y: dt.getUTCFullYear(), m: dt.getUTCMonth() + 1, d: dt.getUTCDate() };
+}
+function calFirstWeekdayOnOrAfter(start, dayIndex) {
+  const w = calWeekdayMon0(start);
+  let diff = dayIndex - w;
+  if (diff < 0) diff += 7;
+  return calAddDays(start, diff);
+}
+function calIsoWeek(ymd) {
+  const d = new Date(Date.UTC(ymd.y, ymd.m - 1, ymd.d));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+}
+function calParseHm(t) {
+  const m = String(t || "").trim().match(/^(\d{1,2}):(\d{2})$/);
+  if (!m) return [8, 30];
+  return [Math.min(23, +m[1]), Math.min(59, +m[2])];
+}
+function calLocalStamp(ymd, hm) {
+  return `${ymd.y}${calPad(ymd.m)}${calPad(ymd.d)}T${calPad(hm[0])}${calPad(hm[1])}00`;
+}
+function calAddMinutes(ymd, hm, minutes) {
+  let total = hm[0] * 60 + hm[1] + Number(minutes || 0);
+  let days = Math.floor(total / (24 * 60));
+  total -= days * 24 * 60;
+  if (total < 0) { total += 24 * 60; days -= 1; }
+  return { ymd: calAddDays(ymd, days), hm: [Math.floor(total / 60), total % 60] };
+}
+function calStampUTC(date) {
+  return date.toISOString().replace(/[-:]/g, "").replace(/\.\d+/, "");
+}
+function calCompact(ymd) {
+  return `${ymd.y}${calPad(ymd.m)}${calPad(ymd.d)}`;
+}
+function escapeICS(str) {
+  return String(str || "")
+    .replace(/\\/g, "\\\\")
+    .replace(/;/g, "\\;")
+    .replace(/,/g, "\\,")
+    .replace(/\r\n/g, "\n")
+    .replace(/\n/g, "\\n");
+}
+function foldICSLine(line) {
+  const enc = new TextEncoder();
+  const dec = new TextDecoder();
+  const bytes = enc.encode(line);
+  if (bytes.length <= 75) return line;
+  const parts = [];
+  let i = 0;
+  while (i < bytes.length) {
+    const max = i === 0 ? 75 : 74;
+    let end = Math.min(i + max, bytes.length);
+    while (end > i && (bytes[end] & 0xc0) === 0x80) end--;
+    if (end === i) end = Math.min(i + max, bytes.length);
+    const chunk = dec.decode(bytes.slice(i, end));
+    parts.push(i === 0 ? chunk : " " + chunk);
+    i = end;
+  }
+  return parts.join("\r\n");
+}
+function calCellEmpty(val) {
+  const subj = splitCell(val).subj.trim();
+  return !subj || subj === "—" || subj === "-" || subj === "+";
+}
+function calHasLessons(st) {
+  const grids = st.dual ? [0, 1] : [0];
+  return grids.some((gi) => {
+    const g = (st.cells && st.cells[gi]) || [];
+    return (st.kinds || []).some((kind, r) => {
+      if ((kind || "lesson") !== "lesson") return false;
+      const row = g[r] || [];
+      return row.some((c, d) => st.days[d] && !calCellEmpty(c));
+    });
+  });
+}
+function calNearestMonday() {
+  const now = new Date();
+  const ymd = { y: now.getFullYear(), m: now.getMonth() + 1, d: now.getDate() };
+  return calAddDays(ymd, (7 - calWeekdayMon0(ymd)) % 7);
+}
+function getDefaultCalendarOptions(st) {
+  let timezone = "Europe/Moscow";
+  try {
+    const detected = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (detected) timezone = detected;
+  } catch {}
+  return {
+    startDate: calYmdInput(calNearestMonday()),
+    endDate: "",
+    duration: st.mode === "uni" ? 90 : 45,
+    timezone,
+    reminder: 15
+  };
+}
+function fillCalTimezoneSelect(selected) {
+  const sel = $("#calTz");
+  if (!sel) return;
+  const known = new Map(CAL_TZONES);
+  let html = CAL_TZONES.map(([id, label]) =>
+    `<option value="${esc(id)}">${esc(label)}</option>`).join("");
+  if (selected && !known.has(selected)) {
+    html = `<option value="${esc(selected)}">${esc(selected)}</option>` + html;
+  }
+  sel.innerHTML = html;
+  sel.value = selected && (known.has(selected) || true) ? selected : "Europe/Moscow";
+  if (![...sel.options].some((o) => o.value === sel.value)) sel.value = "Europe/Moscow";
+}
+function readCalOptions() {
+  return {
+    startDate: ($("#calStart") && $("#calStart").value) || "",
+    endDate: ($("#calEnd") && $("#calEnd").value) || "",
+    duration: Math.max(5, Math.min(180, Number($("#calDuration") && $("#calDuration").value) || 45)),
+    timezone: ($("#calTz") && $("#calTz").value) || "Europe/Moscow",
+    reminder: Math.max(0, Number($("#calReminder") && $("#calReminder").value) || 0)
+  };
+}
+function validateCalendarExport(st, options) {
+  const errors = [];
+  if (!options.startDate || !calParseYmd(options.startDate)) errors.push("Укажи дату начала занятий");
+  const start = calParseYmd(options.startDate);
+  const end = options.endDate ? calParseYmd(options.endDate) : null;
+  if (options.endDate && !end) errors.push("Дата окончания не похожа на дату");
+  if (start && end && options.endDate < options.startDate) errors.push("Дата окончания раньше даты начала");
+  if (!calHasLessons(st)) errors.push("Расписание пустое — нечего экспортировать");
+  return errors;
+}
+function generateICS(st, options) {
+  const start = calParseYmd(options.startDate);
+  const tz = options.timezone || "Europe/Moscow";
+  const duration = options.duration;
+  const reminder = options.reminder;
+  const dtstamp = calStampUTC(new Date());
+  const until = options.endDate && calParseYmd(options.endDate)
+    ? `${calCompact(calParseYmd(options.endDate))}T235959Z` : null;
+  const calName = `${st.title || "Расписание"} · Расписание`;
+  const lines = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Raspisalka//gorelikov.ae//RU",
+    "CALSCALE:GREGORIAN",
+    "METHOD:PUBLISH",
+    `X-WR-CALNAME:${escapeICS(calName)}`,
+    `X-WR-TIMEZONE:${tz}`
+  ];
+  const dual = !!st.dual;
+  const startEven = calIsoWeek(start) % 2 === 0;
+  const grids = dual ? [0, 1] : [0];
+  let count = 0;
+  grids.forEach((gi) => {
+    let gridStart = start;
+    if (dual) {
+      const gridEven = gi === 0;
+      if (startEven !== gridEven) gridStart = calAddDays(start, 7);
+    }
+    (st.days || []).forEach((on, dayIndex) => {
+      if (!on) return;
+      const first = calFirstWeekdayOnOrAfter(gridStart, dayIndex);
+      (st.kinds || []).forEach((kind, slotIndex) => {
+        if ((kind || "lesson") !== "lesson") return;
+        const g = (st.cells && st.cells[gi]) || [];
+        const val = (g[slotIndex] || [])[dayIndex] || "";
+        if (calCellEmpty(val)) return;
+        const parsed = splitCell(val);
+        const hm = calParseHm((st.times || [])[slotIndex]);
+        const endAt = calAddMinutes(first, hm, duration);
+        const uid = `raspisalka-${gi}-${dayIndex}-${slotIndex}-${calCompact(first)}@gorelikov.ae`;
+        let rrule = `RRULE:FREQ=WEEKLY;BYDAY=${CAL_BYDAY[dayIndex]}`;
+        if (dual) rrule += ";INTERVAL=2";
+        if (until) rrule += `;UNTIL=${until}`;
+        lines.push("BEGIN:VEVENT");
+        lines.push(`UID:${uid}`);
+        lines.push(`DTSTAMP:${dtstamp}`);
+        lines.push(`DTSTART;TZID=${tz}:${calLocalStamp(first, hm)}`);
+        lines.push(`DTEND;TZID=${tz}:${calLocalStamp(endAt.ymd, endAt.hm)}`);
+        lines.push(rrule);
+        lines.push(`SUMMARY:${escapeICS(parsed.subj.trim())}`);
+        if (parsed.note.trim()) lines.push(`LOCATION:${escapeICS(parsed.note.trim())}`);
+        if (st.title) lines.push(`DESCRIPTION:${escapeICS(st.title)}\\ngorelikov.ae`);
+        if (reminder > 0) {
+          lines.push("BEGIN:VALARM");
+          lines.push("ACTION:DISPLAY");
+          lines.push(`TRIGGER:-PT${reminder}M`);
+          lines.push(`DESCRIPTION:${escapeICS(parsed.subj.trim())} через ${reminder} мин`);
+          lines.push("END:VALARM");
+        }
+        lines.push("END:VEVENT");
+        count++;
+      });
+    });
+  });
+  lines.push("END:VCALENDAR");
+  return { ics: lines.map(foldICSLine).join("\r\n") + "\r\n", count };
+}
+function getICSFilename(st) {
+  const title = (st.title || "raspisanie").trim();
+  const safe = title.toLowerCase()
+    .replace(/[«»""]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/[^a-zа-яё0-9-]/gi, "")
+    .slice(0, 30) || "raspisanie";
+  return `${safe}.ics`;
+}
+function downloadICS(content, filename) {
+  const blob = new Blob([content], { type: "text/calendar;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2500);
+}
+function closeCalModal() {
+  const m = $("#calModal");
+  if (m) m.hidden = true;
+}
+function openCalModal(e) {
+  if (e) e.preventDefault();
+  const modal = $("#calModal");
+  if (!modal) return;
+  const opts = getDefaultCalendarOptions(state);
+  fillCalTimezoneSelect(opts.timezone);
+  const start = $("#calStart");
+  const end = $("#calEnd");
+  const dur = $("#calDuration");
+  const rem = $("#calReminder");
+  if (start) start.value = opts.startDate;
+  if (end) end.value = "";
+  if (dur) dur.value = String(opts.duration);
+  if (rem) rem.value = String(opts.reminder);
+  modal.hidden = false;
+}
+function doCalendarExport() {
+  const options = readCalOptions();
+  const errors = validateCalendarExport(state, options);
+  if (errors.length) {
+    toast(errors[0]);
+    return;
+  }
+  const start = calParseYmd(options.startDate);
+  const { ics, count } = generateICS(state, options);
+  if (!count) {
+    toast("Расписание пустое — нечего экспортировать");
+    return;
+  }
+  downloadICS(ics, getICSFilename(state));
+  closeCalModal();
+  toast(calWeekdayMon0(start) !== 0
+    ? "Файл скачан. Начало не понедельник — уроки встанут на ближайшие дни недели"
+    : "Файл календаря скачан — открой его на телефоне");
+  metrikaGoal("calendar_export", { mode: state.mode, dual: !!state.dual, lessons_count: count });
+  markScheduleCreated("calendar_export");
+}
+onClick("#calBtn", openCalModal);
+onClick("#calBtnTop", openCalModal);
+onClick("#calClose", closeCalModal);
+onClick("#calDownload", doCalendarExport);
+listen("#calModal", "click", (e) => {
+  if (e.target.id === "calModal") closeCalModal();
 });
 
 function metrikaCall(method, ...args) {
@@ -3310,6 +3606,7 @@ function pwRenderResult() {
   box.innerHTML = `<div class="pw-result-actions">
     <button type="button" class="btn primary" id="pwDl">Скачать PNG</button>
     <button type="button" class="btn" id="pwShare">Ссылка</button>
+    <button type="button" class="btn" id="pwCal">В календарь</button>
     <button type="button" class="btn" id="pwResultBack">Назад</button>
     <button type="button" class="btn ghost" id="pwHome">На главную</button>
   </div>`;
@@ -3630,6 +3927,10 @@ function pwBind() {
     }
     if (e.target.id === "pwShare") {
       await shareSchedule();
+      return;
+    }
+    if (e.target.id === "pwCal") {
+      openCalModal();
       return;
     }
     if (e.target.id === "pwResultBack") {

@@ -71,7 +71,7 @@ try {
   "description": "Конструктор красивого расписания для школы и университета с экспортом в PNG."
 }
 </script>
-<link rel="stylesheet" href="/css/app.css?v=20261005" />
+<link rel="stylesheet" href="/css/app.css?v=20261006" />
 </head>
 <body>
 
@@ -149,6 +149,7 @@ try {
       <button class="btn sm primary" id="dlBtn" type="button">скачать PNG</button>
       <button class="btn sm compact-only" id="previewBtn" type="button">предпросмотр</button>
       <button class="btn sm" id="shareBtn" type="button">ссылка</button>
+      <button class="btn sm" id="calBtnTop" type="button">календарь</button>
       <button class="btn sm desktop-only" id="printBtnTop" type="button">печать</button>
     </div>
   </div>
@@ -265,7 +266,8 @@ try {
         <button class="btn primary" id="dlBtn2" type="button">Скачать PNG</button>
         <button class="btn" id="printBtn" type="button">Печать / PDF</button>
         <button class="btn" id="shareBtn2" type="button">Ссылка на расписание</button>
-        <div class="hint">По ссылке друг откроет то же расписание и сможет сохранить или переделать. Ссылку видит кто угодно, у кого она есть. Лежит на сервере, удалить по кнопке нельзя — не пиши туда личное.</div>
+        <button class="btn" id="calBtn" type="button">В календарь</button>
+        <div class="hint">По ссылке друг откроет то же расписание и сможет сохранить или переделать. Ссылку видит кто угодно, у кого она есть. Лежит на сервере, удалить по кнопке нельзя — не пиши туда личное. «В календарь» скачает .ics — открой файл на телефоне, уроки появятся с напоминаниями.</div>
       </div>
 
       <div class="grp">
@@ -307,6 +309,51 @@ try {
   <p>Картинка готова. Если зашло — можно закинуть на кофе</p>
   <button class="btn sm hot" type="button" data-donate>Поддержать</button>
   <button class="btn sm ghost" type="button" id="donateNudgeClose">не сейчас</button>
+</div>
+
+<div class="modal" id="calModal" hidden>
+  <div class="modal-card cal-card">
+    <h3>Экспорт в календарь</h3>
+    <p class="cal-hint">Скачай файл и открой на телефоне — события добавятся в календарь с напоминаниями.</p>
+    <div class="cal-field">
+      <label for="calStart">Дата начала</label>
+      <input type="date" id="calStart" required />
+      <span class="cal-field-hint">Первый день занятий</span>
+    </div>
+    <div class="cal-field">
+      <label for="calEnd">Дата окончания</label>
+      <input type="date" id="calEnd" />
+      <span class="cal-field-hint">Последний день четверти или семестра — необязательно</span>
+    </div>
+    <div class="cal-field">
+      <label for="calDuration">Длительность урока</label>
+      <select id="calDuration">
+        <option value="45">45 минут (школа)</option>
+        <option value="80">80 минут (пара)</option>
+        <option value="90">90 минут (пара)</option>
+        <option value="40">40 минут</option>
+        <option value="30">30 минут</option>
+      </select>
+    </div>
+    <div class="cal-field">
+      <label for="calTz">Часовой пояс</label>
+      <select id="calTz"></select>
+    </div>
+    <div class="cal-field">
+      <label for="calReminder">Напоминание</label>
+      <select id="calReminder">
+        <option value="15">За 15 минут</option>
+        <option value="30">За 30 минут</option>
+        <option value="10">За 10 минут</option>
+        <option value="5">За 5 минут</option>
+        <option value="0">Без напоминания</option>
+      </select>
+    </div>
+    <div class="cal-actions">
+      <button class="btn primary" id="calDownload" type="button">Скачать .ics</button>
+      <button class="btn ghost" id="calClose" type="button">Отмена</button>
+    </div>
+  </div>
 </div>
 
 <div class="modal" id="donateModal" hidden>
@@ -370,6 +417,6 @@ try {
     </div>
   </div>
 </div>
-<script src="/js/app.js?v=20261004" defer></script>
+<script src="/js/app.js?v=20261006" defer></script>
 </body>
 </html>
