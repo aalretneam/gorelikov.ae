@@ -2419,7 +2419,7 @@ function getDefaultCalendarOptions(st) {
   let timezone = "Europe/Moscow";
   try {
     const detected = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    if (detected) timezone = detected;
+    if (detected && detected !== "UTC" && detected !== "Etc/UTC") timezone = detected;
   } catch {}
   return {
     startDate: calYmdInput(calNearestMonday()),
