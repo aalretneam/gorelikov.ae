@@ -2491,8 +2491,47 @@ function pwRemapCells(oldKinds, oldCells, newKinds) {
   });
   return [c0, c1];
 }
+function pwSubjectsFromCells(s) {
+  const names = [];
+  const seen = new Set();
+  (s.cells || []).forEach((g) => {
+    (g || []).forEach((row) => {
+      (row || []).forEach((val) => {
+        const name = splitCell(val).subj;
+        if (!name || seen.has(name)) return;
+        seen.add(name);
+        names.push(name);
+      });
+    });
+  });
+  return names;
+}
+function pwHydrateWizard(s) {
+  if (!s || typeof s !== "object") return s;
+  const kinds = Array.isArray(s.kinds) ? s.kinds : [];
+  if (!(Number(s.lessonN) > 0)) {
+    const n = kinds.filter((k) => (k || "lesson") === "lesson").length;
+    s.lessonN = Math.max(1, n || 8);
+  } else {
+    s.lessonN = Math.max(1, Math.min(MAX_ROWS, Number(s.lessonN)));
+  }
+  if (typeof s.pauses !== "boolean") {
+    s.pauses = kinds.some((k) => (k || "lesson") !== "lesson");
+  }
+  if (s.editDay == null || !Number.isFinite(Number(s.editDay))) s.editDay = 0;
+  else s.editDay = Math.max(0, Math.min(6, Number(s.editDay)));
+  if (!Array.isArray(s.extraSubjects)) s.extraSubjects = [];
+  if (!Array.isArray(s.subjects)) {
+    s.subjects = pwSubjectsFromCells(s);
+    const cat = pwCatalog(s.mode);
+    s.subjects.forEach((n) => {
+      if (!cat.includes(n) && !s.extraSubjects.includes(n)) s.extraSubjects.push(n);
+    });
+  }
+  return s;
+}
 function pwData() {
-  return phoneWizard.committed ? state : phoneWizard.session;
+  return pwHydrateWizard(phoneWizard.committed ? state : phoneWizard.session);
 }
 function pwPersist() {
   if (phoneWizard && phoneWizard.committed) save();
@@ -3153,7 +3192,7 @@ function pwRenderStep2() {
       <span>${pwSlotWord()}</span>
       <div class="pw-stepper">
         <button type="button" id="pwMinus">−</button>
-        <b id="pwLessonN">${s.lessonN}</b>
+        <b id="pwLessonN">${s.lessonN ?? ""}</b>
         <button type="button" id="pwPlus">+</button>
       </div>
     </div>
@@ -3163,16 +3202,17 @@ function pwRenderStep2() {
 }
 function pwRenderStep3() {
   const s = pwData();
+  const subjects = s.subjects || [];
+  const extra = s.extraSubjects || [];
   $("#pwQuestion").textContent = "Какие предметы?";
   const lead = $("#pwLead");
-  lead.hidden = !s.subjects.length;
-  lead.textContent = s.subjects.length ? "" : "";
+  lead.textContent = "";
   lead.hidden = true;
-  const yours = s.subjects.length
-    ? s.subjects.map((n) => pwChipHtml(n, " on")).join("")
+  const yours = subjects.length
+    ? subjects.map((n) => pwChipHtml(n, " on")).join("")
     : `<span class="pw-empty">Выбери свои предметы</span>`;
-  const cat = pwCatalog(s.mode).concat(s.extraSubjects);
-  const catalog = cat.map((n) => pwChipHtml(n, s.subjects.includes(n) ? " on" : "")).join("");
+  const cat = pwCatalog(s.mode).concat(extra);
+  const catalog = cat.map((n) => pwChipHtml(n, subjects.includes(n) ? " on" : "")).join("");
   $("#pwBody").innerHTML = `
     <div class="pw-yours" id="pwYours">${yours}</div>
     <div class="pw-catalog" id="pwCatalog">${catalog}
@@ -3222,7 +3262,7 @@ function pwRenderStep4() {
       </div>`;
     }
   }
-  const pal = s.subjects.map((n) => pwChipHtml(n, pwPick === n ? " on" : "")).join("");
+  const pal = (s.subjects || []).map((n) => pwChipHtml(n, pwPick === n ? " on" : "")).join("");
   layout.innerHTML = `${weeks}
     <div class="pw-day-tabs">${tabs}</div>
     <div class="pw-split">
@@ -3297,8 +3337,9 @@ async function pwMaybeCopyOdd() {
 }
 
 function pwCommit() {
-  const s = phoneWizard.session;
+  const s = pwData();
   const base = defaultState(s.mode);
+  const first = !phoneWizard.committed;
   const next = Object.assign(base, {
     v: 4,
     mode: s.mode,
@@ -3320,14 +3361,21 @@ function pwCommit() {
     showInfo: false,
     info: [],
     teachers: [],
-    paints: [emptyGrid(), emptyGrid()]
+    paints: [emptyGrid(), emptyGrid()],
+    lessonN: s.lessonN,
+    pauses: !!s.pauses,
+    subjects: (s.subjects || []).slice(),
+    extraSubjects: (s.extraSubjects || []).slice(),
+    editDay: s.editDay ?? 0
   });
   state = next;
   save();
   phoneWizard.committed = true;
   phoneWizard.session = state;
-  metrikaGoal("phone_wizard_done");
-  markScheduleCreated("phone_wizard");
+  if (first) {
+    metrikaGoal("phone_wizard_done");
+    markScheduleCreated("phone_wizard");
+  }
   renderSheet();
 }
 
@@ -3439,7 +3487,7 @@ async function pwNext() {
     pwGo(phoneWizard.step + 1);
     return;
   }
-  if (!phoneWizard.committed) pwCommit();
+  pwCommit();
   phoneWizard.phase = "result";
   pwRender();
 }
@@ -3536,7 +3584,7 @@ function pwBind() {
         if (ans === "cancel") return;
         if (ans === "cells") pwClearSubjectCells(name);
       }
-      s.subjects = s.subjects.filter((n) => n !== name);
+      s.subjects = (s.subjects || []).filter((n) => n !== name);
       pwPersist();
       pwRender();
       return;
