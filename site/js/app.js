@@ -3050,7 +3050,9 @@ function pwFillSheet(el) {
 }
 function pwScalePreview() {
   const port = $("#pwPreview");
-  const el = phoneWizard && phoneWizard.committed && phoneWizard.phase === "result" ? sheet : $("#pwSheet");
+  const el = phoneWizard && phoneWizard.committed && phoneWizard.phase === "result"
+    ? sheet
+    : ($("#pwSheet") || pwEnsureMiniSheet());
   if (!port || !el || port.hidden) return;
   el.style.transform = "none";
   const wrap = port.parentElement;
@@ -3224,11 +3226,23 @@ function pwCommitCustom() {
   if (ok) pwRender();
 }
 
+function pwEnsureMiniSheet() {
+  let el = $("#pwSheet");
+  if (el) return el;
+  el = document.createElement("div");
+  el.id = "pwSheet";
+  el.className = "sheet";
+  const port = $("#pwPreview");
+  if (port) port.appendChild(el);
+  return el;
+}
 function pwMountResultSheet() {
   const port = $("#pwPreview");
   if (!sheet || !port) return;
-  port.innerHTML = "";
-  port.appendChild(sheet);
+  const mini = pwEnsureMiniSheet();
+  mini.hidden = true;
+  if (sheet.parentElement !== port) port.appendChild(sheet);
+  sheet.hidden = false;
   sheet.classList.add("exporting");
   requestAnimationFrame(() => {
     pwScalePreview();
@@ -3237,6 +3251,7 @@ function pwMountResultSheet() {
 }
 function pwRestoreSheet() {
   if (!sheet) return;
+  sheet.hidden = false;
   sheet.classList.remove("exporting");
   sheet.style.transform = "";
   sheetHome();
@@ -3245,8 +3260,8 @@ function pwRestoreSheet() {
 function pwRenderPreview() {
   const wrap = $("#pwPreviewWrap");
   const port = $("#pwPreview");
-  const el = $("#pwSheet");
-  if (!wrap || !port || !el) return;
+  const el = pwEnsureMiniSheet();
+  if (!wrap || !port) return;
   wrap.hidden = false;
   if (phoneWizard.committed && phoneWizard.phase === "result") {
     el.hidden = true;
@@ -3255,10 +3270,7 @@ function pwRenderPreview() {
   }
   el.hidden = false;
   if (sheet && port.contains(sheet)) pwRestoreSheet();
-  if (!port.contains(el)) {
-    port.innerHTML = "";
-    port.appendChild(el);
-  }
+  if (el.parentElement !== port) port.appendChild(el);
   pwFillSheet(el);
   requestAnimationFrame(() => {
     pwScalePreview();
