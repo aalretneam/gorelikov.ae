@@ -1747,6 +1747,42 @@ body.phone-wizard #landing { pointer-events: none; }
   background: var(--p2); color: var(--tx); border: 1px solid var(--line);
 }
 .pw-stepper b { font-family: Unbounded, sans-serif; min-width: 28px; text-align: center; }
+.pw-fields {
+  display: flex; flex-direction: column; gap: 6px; margin-top: 6px;
+}
+.pw-field {
+  display: flex; flex-direction: column; gap: 1px;
+  padding: 6px 12px 8px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--p1);
+  font-size: .72rem; font-weight: 700; color: var(--tx2);
+}
+.pw-field input {
+  width: 100%; border: 0; background: transparent; color: var(--tx);
+  font: inherit; font-size: .95rem; font-weight: 800; padding: 2px 0 0;
+  outline: none;
+}
+.pw-times {
+  margin-top: 6px;
+  max-height: 28vh;
+  overflow: auto;
+  display: flex; flex-direction: column; gap: 6px;
+  padding: 2px 0 4px;
+  -webkit-overflow-scrolling: touch;
+}
+.pw-time-row {
+  display: grid;
+  grid-template-columns: 5.6em minmax(0, 1fr);
+  gap: 8px; align-items: center;
+}
+.pw-time-row input {
+  width: 100%;
+  background: var(--p1); border: 1px solid var(--line); color: var(--tx);
+  border-radius: 12px; padding: 9px 8px; font: inherit; font-weight: 800;
+  text-align: center; font-size: .9rem;
+}
+.pw-time-row span { font-size: .78rem; font-weight: 700; color: var(--tx2); min-width: 0; }
 .pw-yours {
   display: flex; flex-wrap: wrap; gap: 8px; flex: none;
   min-height: 44px; margin: 0 0 2px;

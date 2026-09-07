@@ -157,6 +157,7 @@ function defaultState(mode = "school") {
       mode,
       theme: "minimal",
       title: "Моё расписание",
+      tag: "расписание",
       sub: "",
       days: [1, 1, 1, 1, 1, 0, 0],
       rows: 7,
@@ -191,6 +192,7 @@ function defaultState(mode = "school") {
     mode,
     theme: uni ? "neon" : "y2k",
     title: uni ? "ПИ-231" : "7 «Б»",
+    tag: "расписание",
     sub: uni ? "осенний семестр · 2026/27" : "2026/27 учебный год",
     days: uni ? [1, 1, 1, 1, 1, 1, 0] : [1, 1, 1, 1, 1, 0, 0],
     rows,
@@ -251,6 +253,8 @@ function hydrateState(s) {
   } else {
     merged.dayLabels = merged.dayLabels.map((x) => String(x || "").slice(0, 24));
   }
+  if (merged.tag == null) merged.tag = "расписание";
+  else merged.tag = String(merged.tag || "").slice(0, 32);
   if (merged.theme === "ru-gold") merged.theme = "russia";
   else if (!THEMES.some((t) => t.id === merged.theme)) merged.theme = base.theme;
   if (!Array.isArray(merged.paints) || merged.paints.length < 2) merged.paints = [emptyGrid(), emptyGrid()];
@@ -687,7 +691,7 @@ function renderSheet() {
   let html = `
     <header class="s-head">
       <h2 class="s-title" contenteditable="true" spellcheck="false" data-bind="title">${esc(state.title)}</h2>
-      <div class="s-tagrow"><span class="s-tag">расписание</span>${badge}</div>
+      <div class="s-tagrow"><span class="s-tag">${esc(state.tag || "расписание")}</span>${badge}</div>
       <div class="s-sub" contenteditable="true" spellcheck="false" data-bind="sub">${esc(state.sub)}</div>
     </header>
     ${extra}
@@ -2483,14 +2487,47 @@ function pwApplyFrame() {
   const maxN = pwMaxLessonN(s.mode, s.pauses);
   if (s.lessonN > maxN) s.lessonN = maxN;
   if (s.lessonN < 1) s.lessonN = 1;
+  const prevTimes = (s.times || []).slice();
+  const prevKinds = (s.kinds || []).slice();
   const frame = pwBuildFrame(s.mode, s.lessonN, s.pauses);
   const nextCells = pwRemapCells(s.kinds, s.cells, frame.kinds);
+  const lessonTimes = [];
+  const otherTimes = [];
+  prevKinds.forEach((k, i) => {
+    const t = String(prevTimes[i] || "").trim();
+    if (!t) return;
+    if ((k || "lesson") === "lesson") lessonTimes.push(t);
+    else otherTimes.push(t);
+  });
+  let li = 0, oi = 0;
   s.kinds = frame.kinds;
   s.labels = frame.labels;
-  s.times = frame.times;
+  s.times = frame.times.map((t, i) => {
+    if ((frame.kinds[i] || "lesson") === "lesson") return lessonTimes[li++] || t;
+    return otherTimes[oi++] || t;
+  });
   s.rows = frame.rows;
   s.cells = nextCells;
   pwPersist();
+}
+function pwHeadDefaults(mode) {
+  mode = normalizeMode(mode);
+  if (mode === "uni") return { title: "ПИ-231", tag: "расписание", sub: "осенний семестр · 2026/27" };
+  if (mode === "own") return { title: "Моё расписание", tag: "расписание", sub: "" };
+  return { title: "7 «Б»", tag: "расписание", sub: "2026/27 учебный год" };
+}
+function pwClassLabel(mode) {
+  if (mode === "uni") return "Группа";
+  if (mode === "own") return "Название";
+  return "Класс";
+}
+function pwRowCaption(s, r) {
+  const kind = s.kinds[r] || "lesson";
+  if (kind !== "lesson") return s.labels[r] || KIND_NAME[kind] || "";
+  let n = 0;
+  for (let i = 0; i <= r; i++) if ((s.kinds[i] || "lesson") === "lesson") n++;
+  const w = s.mode === "uni" ? "Пара" : s.mode === "own" ? "Строка" : "Урок";
+  return w + " " + n;
 }
 function pwModeDefaults(mode) {
   mode = normalizeMode(mode);
@@ -2500,9 +2537,13 @@ function pwModeDefaults(mode) {
 }
 function pwNewSession() {
   const d = pwModeDefaults("school");
+  const head = pwHeadDefaults("school");
   const frame = pwBuildFrame("school", d.lessonN, d.pauses);
   return {
     mode: "school",
+    title: head.title,
+    tag: head.tag,
+    sub: head.sub,
     days: d.days.slice(),
     dual: false,
     activeGrid: 0,
@@ -2523,7 +2564,11 @@ function pwSetMode(mode) {
   const s = pwData();
   if (s.mode === mode) return;
   const d = pwModeDefaults(mode);
+  const head = pwHeadDefaults(mode);
   s.mode = mode;
+  s.title = head.title;
+  s.tag = head.tag;
+  s.sub = head.sub;
   s.days = d.days.slice();
   s.dual = false;
   s.activeGrid = 0;
@@ -2549,8 +2594,9 @@ function pwSnapshot() {
     v: 4,
     mode: s.mode,
     theme: s.theme,
-    title: base.title,
-    sub: base.sub,
+    title: s.title == null ? base.title : s.title,
+    tag: s.tag == null ? "расписание" : s.tag,
+    sub: s.sub == null ? base.sub : s.sub,
     days: s.days.slice(),
     rows: s.rows,
     times: s.times.slice(),
@@ -2580,7 +2626,7 @@ function pwFillSheet(el) {
     let html = `
     <header class="s-head">
       <h2 class="s-title">${esc(state.title)}</h2>
-      <div class="s-tagrow"><span class="s-tag">расписание</span>${badge}</div>
+      <div class="s-tagrow"><span class="s-tag">${esc(state.tag || "расписание")}</span>${badge}</div>
       <div class="s-sub">${esc(state.sub)}</div>
     </header>
     <div class="s-grid" style="--days:${days.length}">
@@ -2892,17 +2938,31 @@ function pwRender() {
 
 function pwRenderStep1() {
   $("#pwQuestion").textContent = "Какое расписание делаем?";
-  const hint = pwModeHint();
   const lead = $("#pwLead");
   lead.hidden = true;
   lead.textContent = "";
-  const mode = pwData().mode;
+  const s = pwData();
+  const mode = s.mode;
+  const hint = pwModeHint();
+  const classLbl = pwClassLabel(mode);
+  const head = pwHeadDefaults(mode);
   $("#pwBody").innerHTML = `<div class="seg" id="pwModeSeg">
     <button type="button" data-pw-mode="school"${mode === "school" ? " class=\"active\"" : ""}>Школа</button>
     <button type="button" data-pw-mode="uni"${mode === "uni" ? " class=\"active\"" : ""}>Универ</button>
     <button type="button" data-pw-mode="own"${mode === "own" ? " class=\"active\"" : ""}>Свой</button>
   </div>
-  <p class="pw-lead">${esc(hint)}</p>`;
+  <p class="pw-lead">${esc(hint)}</p>
+  <div class="pw-fields">
+    <label class="pw-field">${esc(classLbl)}
+      <input type="text" id="pwTitle" maxlength="40" value="${esc(s.title || "")}" placeholder="${esc(head.title)}" autocomplete="off" />
+    </label>
+    <label class="pw-field">Шапка
+      <input type="text" id="pwTag" maxlength="32" value="${esc(s.tag || "")}" placeholder="расписание" autocomplete="off" />
+    </label>
+    <label class="pw-field">Учебный год
+      <input type="text" id="pwSub" maxlength="48" value="${esc(s.sub || "")}" placeholder="${esc(head.sub || "2026/27 учебный год")}" autocomplete="off" />
+    </label>
+  </div>`;
   pwRenderPreview();
 }
 function pwRenderStep2() {
@@ -2914,6 +2974,13 @@ function pwRenderStep2() {
   lead.textContent = hint;
   const days = DAY_NAMES.map((n, i) =>
     `<button type="button" class="chip${s.days[i] ? " on" : ""}" data-pw-day="${i}">${n}</button>`).join("");
+  let times = "";
+  for (let r = 0; r < s.rows; r++) {
+    times += `<label class="pw-time-row">
+      <input type="text" inputmode="decimal" maxlength="16" data-pw-time="${r}" value="${esc(s.times[r] || "")}" placeholder="8:30" autocomplete="off" />
+      <span>${esc(pwRowCaption(s, r))}</span>
+    </label>`;
+  }
   $("#pwBody").innerHTML = `
     <div class="pw-days">${days}</div>
     <label class="check"><input type="checkbox" id="pwDual"${s.dual ? " checked" : ""} /> Две недели (чётная / нечётная)</label>
@@ -2925,7 +2992,8 @@ function pwRenderStep2() {
         <button type="button" id="pwPlus">+</button>
       </div>
     </div>
-    <label class="check"><input type="checkbox" id="pwPauses"${s.pauses ? " checked" : ""} /> ${pwPauseLabel()}</label>`;
+    <label class="check"><input type="checkbox" id="pwPauses"${s.pauses ? " checked" : ""} /> ${pwPauseLabel()}</label>
+    <div class="pw-times">${times}</div>`;
   pwRenderPreview();
 }
 function pwRenderStep3() {
@@ -3084,8 +3152,9 @@ function pwCommit() {
     custom: Object.assign({}, base.custom),
     fmt: "auto",
     wm: true,
-    title: base.title,
-    sub: base.sub,
+    title: s.title == null ? base.title : s.title,
+    tag: s.tag == null ? "расписание" : s.tag,
+    sub: s.sub == null ? base.sub : s.sub,
     showInfo: false,
     info: [],
     teachers: [],
@@ -3337,6 +3406,27 @@ function pwBind() {
     if (e.target.id === "pwHome") {
       pwCloseSilent();
       return;
+    }
+  });
+  listen("#phoneWizard", "input", (e) => {
+    if (!phoneWizard) return;
+    const t = e.target;
+    if (t.id === "pwTitle" || t.id === "pwTag" || t.id === "pwSub") {
+      const s = pwData();
+      if (t.id === "pwTitle") s.title = t.value.slice(0, 40);
+      else if (t.id === "pwTag") s.tag = t.value.slice(0, 32);
+      else s.sub = t.value.slice(0, 48);
+      pwPersist();
+      pwRenderPreview();
+      return;
+    }
+    if (t.dataset.pwTime != null) {
+      const s = pwData();
+      const r = +t.dataset.pwTime;
+      if (!s.times || r < 0 || r >= s.times.length) return;
+      s.times[r] = t.value.slice(0, 16);
+      pwPersist();
+      pwRenderPreview();
     }
   });
   listen("#phoneWizard", "change", (e) => {
