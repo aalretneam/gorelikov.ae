@@ -112,9 +112,13 @@ fi
 ln -sf "$DEST" "$ENABLED"
 
 install -m 644 "$SRC_DIR/deploy/raspisalka-share.service" /etc/systemd/system/raspisalka-share.service
+chmod 755 "$SRC_DIR/deploy/pull-main.sh"
+install -m 644 "$SRC_DIR/deploy/raspisalka-deploy.service" /etc/systemd/system/raspisalka-deploy.service
+install -m 644 "$SRC_DIR/deploy/raspisalka-deploy.timer" /etc/systemd/system/raspisalka-deploy.timer
 systemctl daemon-reload
 systemctl enable --now raspisalka-share
 systemctl restart raspisalka-share
+systemctl enable --now raspisalka-deploy.timer
 
 nginx -t
 systemctl reload nginx

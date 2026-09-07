@@ -1,7 +1,8 @@
 # Деплой Расписалки на Beget
 
 Сайт статический. На сервер уходит содержимое `site/` в `/var/www/gorelikov.ae`.
-Пуш в `main` сам выкладывает через GitHub Actions.
+
+**Автодеплой живёт на Beget**, не в панели GitHub. Раз в минуту systemd-таймер `raspisalka-deploy` делает `git fetch` репозитория и, если `main` уехал, запускает `install.sh`. После мержа в `main` прод сам подхватывает коммит (обычно меньше минуты). SSH-секреты в GitHub для этого не нужны: репозиторий публичный, сервер тянет по HTTPS.
 
 | Сервер | IP | Роль |
 |---|---|---|
@@ -17,14 +18,62 @@
 
 У корня должен быть **один** A — Beget. Лишний A на Vultr или на парковку `5.101.152.161` ломает сайт и Вебмастер: запросы скачут между машинами. MX/TXT Beget для почты `info@gorelikov.ae` не трогать.
 
-## 2. GitHub-репозиторий и секреты
+## 2. Один раз на Beget — включить автодеплой
 
-Репозиторий: этот проект. Secrets (Settings → Secrets and variables → Actions):
+Пока таймера на сервере нет, зайди по SSH **один раз**. Дальше мержи в `main` сами доезжают.
+
+```bash
+ssh root@159.194.227.211
+git -C /opt/gorelikov.ae remote set-url origin https://github.com/aalretneam/gorelikov.ae.git
+git -C /opt/gorelikov.ae fetch origin main
+git -C /opt/gorelikov.ae checkout -B main origin/main
+bash /opt/gorelikov.ae/deploy/install.sh
+systemctl status raspisalka-deploy.timer --no-pager
+```
+
+`install.sh` копирует `site/` в `/var/www/gorelikov.ae`, включает nginx и таймер `raspisalka-deploy`.
+
+Проверка, что таймер тикает:
+
+```bash
+systemctl list-timers raspisalka-deploy.timer
+journalctl -u raspisalka-deploy.service -n 30 --no-pager
+```
+
+Если репозитория на сервере ещё нет (чистая машина):
+
+```bash
+ssh root@159.194.227.211
+git clone --branch main https://github.com/aalretneam/gorelikov.ae.git /opt/gorelikov.ae
+bash /opt/gorelikov.ae/deploy/install.sh
+bash /opt/gorelikov.ae/deploy/setup-ssl.sh
+```
+
+`setup-ssl.sh` выпускает Let's Encrypt (нужны верные A-записи на Beget и открытые 80/443).
+
+## 3. Как это устроено
+
+1. Мерж / пуш в `main` на GitHub.
+2. На Beget каждую минуту `raspisalka-deploy.timer` вызывает `deploy/pull-main.sh`.
+3. Скрипт сравнивает локальный HEAD с `origin/main`. Если коммит новый — `git reset --hard` и `install.sh` (rsync в `/var/www`, reload nginx, рестарт share-api).
+
+Принудительно прямо сейчас:
+
+```bash
+ssh root@159.194.227.211
+bash /opt/gorelikov.ae/deploy/pull-main.sh
+```
+
+## 4. Опционально: мгновенный деплой из GitHub Actions
+
+Таймер запаздывает до ~минуты. Если нужен выклад сразу после пуша — добавь SSH-секрет, workflow **Deploy to Beget** сам сделает rsync.
+
+Secrets (Settings → Secrets and variables → Actions):
 
 | Secret | Значение |
 |--------|----------|
-| `VPS_HOST` | `159.194.227.211` (Beget, не Vultr) |
-| `VPS_USER` | `root` |
+| `VPS_HOST` | `159.194.227.211` (Beget, не Vultr). Можно не задавать — в workflow уже этот IP |
+| `VPS_USER` | `root` (можно не задавать) |
 | `VPS_SSH_KEY` | приватный ключ деплоя (целиком, включая `BEGIN`/`END`) |
 
 Публичную пару ключа добавь на Beget в `/root/.ssh/authorized_keys`.
@@ -37,31 +86,7 @@ ssh-copy-id -i ~/.ssh/gorelikov_deploy.pub root@159.194.227.211
 # приватный ~/.ssh/gorelikov_deploy — в секрет VPS_SSH_KEY
 ```
 
-## 3. Первый раз на Beget
-
-Когда репозиторий уже на GitHub:
-
-```bash
-ssh root@159.194.227.211
-git clone git@github.com:USER/gorelikov.ae.git /opt/gorelikov.ae
-bash /opt/gorelikov.ae/deploy/install.sh
-bash /opt/gorelikov.ae/deploy/setup-ssl.sh
-```
-
-`install.sh` копирует `site/` в `/var/www/gorelikov.ae` и включает nginx.
-`setup-ssl.sh` выпускает Let's Encrypt (нужны верные A-записи на Beget и открытые 80/443).
-
-## 4. Дальше
-
-Пуш в `main` → workflow **Deploy to Beget** → rsync в `/opt/gorelikov.ae` → `install.sh`.
-
-Если секретов нет — вручную на Beget:
-
-```bash
-ssh root@159.194.227.211
-git -C /opt/gorelikov.ae pull origin main
-bash /opt/gorelikov.ae/deploy/install.sh
-```
+Без `VPS_SSH_KEY` workflow остаётся зелёным и ничего не пушит: выкладкой занимается таймер на Beget.
 
 Короткие ссылки `https://gorelikov.ae/s/k4m2np8q` — gzip в `/var/lib/raspisalka/` (обычно 200–800 байт, одинаковые расписания не дублируются). Старые длинные `#s=...` открываются как раньше.
 

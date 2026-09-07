@@ -1,0 +1,12 @@
+[Unit]
+Description=Раз в минуту проверить origin/main Расписалки
+
+[Timer]
+OnBootSec=45s
+OnUnitActiveSec=1min
+AccuracySec=15s
+Persistent=true
+Unit=raspisalka-deploy.service
+
+[Install]
+WantedBy=timers.target
