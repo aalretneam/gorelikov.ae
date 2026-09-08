@@ -240,6 +240,7 @@ function paintWork(index: number, scatter: boolean) {
 function setPhase(next: Phase) {
   phase = next;
   captionEl.classList.toggle("is-on", next === "hold");
+  document.documentElement.dataset.mosaic = `${next}:${clicks}`;
   if (next === "hold") {
     hintEl.textContent = "коснись · следующая картина";
     hintEl.classList.remove("is-gone");
@@ -315,6 +316,7 @@ function plantChunk() {
     landAt += 80;
   }
   glass.clink();
+  document.documentElement.dataset.mosaic = `${phase}:${clicks}`;
 }
 
 function nextWork() {
