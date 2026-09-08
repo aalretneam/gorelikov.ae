@@ -70,15 +70,50 @@ canvas {
   color: rgba(230, 225, 214, 0.32);
 }
 
+.quote {
+  position: fixed;
+  z-index: 8;
+  top: max(56px, calc(env(safe-area-inset-top) + 48px));
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(34rem, 72vw);
+  min-height: 2.8em;
+  margin: 0;
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-style: italic;
+  font-weight: 300;
+  font-size: clamp(15px, 2.2vw, 24px);
+  letter-spacing: 0.06em;
+  line-height: 1.45;
+  text-align: center;
+  color: rgba(230, 225, 214, 0.52);
+  pointer-events: none;
+  white-space: pre-line;
+  opacity: 0;
+  transition: opacity 1.4s ease;
+}
+
+.quote.is-on {
+  opacity: 1;
+}
+
 .hint {
   top: auto;
   bottom: max(88px, calc(env(safe-area-inset-bottom) + 72px));
 }
 
+@media (max-width: 720px) {
+  .quote {
+    width: min(22rem, 78vw);
+    font-size: 15px;
+    top: max(118px, calc(env(safe-area-inset-top) + 108px));
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .caption,
   .hint,
-  .whisper {
+  .quote {
     transition: none;
   }
 }

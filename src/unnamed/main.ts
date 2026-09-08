@@ -6,10 +6,10 @@ import { fitGrid, loadWorkImage, maxTiles, preloadMosaics, WORKS } from "./works
 import { bindSoundToggle } from "../shared/sound-toggle";
 import { bind as bindTrace } from "../shared/trace";
 import { GestureTrail } from "../shared/trail";
-import { bindWhisper, isChromeTarget } from "../shared/whisper";
+import { isChromeTarget } from "../shared/whisper";
 import { reducedMotion } from "../shared/gpu";
 
-const MEANING = ["Ничто, кроме души, недостойно восхищения", "а для великой души всё меньше неё"];
+const QUOTE = "Ничто, кроме души, недостойно восхищения\nа для великой души всё меньше неё";
 
 const reduced = reducedMotion();
 const MAX = maxTiles();
@@ -21,7 +21,7 @@ const titleEl = document.querySelector<HTMLElement>("#work-title")!;
 const metaEl = document.querySelector<HTMLElement>("#work-meta")!;
 const hintEl = document.querySelector<HTMLElement>("#hint")!;
 const cursorEl = document.querySelector<HTMLDivElement>("#cursor")!;
-const whisperEl = document.querySelector<HTMLParagraphElement>("#whisper")!;
+const quoteEl = document.querySelector<HTMLParagraphElement>("#quote")!;
 const presenceEl = document.querySelector<HTMLElement>("#presence")!;
 const soundEl = document.querySelector<HTMLButtonElement>("#sound")!;
 
@@ -29,7 +29,6 @@ const tiles = new Tiles(canvas, MAX);
 const glass = new Glass();
 const trail = new GestureTrail(trailCanvas);
 const clock = new PresenceClock();
-const whisper = bindWhisper(whisperEl);
 bindSoundToggle(soundEl, glass);
 bindTrace("mosaic");
 
@@ -69,7 +68,9 @@ let cell = 12;
 let clicks = 0;
 const need = reduced ? 3 : 6;
 let assembledOnce = false;
-let meaningStep = 0;
+let quoteN = 0;
+let quoteAt = 0;
+let quoteTyping = false;
 let switchAt = 0;
 let sealedAt = 0;
 
@@ -87,9 +88,10 @@ function layout(nextAspect = aspect) {
   const w = innerWidth;
   const h = innerHeight;
   const padX = Math.min(w, h) * 0.055;
-  const padY = Math.min(w, h) * 0.12;
+  const topReserve = Math.min(w, h) < 720 ? 196 : 132;
+  const botReserve = Math.min(112, h * 0.16);
   const availW = Math.max(64, w - padX * 2);
-  const availH = Math.max(64, h - padY * 2);
+  const availH = Math.max(64, h - topReserve - botReserve);
   let mw: number;
   let mh: number;
   if (availW / availH > aspect) {
@@ -104,7 +106,7 @@ function layout(nextAspect = aspect) {
   rows = grid.rows;
   live = cols * rows;
   const ox = (w - mw) / 2;
-  const oy = (h - mh) / 2 - 10;
+  const oy = topReserve + Math.max(0, (availH - mh) / 2);
   const cw = mw / cols;
   const ch = mh / rows;
   cell = Math.min(cw, ch);
@@ -210,18 +212,38 @@ function setPhase(next: Phase) {
     hintEl.classList.remove("is-gone");
     if (!assembledOnce) {
       assembledOnce = true;
-      meaningStep = 1;
-      whisper.show(MEANING[0], 5200);
-      window.setTimeout(() => {
-        if (meaningStep === 1) {
-          meaningStep = 2;
-          whisper.show(MEANING[1], 5200);
-        }
-      }, reduced ? 2800 : 5600);
+      startQuote();
     }
   } else {
     hintEl.textContent = "коснись · собери";
   }
+}
+
+function startQuote() {
+  quoteEl.classList.add("is-on");
+  if (reduced) {
+    quoteEl.textContent = QUOTE;
+    quoteN = QUOTE.length;
+    quoteTyping = false;
+    return;
+  }
+  quoteN = 0;
+  quoteEl.textContent = "";
+  quoteTyping = true;
+  quoteAt = performance.now();
+}
+
+function typeQuote(now: number) {
+  if (!quoteTyping || now < quoteAt) return;
+  quoteN += 1;
+  quoteEl.textContent = QUOTE.slice(0, quoteN);
+  if (quoteN >= QUOTE.length) {
+    quoteTyping = false;
+    return;
+  }
+  const ch = QUOTE[quoteN - 1];
+  const wait = ch === "\n" ? 520 : ch === "," ? 220 : 68 + ((quoteN * 17) % 24);
+  quoteAt = now + wait;
 }
 
 function plantChunk() {
@@ -336,7 +358,7 @@ function tick(now: number) {
   writeClock(presenceEl, clock.elapsed());
   trail.step(dt);
   trail.draw();
-  whisper.tick(now);
+  typeQuote(now);
   tiles.draw(pose, uv, extra, live);
   raf = requestAnimationFrame(tick);
 }
