@@ -1,0 +1,73 @@
+@import "../shared/chrome.css";
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #07060a;
+  color: var(--ink);
+  font-family: "Outfit", system-ui, sans-serif;
+  font-weight: 300;
+  cursor: none;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: none;
+}
+
+canvas {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+#board {
+  z-index: 0;
+}
+
+.end {
+  position: fixed;
+  z-index: 9;
+  left: 50%;
+  top: 42%;
+  transform: translate(-50%, -50%);
+  width: min(28rem, 82vw);
+  text-align: center;
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-style: italic;
+  font-size: clamp(16px, 2.4vw, 26px);
+  letter-spacing: 0.06em;
+  line-height: 1.45;
+  color: rgba(244, 239, 230, 0.88);
+  white-space: pre-line;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 2.4s ease;
+}
+
+.end.is-on {
+  opacity: 1;
+}
+
+.end-sub {
+  position: fixed;
+  z-index: 9;
+  left: 50%;
+  top: calc(42% + 7.2rem);
+  transform: translate(-50%, 0);
+  width: min(26rem, 80vw);
+  text-align: center;
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: lowercase;
+  color: rgba(244, 214, 160, 0.72);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 2.8s ease;
+}
+
+.end-sub.is-on {
+  opacity: 1;
+}

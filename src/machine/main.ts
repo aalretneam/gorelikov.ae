@@ -8,10 +8,12 @@ import { MachineSound } from "./audio";
 import { formatVisitors, loadVisitorCount } from "./visitors";
 import { autoStartSound } from "../shared/sound-toggle";
 import { bind as bindTrace, markContinue } from "../shared/trace";
+import { bindBack } from "../shared/back";
 
 const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const session = new Session();
 bindTrace("machine");
+bindBack(document.querySelector("#back"), 30_000);
 const clock = new PresenceClock();
 const params: ArtParams = defaultParams();
 const field = new MachineField(document.querySelector("#field")!);
@@ -24,7 +26,7 @@ const bootText = document.querySelector<HTMLParagraphElement>("#boot-text")!;
 const stageEl = document.querySelector<HTMLElement>("#stage")!;
 const headlineEl = document.querySelector<HTMLHeadingElement>("#headline")!;
 const subEl = document.querySelector<HTMLParagraphElement>("#sub")!;
-const hintEl = document.querySelector<HTMLParagraphElement>("#hint")!;
+const hintEl = document.querySelector<HTMLParagraphElement>("#hint");
 const arrowEl = document.querySelector<HTMLParagraphElement>("#arrow")!;
 const continueEl = document.querySelector<HTMLButtonElement>("#continue")!;
 const againEl = document.querySelector<HTMLButtonElement>("#again")!;
@@ -162,7 +164,7 @@ function enter(next: StateName) {
   cardEl.classList.toggle("is-on", next === "trace" || next === "complete");
   againEl.classList.toggle("is-on", next === "complete");
   colophonEl.classList.toggle("is-on", next === "complete");
-  hintEl.classList.toggle("is-on", next === "arrival");
+  hintEl?.classList.toggle("is-on", next === "arrival");
   arrowEl.classList.toggle("is-on", next === "arrival");
   stageEl.classList.toggle("is-complete", next === "complete");
   stageEl.classList.toggle("is-trace", next === "trace" || next === "complete");
@@ -270,8 +272,10 @@ function arrivalTimeline(now: number) {
   }
 
   if (t > (reduced ? 1600 : 9000)) {
-    setText(hintEl, copy.scroll);
-    hintEl.classList.add("is-on");
+    if (hintEl) {
+      setText(hintEl, copy.scroll);
+      hintEl.classList.add("is-on");
+    }
     arrowEl.classList.add("is-on");
   }
 }

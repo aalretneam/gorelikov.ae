@@ -7,6 +7,7 @@ import { bindSoundToggle } from "../shared/sound-toggle";
 import { bind as bindTrace } from "../shared/trace";
 import { GestureTrail } from "../shared/trail";
 import { isChromeTarget } from "../shared/whisper";
+import { bindBack } from "../shared/back";
 import { reducedMotion } from "../shared/gpu";
 
 const QUOTE = "Ничто, кроме души, недостойно восхищения\nа для великой души всё меньше неё";
@@ -19,7 +20,6 @@ const trailCanvas = document.querySelector<HTMLCanvasElement>("#trail")!;
 const captionEl = document.querySelector<HTMLElement>("#caption")!;
 const titleEl = document.querySelector<HTMLElement>("#work-title")!;
 const metaEl = document.querySelector<HTMLElement>("#work-meta")!;
-const hintEl = document.querySelector<HTMLElement>("#hint")!;
 const cursorEl = document.querySelector<HTMLDivElement>("#cursor")!;
 const quoteEl = document.querySelector<HTMLParagraphElement>("#quote")!;
 const presenceEl = document.querySelector<HTMLElement>("#presence")!;
@@ -31,6 +31,7 @@ const trail = new GestureTrail(trailCanvas);
 const clock = new PresenceClock();
 bindSoundToggle(soundEl, glass);
 bindTrace("mosaic");
+const back = bindBack(document.querySelector("#back"));
 
 const pose = new Float32Array(MAX * 4);
 const uv = new Float32Array(MAX * 4);
@@ -242,15 +243,13 @@ function setPhase(next: Phase) {
   captionEl.classList.toggle("is-on", next === "hold");
   document.documentElement.dataset.mosaic = `${next}:${clicks}`;
   if (next === "hold") {
-    hintEl.textContent = "коснись · следующая картина";
-    hintEl.classList.remove("is-gone");
+    if (work === WORKS.length - 1) back.show();
     if (!assembledOnce) {
       assembledOnce = true;
       startQuote();
     }
   } else {
     captionEl.classList.remove("is-on");
-    hintEl.textContent = "коснись · собери";
   }
 }
 
@@ -546,7 +545,6 @@ window.addEventListener(
 layout(aspect);
 scatterLive(true);
 document.documentElement.dataset.mosaic = `${phase}:${clicks}`;
-hintEl.textContent = "коснись · собери";
 raf = requestAnimationFrame(tick);
 paintWork(0, true);
 void preloadMosaics();

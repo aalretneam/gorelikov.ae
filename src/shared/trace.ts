@@ -1,6 +1,6 @@
 /** Local visit memory. Never sent. */
 
-export type RoomId = "hub" | "field" | "mosaic" | "machine" | "want" | "behind";
+export type RoomId = "hub" | "field" | "mosaic" | "machine" | "want" | "behind" | "play" | "you";
 
 export type Trace = {
   v: 1;
@@ -35,7 +35,7 @@ const NOTES_MAX = 8;
 const MOVE_MS = 250;
 const PAUSE_MS = 2200;
 const NOTE_COOL = 4000;
-const ROOMS: RoomId[] = ["hub", "field", "mosaic", "machine", "want", "behind"];
+const ROOMS: RoomId[] = ["hub", "field", "mosaic", "machine", "want", "behind", "play", "you"];
 
 let mem: Trace | null = null;
 let dirty = false;
@@ -241,6 +241,7 @@ export function enter(room: RoomId): Trace {
 
 export function bind(room: RoomId): Trace {
   const t = enter(room);
+  bindDwellLocal(room);
   if (pointerOn) return t;
   pointerOn = true;
   window.addEventListener("pointerdown", (e) => {
@@ -249,6 +250,33 @@ export function bind(room: RoomId): Trace {
   });
   window.addEventListener("pointermove", () => record({ type: "move" }));
   return t;
+}
+
+const DWELL_KEY = "ag-dwell";
+const dwellBound = new Set<string>();
+
+function bindDwellLocal(room: RoomId) {
+  if (dwellBound.has(room)) return;
+  dwellBound.add(room);
+  let from = Date.now();
+  const flush = () => {
+    const ms = Date.now() - from;
+    from = Date.now();
+    if (ms < 80) return;
+    try {
+      const raw = localStorage.getItem(DWELL_KEY);
+      const d = raw ? (JSON.parse(raw) as Record<string, number>) : {};
+      d[room] = (d[room] ?? 0) + ms;
+      localStorage.setItem(DWELL_KEY, JSON.stringify(d));
+    } catch {
+      /* private */
+    }
+  };
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) flush();
+    else from = Date.now();
+  });
+  window.addEventListener("pagehide", flush);
 }
 
 export function markContinue() {
