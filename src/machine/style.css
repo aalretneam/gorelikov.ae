@@ -397,7 +397,7 @@ canvas {
 }
 
 .hint {
-  bottom: max(48px, env(safe-area-inset-bottom));
+  display: none !important;
 }
 
 .arrow {
@@ -619,6 +619,27 @@ canvas {
   .glass {
     cursor: pointer;
   }
+}
+
+.back-arrow {
+  position: fixed;
+  z-index: 40;
+  left: 50%;
+  bottom: max(28px, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  font-size: 28px;
+  line-height: 1;
+  color: rgba(244, 242, 255, 0.88);
+  text-decoration: none;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 1.8s ease;
+  padding: 12px 18px;
+}
+
+.back-arrow.is-on {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 @media (prefers-reduced-motion: reduce) {
