@@ -66,6 +66,7 @@ const need = reduced ? 3 : 6;
 let assembledOnce = false;
 let meaningStep = 0;
 let switchAt = 0;
+let sealedAt = 0;
 
 function layout() {
   dpr = tiles.resize(innerWidth, innerHeight);
@@ -137,7 +138,7 @@ function paintWork(index: number, scatter: boolean) {
   }
   void mosaicGrid(w).then((g) => {
     if (work !== index) return;
-    applyGrid(g.data, scatter);
+    applyGrid(g.data, scatter && clicks === 0 && phase !== "hold");
   });
 }
 
@@ -146,6 +147,15 @@ function setPhase(next: Phase) {
   phaseAt = performance.now();
   captionEl.classList.toggle("is-on", next === "hold");
   if (next === "hold") {
+    for (let i = 0; i < count; i++) {
+      x[i] = tx[i];
+      y[i] = ty[i];
+      rot[i] = 0;
+      vx[i] = 0;
+      vy[i] = 0;
+      vr[i] = 0;
+      rooted[i] = 1;
+    }
     hintEl.textContent = "коснись · следующая картина";
     hintEl.classList.remove("is-gone");
     if (!assembledOnce) {
@@ -190,6 +200,7 @@ function nextWork() {
   switchAt = now;
   work = (work + 1) % WORKS.length;
   clicks = 0;
+  sealedAt = 0;
   paintWork(work, false);
   if (reduced) {
     for (let i = 0; i < count; i++) {
@@ -214,7 +225,7 @@ function tick(now: number) {
   const t = (now - phaseAt) / 1000;
   const mx = pointer.x * dpr;
   const my = pointer.y * dpr;
-  const size = cell * dpr * (phase === "hold" ? 0.47 : 0.44);
+  const size = cell * dpr * (phase === "hold" ? 0.48 : 0.46);
   let drift = 0;
   let rootedN = 0;
 
@@ -235,10 +246,6 @@ function tick(now: number) {
       vx[i] += (tx[i] - x[i]) * k * dt;
       vy[i] += (ty[i] - y[i]) * k * dt;
       vr[i] += -rot[i] * 6 * dt;
-      if (phase === "hold") {
-        const breathe = Math.sin(now * 0.0018 + i * 0.05) * 0.4 * dpr;
-        x[i] += breathe * dt * 20;
-      }
     } else if (phase === "burst") {
       const a = Math.atan2(y[i] - innerHeight * 0.5 * dpr, x[i] - innerWidth * 0.5 * dpr);
       vx[i] += Math.cos(a) * 520 * dpr * dt;
@@ -274,12 +281,13 @@ function tick(now: number) {
     color[o + 3] = phase === "hold" ? 1 : 0.75 + shine[i] * 0.2;
   }
 
-  if (
-    phase === "chaos" &&
-    rootedN === count &&
-    ((t > 0.8 && drift / count < 3.2 * dpr) || t > 2.8)
-  ) {
-    setPhase("hold");
+  if (phase === "chaos" && rootedN === count) {
+    if (!sealedAt) sealedAt = now;
+    if (now - sealedAt > (reduced ? 180 : 900) || drift / count < 3.2 * dpr) {
+      setPhase("hold");
+    }
+  } else if (phase === "chaos") {
+    sealedAt = 0;
   } else if (phase === "burst" && t > 1.2) {
     paintWork(work, true);
     setPhase("chaos");
@@ -371,7 +379,8 @@ for (let i = 0; i < count; i++) {
   tr[i] = tg[i] = tb[i] = 0.12;
 }
 raf = requestAnimationFrame(tick);
-void preloadMosaics().then(() => paintWork(0, true));
+void mosaicGrid(WORKS[0]).then(() => paintWork(0, true));
+void preloadMosaics();
 
 if (import.meta.hot) {
   import.meta.hot.dispose(() => {

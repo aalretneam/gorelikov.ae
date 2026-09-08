@@ -60,6 +60,7 @@ export class Maze {
   private exits: Cell[] = GATES.map(() => ({ x: 0, y: 0 }));
   private segs: Seg[] = [];
   private floor: Cell[] = [];
+  private roomR = 3;
   private ripples: Ripple[] = [];
   private motes: Mote[] = [];
   pulse = 0;
@@ -172,6 +173,7 @@ export class Maze {
     }
 
     const room = simple ? 2 : 3;
+    this.roomR = room;
     for (let y = cy - room; y <= cy + room; y++) {
       for (let x = cx - room; x <= cx + room; x++) this.set(x, y, 1);
     }
@@ -209,7 +211,8 @@ export class Maze {
     x = Math.min(this.cols - 2, Math.max(1, x | 1));
     y = Math.min(this.rows - 2, Math.max(1, y | 1));
 
-    this.tunnel(cx, cy, x, y);
+    this.set(x, y, 1);
+    if (!this.connected(cx, cy, x, y)) this.tunnel(cx, cy, x, y);
     this.set(x, y, 1);
 
     if (prefer === "n") {
@@ -226,6 +229,30 @@ export class Maze {
     }
     for (let xx = x; xx < this.cols; xx++) this.set(xx, y, 1);
     return { x: Math.max(x - 2, 3) | 1, y };
+  }
+
+  private connected(x0: number, y0: number, x1: number, y1: number) {
+    if (!this.at(x0, y0) || !this.at(x1, y1)) return false;
+    const seen = new Uint8Array(this.grid.length);
+    const q: number[] = [this.ix(x0, y0)];
+    seen[q[0]] = 1;
+    let n = 0;
+    while (n < q.length) {
+      const i = q[n++];
+      const x = i % this.cols;
+      const y = (i / this.cols) | 0;
+      if (x === x1 && y === y1) return true;
+      for (let d = 0; d < 4; d++) {
+        const nx = x + DX[d];
+        const ny = y + DY[d];
+        if (!this.at(nx, ny)) continue;
+        const j = this.ix(nx, ny);
+        if (seen[j]) continue;
+        seen[j] = 1;
+        q.push(j);
+      }
+    }
+    return false;
   }
 
   private tunnel(x0: number, y0: number, x1: number, y1: number) {
@@ -377,39 +404,30 @@ export class Maze {
     ctx.rect(this.ox, this.oy, this.cols * cell, this.rows * cell);
     ctx.clip();
 
-    if (!simple) {
-      for (let y = 0; y < this.rows; y++) {
-        for (let x = 0; x < this.cols; x++) {
-          const n = (x * 19 + y * 37) & 7;
-          if (this.at(x, y)) continue;
-          ctx.fillStyle = `rgb(${10 + n},${8 + (n >> 1)},${12 + n})`;
-          ctx.fillRect(this.ox + x * cell, this.oy + y * cell, cell + 0.5, cell + 0.5);
-        }
-      }
-    } else {
-      ctx.fillStyle = "#0c0a0e";
-      ctx.fillRect(this.ox, this.oy, this.cols * cell, this.rows * cell);
-      ctx.fillStyle = "#050308";
-      for (const c of this.floor) {
-        ctx.fillRect(this.ox + c.x * cell, this.oy + c.y * cell, cell + 0.4, cell + 0.4);
-      }
-    }
-
-    const floorA = 0.04 + awake * 0.05;
-    ctx.fillStyle = `rgba(214,186,150,${floorA})`;
+    ctx.fillStyle = "#100c12";
+    ctx.fillRect(this.ox, this.oy, this.cols * cell, this.rows * cell);
+    const rcx = Math.floor(this.cols / 2) | 1;
+    const rcy = Math.floor(this.rows / 2) | 1;
+    const roomR = this.roomR;
+    ctx.fillStyle = "#050308";
     for (const c of this.floor) {
-      const p = this.cellPt(c.x, c.y);
-      const a = floorA + vis(p.x, p.y) * 0.1;
-      if (a < 0.05) continue;
-      ctx.fillStyle = `rgba(214,186,150,${a})`;
-      const inset = cell * 0.18;
-      ctx.fillRect(this.ox + c.x * cell + inset, this.oy + c.y * cell + inset, cell - inset * 2, cell - inset * 2);
+      if (Math.abs(c.x - rcx) <= roomR && Math.abs(c.y - rcy) <= roomR) continue;
+      ctx.fillRect(this.ox + c.x * cell - 0.3, this.oy + c.y * cell - 0.3, cell + 0.7, cell + 0.7);
     }
+    ctx.fillRect(
+      this.ox + (rcx - roomR) * cell + cell * 0.15,
+      this.oy + (rcy - roomR) * cell + cell * 0.15,
+      (roomR * 2 + 1) * cell - cell * 0.3,
+      (roomR * 2 + 1) * cell - cell * 0.3,
+    );
 
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
-    const slit = Math.max(1.15, cell * 0.22);
+    const slit = Math.max(1.2, cell * 0.24);
     for (const seg of this.segs) {
+      const aIn = Math.abs(seg.x0 - rcx) <= roomR && Math.abs(seg.y0 - rcy) <= roomR;
+      const bIn = Math.abs(seg.x1 - rcx) <= roomR && Math.abs(seg.y1 - rcy) <= roomR;
+      if (aIn && bIn) continue;
       const a0 = this.cellPt(seg.x0, seg.y0);
       const a1 = this.cellPt(seg.x1, seg.y1);
       const p0 = warp(a0);
@@ -417,9 +435,9 @@ export class Maze {
       const midX = (p0.x + p1.x) * 0.5;
       const midY = (p0.y + p1.y) * 0.5;
       const near = vis(midX, midY);
-      const a = 0.07 + awake * 0.1 + near * 0.45 + this.pulse * 0.12 + breath * 0.03;
-      ctx.strokeStyle = `rgba(244,232,210,${Math.min(0.78, a)})`;
-      ctx.lineWidth = slit * (0.75 + near * 0.45);
+      const a = 0.16 + awake * 0.12 + near * 0.38 + this.pulse * 0.12 + breath * 0.03;
+      ctx.strokeStyle = `rgba(244,232,210,${Math.min(0.82, a)})`;
+      ctx.lineWidth = slit * (0.8 + near * 0.4);
       ctx.beginPath();
       ctx.moveTo(p0.x, p0.y);
       ctx.lineTo(p1.x, p1.y);
@@ -444,7 +462,7 @@ export class Maze {
     ctx.fillStyle = seek;
     ctx.fillRect(0, 0, this.w, this.h);
 
-    const dusk = 0.62 - awake * 0.22;
+    const dusk = 0.38 - awake * 0.16;
     const shade = ctx.createRadialGradient(mx, my, lamp * 0.18, mx, my, lamp * 1.35);
     shade.addColorStop(0, "rgba(5,3,8,0)");
     shade.addColorStop(0.55, `rgba(5,3,8,${dusk * 0.35})`);

@@ -12,11 +12,11 @@ export type Work = {
 };
 
 export const WORKS: Work[] = [
-  { title: "небо", meta: "галла плацидия · равенна · v век", src: "/mosaics/galla-ceiling.jpg" },
-  { title: "битва при иссе", meta: "дом фавна · помпеи · i век до н.э.", src: "/mosaics/alexander.jpg" },
   { title: "феодора", meta: "сан-витале · равенна · vi век", src: "/mosaics/theodora.jpg" },
-  { title: "юстиниан", meta: "сан-витале · равенна · vi век", src: "/mosaics/justinian.jpg" },
+  { title: "битва при иссе", meta: "дом фавна · помпеи · i век до н.э.", src: "/mosaics/alexander.jpg" },
   { title: "деисус", meta: "святая софия · константинополь · xii век", src: "/mosaics/deesis.jpg" },
+  { title: "юстиниан", meta: "сан-витале · равенна · vi век", src: "/mosaics/justinian.jpg" },
+  { title: "небо", meta: "галла плацидия · равенна · v век", src: "/mosaics/galla-ceiling.jpg" },
   { title: "пантократор", meta: "чефалу · сицилия · xii век", src: "/mosaics/cefalu.jpg" },
   { title: "голуби", meta: "вилла адриана · ii век", src: "/mosaics/doves.jpg" },
   { title: "пастырь", meta: "галла плацидия · равенна · v век", src: "/mosaics/shepherd.jpg" },
