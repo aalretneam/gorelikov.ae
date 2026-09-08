@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#050308" />
+    <title>ag</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon.png" type="image/png" sizes="32x32" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Outfit:wght@200;300;400&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <canvas id="field" aria-hidden="true"></canvas>
+    <canvas id="dust" aria-hidden="true"></canvas>
+    <div class="cursor" id="cursor" aria-hidden="true"></div>
+    <div class="veil" id="veil"></div>
+    <main class="hud">
+      <p class="whisper" id="whisper"></p>
+      <ol class="life" id="life" aria-hidden="true"></ol>
+      <header class="label">
+        <img class="mark" src="/logo.svg" width="96" height="30" alt="" />
+        <span class="meta">машина · человек · 2026</span>
+      </header>
+      <p class="hint" id="hint">двигайся · нажми · задержись</p>
+      <span class="presence" id="presence">00:00</span>
+      <a class="door" id="door" href="./machine.html" aria-hidden="true" tabindex="-1">
+        <span class="door-meta">ты дождался</span>
+        <span class="door-title">есть ещё одна комната</span>
+        <span class="door-sub">ии под надзором человека</span>
+      </a>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
