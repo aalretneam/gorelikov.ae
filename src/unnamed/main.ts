@@ -545,6 +545,7 @@ window.addEventListener(
 
 layout(aspect);
 scatterLive(true);
+document.documentElement.dataset.mosaic = `${phase}:${clicks}`;
 hintEl.textContent = "коснись · собери";
 raf = requestAnimationFrame(tick);
 paintWork(0, true);
