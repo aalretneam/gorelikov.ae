@@ -111,7 +111,7 @@ function finish(who: 1 | 2) {
     lost: who === AI,
     ms: Date.now() - started,
   });
-  targetZoom = reduced ? 0.2 : 0.11;
+  targetZoom = reduced ? 0.28 : 0.2;
   endEl.textContent =
     who === HUMAN
       ? "ты собрал пять там, где она оставила пустоту.\nвокруг — партия, оконченная до твоего взгляда.\nсуперкомпьютер не играл с тобой.\nон ждал, пока ты закроешь щель."
@@ -200,7 +200,7 @@ function drawGrid() {
 
 function drawStone(x: number, y: number, who: number, ghost = false) {
   const p = toScreen(x, y);
-  const r = cell * zoom * (ghost ? 0.32 : 0.38);
+  const r = Math.max(ghost ? 1.7 : 2.4, cell * zoom * (ghost ? 0.36 : 0.4));
   if (p.x < -40 || p.y < -40 || p.x > w + 40 || p.y > h + 40) return;
   ctx.beginPath();
   ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
@@ -221,8 +221,8 @@ function tick(now: number) {
   zoom += (targetZoom - zoom) * (reduced ? 0.2 : 0.028);
   if (endedAt) {
     const u = Math.min(1, (now - endedAt) / 9000);
-    camX += (42 - camX) * 0.01 * (0.35 + u);
-    camY += (-3 - camY) * 0.01;
+    camX += (24 - camX) * 0.012 * (0.35 + u);
+    camY += (-2 - camY) * 0.012;
   }
   writeClock(presenceEl, clock.elapsed());
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
