@@ -806,6 +806,7 @@ function onEditorInput(e) {
     applyCellLook(cell, val, r, d);
   } else return;
   save();
+  if (document.body.classList.contains("mode-edit")) scheduleFit();
 }
 function onEditorPaste(e) {
   const part = e.target.dataset && e.target.dataset.part;
