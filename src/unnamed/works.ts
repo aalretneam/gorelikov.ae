@@ -9,7 +9,7 @@ export type Work = {
 };
 
 export const WORKS: Work[] = [
-  { title: "труд", meta: "стена · xx век", src: "/mosaics/trud.jpg" },
+  { title: "труд", meta: "стена · ссср", src: "/mosaics/trud.jpg" },
   { title: "феодора", meta: "сан-витале · равенна · vi век", src: "/mosaics/theodora.jpg" },
   { title: "битва при иссе", meta: "дом фавна · помпеи · i век до н.э.", src: "/mosaics/alexander.jpg" },
   { title: "деисус", meta: "святая софия · константинополь · xii век", src: "/mosaics/deesis.jpg" },

@@ -41,18 +41,18 @@ float hash(vec2 p) {
 
 void main() {
   vec2 q = abs(v_uv);
-  float r = 0.04 + v_chip * 0.05;
+  float r = 0.028 + v_chip * 0.03;
   vec2 b = q - vec2(1.0 - r);
   float sdf = length(max(b, 0.0)) + min(max(b.x, b.y), 0.0) - r;
-  sdf += (hash(v_st * 36.0) - 0.5) * 0.07 * v_chip;
-  if (sdf > 0.055) discard;
+  sdf += (hash(v_st * 36.0) - 0.5) * 0.035 * v_chip;
+  if (sdf > 0.04) discard;
 
   vec3 tex = texture(u_tex, v_st).rgb;
-  tex *= 0.93 + 0.09 * hash(v_st * 88.0);
-  tex *= 0.9 + 0.1 * (0.58 - v_uv.y * 0.42);
+  tex *= 0.95 + 0.07 * hash(v_st * 88.0);
+  tex *= 0.92 + 0.08 * (0.58 - v_uv.y * 0.42);
 
-  vec3 mortar = vec3(0.058, 0.05, 0.044);
-  float edge = 1.0 - smoothstep(-0.055, 0.018, sdf);
+  vec3 mortar = vec3(0.09, 0.078, 0.068);
+  float edge = 1.0 - smoothstep(-0.04, 0.012, sdf);
   vec3 col = mix(mortar, tex, edge * u_hasTex);
 
   float bevel = smoothstep(0.07, -0.015, sdf);
