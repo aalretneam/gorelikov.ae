@@ -1,0 +1,12 @@
+---
+description: Этот агент и эта ветка — только art.gorelikov.ae
+alwaysApply: true
+---
+
+# Только art.gorelikov.ae
+
+Этот агент работает **только** с сайтом https://art.gorelikov.ae/
+
+Это не Расписалка. Не открывать `site/` Расписалки, не править `gorelikov.ae`, не выкатывать https://gorelikov.ae/, не мержить эту ветку в `main`.
+
+Код арта — Vite + TypeScript в корне этой ветки (`index.html`, `machine.html`, `unnamed.html`, `src/`). Сборка: `npm run build` → `dist/`.
