@@ -6,6 +6,7 @@ import { MachineField } from "./field";
 import { Dust } from "./dust";
 import { MachineSound } from "./audio";
 import { formatVisitors, loadVisitorCount } from "./visitors";
+import { autoStartSound } from "../shared/sound-toggle";
 
 const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const session = new Session();
@@ -394,6 +395,10 @@ soundEl.addEventListener("click", async () => {
     soundEl.textContent = copy.soundOn;
     soundEl.setAttribute("aria-pressed", "true");
   }
+});
+autoStartSound(sound, () => {
+  soundEl.textContent = copy.soundOn;
+  soundEl.setAttribute("aria-pressed", "true");
 });
 
 continueEl.addEventListener("click", () => void onContinue());

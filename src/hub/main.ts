@@ -14,8 +14,15 @@ const LINES = [
   "или есть",
   "кто-то найдёт тут вдохновение",
   "кто-то смысл",
-  "Всё зависит от тебя и твоего выбора",
+  "Всё зависит от тебя..",
+  "И твоего выбора ..",
 ];
+
+const reduced = reducedMotion();
+const ROOMS_AT = reduced ? 60_000 : 120_000;
+const FIRST_LINE = reduced ? 7000 : 14000;
+const LINE_STEP = reduced ? 8000 : 16000;
+const LINE_DUR = reduced ? 4500 : 8000;
 
 const canvas = document.querySelector<HTMLCanvasElement>("#maze")!;
 const trailCanvas = document.querySelector<HTMLCanvasElement>("#trail")!;
@@ -26,9 +33,7 @@ const presenceEl = document.querySelector<HTMLElement>("#presence")!;
 const soundEl = document.querySelector<HTMLButtonElement>("#sound")!;
 const hitsEl = document.querySelector<HTMLDivElement>("#hits")!;
 
-const reduced = reducedMotion();
 const simple = isMobileGpu();
-const stepMs = reduced ? 4000 : 8000;
 const maze = new Maze(canvas);
 const trail = new GestureTrail(trailCanvas);
 const sound = new HubSound();
@@ -43,13 +48,11 @@ let raf = 0;
 let lineI = -1;
 let revealed: number[] = [];
 let hover = -1;
-let hoverSince = 0;
-let armed = -1;
 let hold = 0;
 let holding = false;
 let lastSlit = 0;
 let choiceHinted = false;
-let pulseAt = 0;
+let roomsOpened = false;
 let lastHoverSound = -1;
 
 function layoutHits() {
@@ -62,11 +65,11 @@ function layoutHits() {
     a.tabIndex = -1;
     a.style.width = `${HIT}px`;
     a.style.height = `${HIT}px`;
-    a.addEventListener("click", (e) => {
-      if (armed !== i && e.detail !== 0) {
-        e.preventDefault();
-        return;
-      }
+    const word = document.createElement("span");
+    word.className = "word";
+    word.textContent = GATES[i].word;
+    a.append(word);
+    a.addEventListener("click", () => {
       markOpened(GATES[i].id);
     });
     hitsEl.append(a);
@@ -84,6 +87,20 @@ function placeHits() {
   });
 }
 
+function openRooms() {
+  if (roomsOpened) return;
+  roomsOpened = true;
+  revealed = GATES.map((_, i) => i);
+  placeHits();
+  maze.pulse = 1;
+  if (!choiceHinted) {
+    choiceHinted = true;
+    hintEl.textContent = "коснись · выбери";
+    hintEl.classList.remove("is-gone");
+    window.setTimeout(() => hintEl.classList.add("is-gone"), 6400);
+  }
+}
+
 function resize() {
   const dpr = dprCap(1.5, 1);
   maze.resize(innerWidth, innerHeight, dpr);
@@ -92,10 +109,7 @@ function resize() {
 }
 
 function showLine(i: number) {
-  const dur = i === 5 ? 4000 : reduced ? 2800 : 5200;
-  whisper.show(LINES[i], dur);
-  if (i < 5 && !revealed.includes(i)) revealed = [...revealed, i];
-  placeHits();
+  whisper.show(LINES[i], LINE_DUR);
 }
 
 function onPointer(x: number, y: number) {
@@ -115,12 +129,12 @@ window.addEventListener("pointerdown", (e) => {
   cursorEl.classList.add("is-hold");
   if ((e.target as HTMLElement).closest("#hits")) return;
   const i = maze.hitIndex(pointer.tx, pointer.ty, revealed);
-  if (i >= 0 && armed === i) {
+  if (i >= 0) {
     markOpened(GATES[i].id);
     window.location.href = GATES[i].href;
     return;
   }
-  if (i < 0) maze.ripple(pointer.tx, pointer.ty);
+  maze.ripple(pointer.tx, pointer.ty);
   e.preventDefault();
 });
 
@@ -150,42 +164,16 @@ function tick(now: number) {
   hold += ((holding ? 1 : 0) - hold) * 0.1;
 
   const nextLine = lineI + 1;
-  const at = (nextLine + 1) * stepMs;
+  const at = FIRST_LINE + nextLine * LINE_STEP;
   if (nextLine < LINES.length && elapsed >= at) {
     lineI = nextLine;
     showLine(lineI);
-    if (lineI === 5) pulseAt = now + 25000;
   }
 
-  if (lineI === 5 && !choiceHinted && elapsed >= 6 * stepMs + 4000) {
-    choiceHinted = true;
-    hintEl.textContent = "двигайся · задержись · выбери";
-    hintEl.classList.remove("is-gone");
-    window.setTimeout(() => hintEl.classList.add("is-gone"), 5200);
-  }
-
-  if (pulseAt && now >= pulseAt) {
-    maze.pulse = 1;
-    pulseAt = 0;
-  }
+  if (elapsed >= ROOMS_AT) openRooms();
 
   const hit = maze.hitIndex(pointer.x, pointer.y, revealed);
-  if (hit !== hover) {
-    hover = hit;
-    hoverSince = now;
-    armed = -1;
-  }
-  if (hit >= 0 && now - hoverSince >= 600 && armed !== hit) {
-    armed = hit;
-    if (!whisper.busy(now)) {
-      whisperEl.classList.add("is-small");
-      whisper.show(GATES[hit].word, 4200);
-    }
-  }
-  if (hit < 0 && whisperEl.classList.contains("is-small") && !whisper.busy(now)) {
-    whisperEl.classList.remove("is-small");
-  }
-
+  if (hit !== hover) hover = hit;
   cursorEl.classList.toggle("is-ring", hit >= 0);
   cursorEl.style.transform = `translate3d(${pointer.x}px, ${pointer.y}px, 0)`;
 
@@ -194,12 +182,12 @@ function tick(now: number) {
     if (hit >= 0) sound.hover(true, GATES[hit].freq);
     else sound.hover(false);
   }
-  if (sound.enabled && now - lastSlit > 4000 + Math.random() * 4000 && Math.random() < 0.008) {
+  if (sound.enabled && now - lastSlit > 5000 + Math.random() * 5000 && Math.random() < 0.01) {
     sound.slit();
     lastSlit = now;
   }
 
-  maze.step(dt);
+  maze.step(dt, pointer.x, pointer.y);
   maze.draw({
     mx: pointer.x,
     my: pointer.y,
@@ -208,6 +196,7 @@ function tick(now: number) {
     visited,
     hold,
     simple,
+    awake: Math.min(1, elapsed / ROOMS_AT),
   });
   trail.step(dt);
   trail.draw();

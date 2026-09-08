@@ -12,6 +12,16 @@ export function syncSoundButton(el: HTMLButtonElement, enabled: boolean) {
   el.setAttribute("aria-pressed", enabled ? "true" : "false");
 }
 
+export function autoStartSound(sound: ToggleableSound, onStarted?: () => void) {
+  const kick = async (e: Event) => {
+    if ((e.target as HTMLElement | null)?.closest?.(".sound, #sound")) return;
+    if (sound.enabled) return;
+    await sound.start();
+    onStarted?.();
+  };
+  window.addEventListener("pointerdown", kick, { capture: true });
+}
+
 export function bindSoundToggle(el: HTMLButtonElement, sound: ToggleableSound) {
   syncSoundButton(el, sound.enabled);
   el.addEventListener("click", async () => {
@@ -19,6 +29,7 @@ export function bindSoundToggle(el: HTMLButtonElement, sound: ToggleableSound) {
     else await sound.start();
     syncSoundButton(el, sound.enabled);
   });
+  autoStartSound(sound, () => syncSoundButton(el, sound.enabled));
 }
 
 export function muteWhenHidden(sound: { setMuted?: (muted: boolean) => void }) {

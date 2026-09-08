@@ -72,15 +72,40 @@ canvas {
   position: absolute;
   left: 0;
   top: 0;
-  margin: calc(var(--hit, 56px) / -2) 0 0 calc(var(--hit, 56px) / -2);
-  width: 56px;
-  height: 56px;
+  margin: -36px 0 0 -36px;
+  width: 72px;
+  height: 72px;
   pointer-events: none;
   border-radius: 50%;
 }
 
 .hit.is-on {
   pointer-events: auto;
+}
+
+.hit .word {
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 2px);
+  transform: translateX(-50%);
+  font-size: 10px;
+  letter-spacing: 0.32em;
+  text-transform: lowercase;
+  color: rgba(244, 239, 230, 0.62);
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 1.1s ease, color 0.4s ease;
+}
+
+.hit.is-on .word {
+  opacity: 0.7;
+}
+
+.hit.is-on:hover .word,
+.hit.is-on:focus-visible .word {
+  opacity: 1;
+  color: rgba(244, 239, 230, 0.92);
 }
 
 @keyframes rise {
