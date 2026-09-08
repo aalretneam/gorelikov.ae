@@ -80,9 +80,9 @@ function tick(now: number) {
   if (holding) holdT += dt;
 
   if (elapsed / 1000 >= nextLine && lineI < LINES.length && !whisper.busy(now)) {
-    whisper.show(LINES[lineI], reduced ? 2800 : 5200);
+    whisper.show(LINES[lineI], reduced ? 7800 : 10200);
     lineI += 1;
-    nextLine += reduced ? 10 : 22;
+    nextLine += reduced ? 15 : 27;
   }
 
   mass.step(dt);

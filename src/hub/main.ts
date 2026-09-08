@@ -20,8 +20,8 @@ const LINES = [
 
 const reduced = reducedMotion();
 const FIRST_LINE = reduced ? 7000 : 14000;
-const LINE_STEP = reduced ? 8000 : 16000;
-const LINE_DUR = reduced ? 4500 : 8000;
+const LINE_STEP = reduced ? 13000 : 21000;
+const LINE_DUR = reduced ? 9500 : 13000;
 
 const canvas = document.querySelector<HTMLCanvasElement>("#maze")!;
 const trailCanvas = document.querySelector<HTMLCanvasElement>("#trail")!;
@@ -101,7 +101,7 @@ function revealVisible() {
       choiceHinted = true;
       hintEl.textContent = "коснись · выбери";
       hintEl.classList.remove("is-gone");
-      window.setTimeout(() => hintEl.classList.add("is-gone"), 6400);
+      window.setTimeout(() => hintEl.classList.add("is-gone"), 11400);
     }
   }
 }
@@ -225,7 +225,7 @@ function tick(now: number) {
     hintEl.classList.remove("is-gone");
     window.setTimeout(() => {
       if (!choiceHinted) hintEl.classList.add("is-gone");
-    }, 5200);
+    }, 10200);
   }
 
   revealVisible();

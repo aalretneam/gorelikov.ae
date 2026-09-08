@@ -104,7 +104,7 @@ function onDown() {
     entered = true;
     hintEl.textContent = "1–4 палитры · колёсико · пробел";
     hintEl.classList.remove("is-gone");
-    window.setTimeout(() => hintEl.classList.add("is-gone"), 4200);
+    window.setTimeout(() => hintEl.classList.add("is-gone"), 9200);
   }
 }
 
@@ -155,7 +155,7 @@ window.addEventListener("keydown", (e) => {
     paletteMix = targetPalette;
     paletteSpeed = 0.12;
     if (!whisper.busy()) {
-      whisper.show(["фиолетовое море", "янтарный жар", "глубокая вода", "ночной цветок"][targetPalette], 1800);
+      whisper.show(["фиолетовое море", "янтарный жар", "глубокая вода", "ночной цветок"][targetPalette], 6800);
     }
   }
   if (e.key === "m" || e.key === "M") {
@@ -170,7 +170,7 @@ resize();
 
 function maybeLine(presence: number, now: number) {
   if (whisper.busy(now)) return;
-  const dur = reduced ? 2200 : 5200;
+  const dur = reduced ? 7200 : 10200;
   const t = THOUGHT[thoughtI];
   if (t && presence >= t.at) {
     whisper.show(t.text, dur);

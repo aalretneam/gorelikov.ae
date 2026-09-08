@@ -75,9 +75,9 @@ function tick(now: number) {
   trail.draw();
   sound.setLook(look.forward, look.back);
   if (elapsed / 1000 >= nextLine && lineI < LINES.length && !whisper.busy(now)) {
-    whisper.show(LINES[lineI], reduced ? 2800 : 5600);
+    whisper.show(LINES[lineI], reduced ? 7800 : 10600);
     lineI += 1;
-    nextLine += reduced ? 9 : 20;
+    nextLine += reduced ? 14 : 25;
   }
   whisper.tick(now);
   cursorEl.style.transform = `translate3d(${pointer.x}px, ${pointer.y}px, 0)`;

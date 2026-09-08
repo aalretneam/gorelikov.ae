@@ -7,7 +7,7 @@ export function bindWhisper(el: HTMLElement) {
     el.classList.add("is-off");
   }
 
-  function show(text: string, duration = 4000) {
+  function show(text: string, duration = 9000) {
     el.textContent = text;
     el.classList.remove("is-off");
     el.classList.add("is-on");

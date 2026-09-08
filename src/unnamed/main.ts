@@ -161,13 +161,13 @@ function setPhase(next: Phase) {
     if (!assembledOnce) {
       assembledOnce = true;
       meaningStep = 1;
-      whisper.show(MEANING[0], 5200);
+      whisper.show(MEANING[0], 10200);
       window.setTimeout(() => {
         if (meaningStep === 1) {
           meaningStep = 2;
-          whisper.show(MEANING[1], 5200);
+          whisper.show(MEANING[1], 10200);
         }
-      }, reduced ? 2800 : 5600);
+      }, reduced ? 7800 : 10600);
     }
   } else {
     hintEl.textContent = "коснись · собери";
