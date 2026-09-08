@@ -4,8 +4,8 @@ export type ToggleableSound = {
   stop: () => void;
 };
 
-export const SOUND_OFF = "звук / выкл";
-export const SOUND_ON = "звук / вкл";
+export const SOUND_OFF = "слушать";
+export const SOUND_ON = "тишина";
 
 export function syncSoundButton(el: HTMLButtonElement, enabled: boolean) {
   el.textContent = enabled ? SOUND_ON : SOUND_OFF;

@@ -2,8 +2,9 @@ import "./style.css";
 import { PresenceClock, writeClock } from "../clock";
 import { Tiles } from "./tiles";
 import { Glass } from "./glass";
-import { mosaicGrid, mosaicGridSync, preloadMosaics, rasterDisplay, WORKS } from "./works";
+import { fitGrid, loadWorkImage, maxTiles, preloadMosaics, WORKS } from "./works";
 import { bindSoundToggle } from "../shared/sound-toggle";
+import { bind as bindTrace } from "../shared/trace";
 import { GestureTrail } from "../shared/trail";
 import { bindWhisper, isChromeTarget } from "../shared/whisper";
 import { reducedMotion } from "../shared/gpu";
@@ -11,8 +12,7 @@ import { reducedMotion } from "../shared/gpu";
 const MEANING = ["Ничто, кроме души, недостойно восхищения", "а для великой души всё меньше неё"];
 
 const reduced = reducedMotion();
-const { cols, rows } = rasterDisplay();
-const count = cols * rows;
+const MAX = maxTiles();
 
 const canvas = document.querySelector<HTMLCanvasElement>("#mosaic")!;
 const trailCanvas = document.querySelector<HTMLCanvasElement>("#trail")!;
@@ -25,34 +25,39 @@ const whisperEl = document.querySelector<HTMLParagraphElement>("#whisper")!;
 const presenceEl = document.querySelector<HTMLElement>("#presence")!;
 const soundEl = document.querySelector<HTMLButtonElement>("#sound")!;
 
-const tiles = new Tiles(canvas, count);
+const tiles = new Tiles(canvas, MAX);
 const glass = new Glass();
 const trail = new GestureTrail(trailCanvas);
 const clock = new PresenceClock();
 const whisper = bindWhisper(whisperEl);
 bindSoundToggle(soundEl, glass);
+bindTrace("mosaic");
 
-const pose = new Float32Array(count * 4);
-const color = new Float32Array(count * 4);
-const x = new Float32Array(count);
-const y = new Float32Array(count);
-const vx = new Float32Array(count);
-const vy = new Float32Array(count);
-const rot = new Float32Array(count);
-const vr = new Float32Array(count);
-const tx = new Float32Array(count);
-const ty = new Float32Array(count);
-const cr = new Float32Array(count);
-const cg = new Float32Array(count);
-const cb = new Float32Array(count);
-const tr = new Float32Array(count);
-const tg = new Float32Array(count);
-const tb = new Float32Array(count);
-const delay = new Float32Array(count);
-const shine = new Float32Array(count);
-const rooted = new Uint8Array(count);
+const pose = new Float32Array(MAX * 4);
+const uv = new Float32Array(MAX * 4);
+const extra = new Float32Array(MAX * 4);
+const x = new Float32Array(MAX);
+const y = new Float32Array(MAX);
+const vx = new Float32Array(MAX);
+const vy = new Float32Array(MAX);
+const rot = new Float32Array(MAX);
+const vr = new Float32Array(MAX);
+const tx = new Float32Array(MAX);
+const ty = new Float32Array(MAX);
+const jx = new Float32Array(MAX);
+const jy = new Float32Array(MAX);
+const jrot = new Float32Array(MAX);
+const jsz = new Float32Array(MAX);
+const delay = new Float32Array(MAX);
+const shine = new Float32Array(MAX);
+const chip = new Float32Array(MAX);
+const rooted = new Uint8Array(MAX);
 
 type Phase = "chaos" | "hold" | "burst";
+let cols = 48;
+let rows = 22;
+let live = cols * rows;
+let aspect = 736 / 330;
 let work = 0;
 let phase: Phase = "chaos";
 let phaseAt = performance.now();
@@ -68,16 +73,23 @@ let meaningStep = 0;
 let switchAt = 0;
 let sealedAt = 0;
 
-function layout() {
+function hash(i: number) {
+  let a = Math.imul(i ^ 0x9e3779b9, 0x85ebca6b);
+  a = Math.imul(a ^ (a >>> 13), 0xc2b2ae35);
+  return ((a ^ (a >>> 16)) >>> 0) / 4294967296;
+}
+
+function layout(nextAspect = aspect) {
+  const prevLive = live;
+  aspect = nextAspect;
   dpr = tiles.resize(innerWidth, innerHeight);
   trail.resize(innerWidth, innerHeight, dpr);
   const w = innerWidth;
   const h = innerHeight;
-  const padX = Math.min(w, h) * 0.07;
-  const padY = Math.min(w, h) * 0.1;
-  const availW = w - padX * 2;
-  const availH = h - padY * 2;
-  const aspect = cols / rows;
+  const padX = Math.min(w, h) * 0.055;
+  const padY = Math.min(w, h) * 0.12;
+  const availW = Math.max(64, w - padX * 2);
+  const availH = Math.max(64, h - padY * 2);
   let mw: number;
   let mh: number;
   if (availW / availH > aspect) {
@@ -87,42 +99,70 @@ function layout() {
     mw = availW;
     mh = mw / aspect;
   }
+  const grid = fitGrid(aspect);
+  cols = grid.cols;
+  rows = grid.rows;
+  live = cols * rows;
   const ox = (w - mw) / 2;
-  const oy = (h - mh) / 2 - 8;
+  const oy = (h - mh) / 2 - 10;
   const cw = mw / cols;
   const ch = mh / rows;
   cell = Math.min(cw, ch);
-  for (let i = 0; i < count; i++) {
+  const inset = 0.006;
+  for (let i = 0; i < live; i++) {
     const col = i % cols;
     const row = (i / cols) | 0;
+    const n0 = hash(i);
+    const n1 = hash(i + 19);
+    const n2 = hash(i + 41);
     tx[i] = (ox + (col + 0.5) * cw) * dpr;
     ty[i] = (oy + (row + 0.5) * ch) * dpr;
+    jx[i] = (n0 - 0.5) * cell * 0.04 * dpr;
+    jy[i] = (n1 - 0.5) * cell * 0.04 * dpr;
+    jrot[i] = (n2 - 0.5) * 0.07;
+    jsz[i] = 0.96 + n0 * 0.055;
+    shine[i] = 0.45 + n1 * 0.5;
+    chip[i] = 0.35 + n2 * 0.65;
+    delay[i] = Math.hypot(col - cols * 0.5, row - rows * 0.5) * 0.016 + n0 * 0.22;
+    const o = i * 4;
+    const u0 = (col + inset) / cols;
+    const u1 = (col + 1 - inset) / cols;
+    const vTop = 1 - (row + inset) / rows;
+    const vBot = 1 - (row + 1 - inset) / rows;
+    uv[o] = u0;
+    uv[o + 1] = vTop;
+    uv[o + 2] = u1;
+    uv[o + 3] = vBot;
+    extra[o] = shine[i];
+    extra[o + 1] = chip[i];
+    extra[o + 2] = 0;
+    extra[o + 3] = 0;
+  }
+  if (live > prevLive && phase !== "hold") {
+    for (let i = prevLive; i < live; i++) {
+      const a = i * 0.47 + hash(i + 7) * 0.4;
+      const rad = Math.min(innerWidth, innerHeight) * (0.2 + hash(i + 3) * 0.55);
+      x[i] = innerWidth * 0.5 * dpr + Math.cos(a) * rad * dpr;
+      y[i] = innerHeight * 0.5 * dpr + Math.sin(a * 1.13) * rad * 0.78 * dpr;
+      vx[i] = Math.sin(a * 2.1) * 80 * dpr;
+      vy[i] = Math.cos(a * 1.7) * 80 * dpr;
+      rot[i] = (a % 2) - 1;
+      rooted[i] = 0;
+    }
   }
 }
 
-function applyGrid(rgb: Uint8Array, scatter: boolean) {
-  for (let i = 0; i < count; i++) {
-    tr[i] = rgb[i * 3] / 255;
-    tg[i] = rgb[i * 3 + 1] / 255;
-    tb[i] = rgb[i * 3 + 2] / 255;
-    const col = i % cols;
-    const rowI = (i / cols) | 0;
-    delay[i] = Math.hypot(col - cols * 0.5, rowI - rows * 0.5) * 0.018 + ((i * 17) % 23) * 0.01;
-    shine[i] = 0.55 + ((i * 13) % 10) * 0.04;
+function scatterLive() {
+  for (let i = 0; i < live; i++) {
     rooted[i] = 0;
-    if (scatter) {
-      const a = i * 0.47 + Math.random() * 0.4;
-      const rad = Math.min(innerWidth, innerHeight) * (0.22 + ((i * 31) % 20) * 0.04);
-      x[i] = innerWidth * 0.5 * dpr + Math.cos(a) * rad * dpr;
-      y[i] = innerHeight * 0.5 * dpr + Math.sin(a * 1.13) * rad * 0.78 * dpr;
-      vx[i] = Math.sin(a * 2.1) * 140 * dpr;
-      vy[i] = Math.cos(a * 1.7) * 140 * dpr;
-      rot[i] = (a % 2) - 1;
-      vr[i] = Math.sin(i) * 2.2;
-      cr[i] = tr[i];
-      cg[i] = tg[i];
-      cb[i] = tb[i];
-    }
+    const a = i * 0.47 + hash(i + 7) * 0.4;
+    const rad = Math.min(innerWidth, innerHeight) * (0.2 + hash(i + 3) * 0.55);
+    x[i] = innerWidth * 0.5 * dpr + Math.cos(a) * rad * dpr;
+    y[i] = innerHeight * 0.5 * dpr + Math.sin(a * 1.13) * rad * 0.78 * dpr;
+    vx[i] = Math.sin(a * 2.1) * 140 * dpr;
+    vy[i] = Math.cos(a * 1.7) * 140 * dpr;
+    rot[i] = (a % 2) - 1;
+    vr[i] = Math.sin(i) * 2.2;
   }
 }
 
@@ -131,15 +171,25 @@ function paintWork(index: number, scatter: boolean) {
   titleEl.textContent = w.title;
   metaEl.textContent = w.meta;
   captionEl.classList.toggle("is-on", phase === "hold");
-  const cached = mosaicGridSync(w);
-  if (cached) {
-    applyGrid(cached.data, scatter);
-    return;
-  }
-  void mosaicGrid(w).then((g) => {
-    if (work !== index) return;
-    applyGrid(g.data, scatter && clicks === 0 && phase !== "hold");
-  });
+  void loadWorkImage(w)
+    .then((img) => {
+      if (work !== index) return;
+      tiles.setTexture(img);
+      layout(img.width / Math.max(1, img.height));
+      if (scatter) scatterLive();
+      else if (phase === "hold") {
+        for (let i = 0; i < live; i++) {
+          x[i] = tx[i] + jx[i];
+          y[i] = ty[i] + jy[i];
+          rot[i] = jrot[i];
+          rooted[i] = 1;
+        }
+      }
+    })
+    .catch(() => {
+      if (work !== index) return;
+      tiles.setTexture(null);
+    });
 }
 
 function setPhase(next: Phase) {
@@ -147,10 +197,10 @@ function setPhase(next: Phase) {
   phaseAt = performance.now();
   captionEl.classList.toggle("is-on", next === "hold");
   if (next === "hold") {
-    for (let i = 0; i < count; i++) {
-      x[i] = tx[i];
-      y[i] = ty[i];
-      rot[i] = 0;
+    for (let i = 0; i < live; i++) {
+      x[i] = tx[i] + jx[i];
+      y[i] = ty[i] + jy[i];
+      rot[i] = jrot[i];
       vx[i] = 0;
       vy[i] = 0;
       vr[i] = 0;
@@ -161,13 +211,13 @@ function setPhase(next: Phase) {
     if (!assembledOnce) {
       assembledOnce = true;
       meaningStep = 1;
-      whisper.show(MEANING[0], 10200);
+      whisper.show(MEANING[0], 5200);
       window.setTimeout(() => {
         if (meaningStep === 1) {
           meaningStep = 2;
-          whisper.show(MEANING[1], 10200);
+          whisper.show(MEANING[1], 5200);
         }
-      }, reduced ? 7800 : 10600);
+      }, reduced ? 2800 : 5600);
     }
   } else {
     hintEl.textContent = "коснись · собери";
@@ -177,10 +227,10 @@ function setPhase(next: Phase) {
 function plantChunk() {
   if (phase !== "chaos") return;
   clicks += 1;
-  const target = Math.min(count, Math.ceil((clicks / need) * count));
-  const order = Array.from({ length: count }, (_, i) => i).sort((a, b) => delay[a] - delay[b]);
+  const target = Math.min(live, Math.ceil((clicks / need) * live));
+  const order = Array.from({ length: live }, (_, i) => i).sort((a, b) => delay[a] - delay[b]);
   let have = 0;
-  for (let i = 0; i < count; i++) if (rooted[i]) have += 1;
+  for (let i = 0; i < live; i++) if (rooted[i]) have += 1;
   for (const i of order) {
     if (have >= target) break;
     if (!rooted[i]) {
@@ -189,7 +239,7 @@ function plantChunk() {
     }
   }
   if (clicks >= need) {
-    for (let i = 0; i < count; i++) rooted[i] = 1;
+    for (let i = 0; i < live; i++) rooted[i] = 1;
   }
   glass.clink();
 }
@@ -201,22 +251,13 @@ function nextWork() {
   work = (work + 1) % WORKS.length;
   clicks = 0;
   sealedAt = 0;
-  paintWork(work, false);
   if (reduced) {
-    for (let i = 0; i < count; i++) {
-      cr[i] = tr[i];
-      cg[i] = tg[i];
-      cb[i] = tb[i];
-      x[i] = tx[i];
-      y[i] = ty[i];
-      rot[i] = 0;
-      rooted[i] = 1;
-    }
-    clicks = need;
+    paintWork(work, false);
     setPhase("hold");
     return;
   }
   setPhase("burst");
+  paintWork(work, false);
 }
 
 function tick(now: number) {
@@ -225,27 +266,26 @@ function tick(now: number) {
   const t = (now - phaseAt) / 1000;
   const mx = pointer.x * dpr;
   const my = pointer.y * dpr;
-  const size = cell * dpr * (phase === "hold" ? 0.48 : 0.46);
+  const sizeHold = cell * dpr * 0.495;
+  const sizeChaos = cell * dpr * 0.46;
   let drift = 0;
   let rootedN = 0;
 
-  for (let i = 0; i < count; i++) {
-    cr[i] += (tr[i] - cr[i]) * (reduced ? 1 : 0.08);
-    cg[i] += (tg[i] - cg[i]) * (reduced ? 1 : 0.08);
-    cb[i] += (tb[i] - cb[i]) * (reduced ? 1 : 0.08);
-
+  for (let i = 0; i < live; i++) {
     const dxm = x[i] - mx;
     const dym = y[i] - my;
     const md = Math.hypot(dxm, dym) + 0.001;
     const falloff = Math.exp(-md / (90 * dpr));
     const push = 16 * dpr;
+    const hx = tx[i] + jx[i];
+    const hy = ty[i] + jy[i];
 
     if (rooted[i] && phase !== "burst") {
       rootedN += 1;
-      const k = phase === "hold" ? 18 : 12;
-      vx[i] += (tx[i] - x[i]) * k * dt;
-      vy[i] += (ty[i] - y[i]) * k * dt;
-      vr[i] += -rot[i] * 6 * dt;
+      const k = phase === "hold" ? 22 : 12;
+      vx[i] += (hx - x[i]) * k * dt;
+      vy[i] += (hy - y[i]) * k * dt;
+      vr[i] += (jrot[i] - rot[i]) * 8 * dt;
     } else if (phase === "burst") {
       const a = Math.atan2(y[i] - innerHeight * 0.5 * dpr, x[i] - innerWidth * 0.5 * dpr);
       vx[i] += Math.cos(a) * 520 * dpr * dt;
@@ -268,28 +308,26 @@ function tick(now: number) {
     y[i] += vy[i] * dt;
     rot[i] += vr[i] * dt;
 
-    if (rooted[i] && phase !== "burst") drift += Math.hypot(x[i] - tx[i], y[i] - ty[i]);
+    if (rooted[i] && phase !== "burst") drift += Math.hypot(x[i] - hx, y[i] - hy);
 
     const o = i * 4;
     pose[o] = x[i];
     pose[o + 1] = y[i];
     pose[o + 2] = rot[i];
-    pose[o + 3] = size * (0.92 + shine[i] * 0.08);
-    color[o] = cr[i];
-    color[o + 1] = cg[i];
-    color[o + 2] = cb[i];
-    color[o + 3] = phase === "hold" ? 1 : 0.75 + shine[i] * 0.2;
+    pose[o + 3] = (phase === "hold" ? sizeHold : sizeChaos) * jsz[i];
+    extra[o] = shine[i];
+    extra[o + 1] = chip[i];
   }
 
-  if (phase === "chaos" && rootedN === count) {
+  if (phase === "chaos" && rootedN === live && live > 0) {
     if (!sealedAt) sealedAt = now;
-    if (now - sealedAt > (reduced ? 180 : 900) || drift / count < 3.2 * dpr) {
+    if (now - sealedAt > (reduced ? 180 : 900) || drift / live < 3.2 * dpr) {
       setPhase("hold");
     }
   } else if (phase === "chaos") {
     sealedAt = 0;
   } else if (phase === "burst" && t > 1.2) {
-    paintWork(work, true);
+    scatterLive();
     setPhase("chaos");
   }
 
@@ -299,7 +337,7 @@ function tick(now: number) {
   trail.step(dt);
   trail.draw();
   whisper.tick(now);
-  tiles.draw(pose, color);
+  tiles.draw(pose, uv, extra, live);
   raf = requestAnimationFrame(tick);
 }
 
@@ -344,11 +382,12 @@ window.addEventListener(
 window.addEventListener(
   "resize",
   () => {
-    layout();
+    layout(aspect);
     if (phase === "hold") {
-      for (let i = 0; i < count; i++) {
-        x[i] = tx[i];
-        y[i] = ty[i];
+      for (let i = 0; i < live; i++) {
+        x[i] = tx[i] + jx[i];
+        y[i] = ty[i] + jy[i];
+        rot[i] = jrot[i];
       }
     }
   },
@@ -368,18 +407,11 @@ window.addEventListener(
   on,
 );
 
-layout();
+layout(aspect);
+scatterLive();
 hintEl.textContent = "коснись · собери";
-for (let i = 0; i < count; i++) {
-  const a = i * 0.47;
-  const rad = Math.min(innerWidth, innerHeight) * (0.22 + ((i * 31) % 20) * 0.04);
-  x[i] = innerWidth * 0.5 * dpr + Math.cos(a) * rad * dpr;
-  y[i] = innerHeight * 0.5 * dpr + Math.sin(a * 1.13) * rad * 0.78 * dpr;
-  cr[i] = cg[i] = cb[i] = 0.12;
-  tr[i] = tg[i] = tb[i] = 0.12;
-}
 raf = requestAnimationFrame(tick);
-void mosaicGrid(WORKS[0]).then(() => paintWork(0, true));
+paintWork(0, true);
 void preloadMosaics();
 
 if (import.meta.hot) {
