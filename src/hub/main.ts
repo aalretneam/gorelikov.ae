@@ -255,7 +255,7 @@ function tick(now: number) {
     visited,
     hold,
     simple,
-    awake: Math.min(1, elapsed / (reduced ? 38000 : 88000)),
+        awake: Math.min(1, elapsed / (reduced ? 22000 : 40000)),
   });
   trail.step(dt);
   trail.draw();

@@ -15,8 +15,8 @@ export const GATES: Gate[] = [
   { id: "field", href: "./field.html", word: "остаться", nx: 0.5, ny: 0.02, rgb: [1, 0.72, 0.42], freq: 196 },
   { id: "mosaic", href: "./unnamed.html", word: "собрать", nx: 0.02, ny: 0.28, rgb: [0.72, 0.86, 0.92], freq: 247 },
   { id: "machine", href: "./machine.html", word: "смотреть", nx: 0.98, ny: 0.28, rgb: [0.55, 0.78, 1], freq: 164 },
-  { id: "want", href: "./want.html", word: "хотеть", nx: 0.22, ny: 0.98, rgb: [0.92, 0.48, 0.38], freq: 220 },
-  { id: "behind", href: "./behind.html", word: "уже", nx: 0.78, ny: 0.98, rgb: [0.82, 0.78, 0.7], freq: 131 },
+  { id: "want", href: "./want.html", word: "хотеть", nx: 0.36, ny: 0.98, rgb: [0.92, 0.48, 0.38], freq: 220 },
+  { id: "behind", href: "./behind.html", word: "уже", nx: 0.64, ny: 0.98, rgb: [0.82, 0.78, 0.7], freq: 131 },
 ];
 
 export const HIT = 72;
@@ -27,8 +27,8 @@ type Cell = { x: number; y: number };
 
 const DX = [0, 1, 0, -1];
 const DY = [-1, 0, 1, 0];
-const SCALE_NEAR = 2.9;
-const SCALE_FAR = 0.32;
+const SCALE_NEAR = 3.05;
+const SCALE_FAR = 0.28;
 
 function mulberry(seed: number) {
   let a = seed | 0;
@@ -147,23 +147,29 @@ export class Maze {
   }
 
   zoomTo(elapsed: number, reduced: boolean) {
-    const dur = reduced ? 38 : 88;
+    const dur = reduced ? 22 : 40;
     const u = Math.min(1, elapsed / 1000 / dur);
-    const k = 1 - (1 - u) * (1 - u);
+    const k = 1 - Math.exp(-u * 2.8);
     this.scale = lerp(SCALE_NEAR, SCALE_FAR, k);
     this.clampCam();
   }
 
   private clampCam() {
-    this.camX = Math.min(this.worldW(), Math.max(0, this.camX));
-    this.camY = Math.min(this.worldH(), Math.max(0, this.camY));
+    const hw = this.w * 0.5 / this.scale;
+    const hh = this.h * 0.5 / this.scale;
+    const ww = this.worldW();
+    const wh = this.worldH();
+    if (ww <= this.w / this.scale) this.camX = ww * 0.5;
+    else this.camX = Math.min(ww - hw, Math.max(hw, this.camX));
+    if (wh <= this.h / this.scale) this.camY = wh * 0.5;
+    else this.camY = Math.min(wh - hh, Math.max(hh, this.camY));
   }
 
   private carveWorld() {
     const simple = isMobileGpu();
     this.cell = simple ? 28 : 24;
     this.cols = odd(simple ? 41 : 55);
-    this.rows = odd(simple ? 181 : 261);
+    this.rows = odd(simple ? 221 : 321);
     this.grid = new Uint8Array(this.cols * this.rows);
     const cols = this.cols;
     const rows = this.rows;
