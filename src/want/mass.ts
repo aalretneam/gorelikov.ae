@@ -18,15 +18,19 @@ export class Mass {
     this.canvas = canvas;
     this.ctx = ctx;
     const n = Math.floor(2200 * gpuScale());
+    const cx = innerWidth * 0.5;
+    const cy = innerHeight * 0.48;
     for (let i = 0; i < n; i++) {
+      const stuck = Math.random() < 0.18 ? 0.75 : 0;
       this.ps.push({
-        x: Math.random(),
-        y: Math.random(),
+        x: stuck ? cx + (Math.random() - 0.5) * 48 : Math.random() * innerWidth,
+        y: stuck ? cy + (Math.random() - 0.5) * 48 : Math.random() * innerHeight,
         vx: (Math.random() - 0.5) * 40,
         vy: (Math.random() - 0.5) * 40,
-        stuck: 0,
+        stuck,
       });
     }
+    this.mass = 0.16;
   }
 
   resize(width: number, height: number, dpr: number) {
@@ -38,12 +42,6 @@ export class Mass {
     if (this.canvas.width !== cw || this.canvas.height !== ch) {
       this.canvas.width = cw;
       this.canvas.height = ch;
-    }
-    for (const p of this.ps) {
-      if (!p.stuck) {
-        p.x = Math.random() * width;
-        p.y = Math.random() * height;
-      }
     }
   }
 
@@ -112,14 +110,15 @@ export class Mass {
     ctx.fillRect(0, 0, this.w, this.h);
     const cx = this.w * 0.5;
     const cy = this.h * 0.48;
-    const g = ctx.createRadialGradient(cx, cy, 4, cx, cy, this.radius * 1.6);
-    g.addColorStop(0, `rgba(210,90,70,${0.12 + this.mass * 0.2})`);
+    const g = ctx.createRadialGradient(cx, cy, 6, cx, cy, this.radius * 1.8);
+    g.addColorStop(0, `rgba(210,90,70,${0.28 + this.mass * 0.4})`);
+    g.addColorStop(0.42, `rgba(160,64,52,${0.1 + this.mass * 0.16})`);
     g.addColorStop(1, "rgba(7,4,10,0)");
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, this.w, this.h);
     for (const p of this.ps) {
-      const a = 0.12 + p.stuck * 0.45;
-      const r = 0.7 + p.stuck * 1.6;
+      const a = 0.2 + p.stuck * 0.55;
+      const r = 1.1 + p.stuck * 2.4;
       ctx.fillStyle = `rgba(232,140,110,${a})`;
       ctx.fillRect(p.x, p.y, r, r);
     }
