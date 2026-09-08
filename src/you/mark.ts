@@ -91,35 +91,55 @@ function carve(n: number, seed: number) {
 
 export type MarkInput = Portrait & { shortId: string };
 
+export const POSTER_W = 1080;
+export const POSTER_H = 1350;
+
 export function paintMark(ctx: CanvasRenderingContext2D, w: number, h: number, me: MarkInput, t = 0) {
+  ctx.letterSpacing = "0px";
   const gold = me.unique;
   const ink = gold ? [244, 214, 160] : [232, 226, 214];
   const rnd = mulberry(seedOf(me.id));
-  const cx = w * 0.5;
-  const cy = h * 0.48;
-  const s = Math.min(w, h);
+  const aspect = POSTER_W / POSTER_H;
+  let pw: number;
+  let ph: number;
+  let px: number;
+  let py: number;
+  if (w / h > aspect) {
+    ph = h;
+    pw = h * aspect;
+    px = (w - pw) / 2;
+    py = 0;
+  } else {
+    pw = w;
+    ph = w / aspect;
+    px = 0;
+    py = (h - ph) / 2;
+  }
+  const cx = px + pw * 0.5;
+  const cy = py + ph * 0.47;
+  const s = pw;
 
   ctx.fillStyle = "#050308";
   ctx.fillRect(0, 0, w, h);
 
-  const well = ctx.createRadialGradient(cx, cy - s * 0.04, s * 0.02, cx, cy, s * 0.62);
+  const well = ctx.createRadialGradient(cx, cy - s * 0.04, s * 0.02, cx, cy, s * 0.55);
   well.addColorStop(0, gold ? "rgba(90, 62, 28, 0.55)" : "rgba(40, 36, 48, 0.45)");
   well.addColorStop(0.45, "rgba(12, 8, 14, 0.2)");
   well.addColorStop(1, "rgba(5, 3, 8, 0)");
   ctx.fillStyle = well;
-  ctx.fillRect(0, 0, w, h);
+  ctx.fillRect(px, py, pw, ph);
 
-  const grain = Math.floor((w * h) / 280);
+  const grain = Math.floor((pw * ph) / 280);
   for (let i = 0; i < grain; i++) {
     const a = 0.015 + rnd() * 0.04;
     ctx.fillStyle = `rgba(${ink[0]},${ink[1]},${ink[2]},${a})`;
-    ctx.fillRect(rnd() * w, rnd() * h, 1.1, 1.1);
+    ctx.fillRect(px + rnd() * pw, py + rnd() * ph, 1.1, 1.1);
   }
 
   const density = Math.min(420, 80 + Math.floor(me.ms / 1800));
   for (let i = 0; i < density; i++) {
     const ang = rnd() * Math.PI * 2;
-    const rad = Math.pow(rnd(), 0.55) * s * 0.48;
+    const rad = Math.pow(rnd(), 0.55) * s * 0.42;
     const x = cx + Math.cos(ang + t * 0.03) * rad;
     const y = cy + Math.sin(ang + t * 0.03) * rad * 0.92;
     ctx.fillStyle = `rgba(${ink[0]},${ink[1]},${ink[2]},${0.06 + rnd() * 0.12})`;
@@ -134,30 +154,30 @@ export function paintMark(ctx: CanvasRenderingContext2D, w: number, h: number, m
   for (let i = 0; i < scars; i++) {
     const a = rnd() * Math.PI * 2;
     const r0 = s * (0.04 + rnd() * 0.06);
-    const r1 = s * (0.16 + rnd() * 0.22);
+    const r1 = s * (0.16 + rnd() * 0.2);
     ctx.beginPath();
     ctx.moveTo(cx + Math.cos(a) * r0, cy + Math.sin(a) * r0);
     ctx.lineTo(cx + Math.cos(a) * r1, cy + Math.sin(a) * r1);
     ctx.stroke();
   }
 
-  const mazeR = s * 0.2;
+  const mazeR = s * 0.168;
   const { g, n } = carve(17, seedOf(me.id) ^ (me.done * 97));
   const cell = (mazeR * 2) / n;
   ctx.save();
   ctx.beginPath();
   ctx.arc(cx, cy, mazeR * 0.96, 0, Math.PI * 2);
   ctx.clip();
-  ctx.strokeStyle = `rgba(${ink[0]},${ink[1]},${ink[2]},${gold ? 0.55 : 0.38})`;
+  ctx.strokeStyle = `rgba(${ink[0]},${ink[1]},${ink[2]},${gold ? 0.58 : 0.4})`;
   ctx.lineWidth = Math.max(0.7, s * 0.0014);
   ctx.lineCap = "square";
-  const ox = cx - mazeR;
-  const oy = cy - mazeR;
+  const mx = cx - mazeR;
+  const my = cy - mazeR;
   for (let y = 1; y < n - 1; y++) {
     for (let x = 1; x < n - 1; x++) {
       if (!g[y * n + x]) continue;
-      const x0 = ox + (x + 0.5) * cell;
-      const y0 = oy + (y + 0.5) * cell;
+      const x0 = mx + (x + 0.5) * cell;
+      const y0 = my + (y + 0.5) * cell;
       if (g[y * n + x + 1]) {
         ctx.beginPath();
         ctx.moveTo(x0, y0);
@@ -175,7 +195,7 @@ export function paintMark(ctx: CanvasRenderingContext2D, w: number, h: number, m
   ctx.restore();
 
   const breath = 0.5 + 0.5 * Math.sin(t * 0.9);
-  ctx.strokeStyle = `rgba(${ink[0]},${ink[1]},${ink[2]},${gold ? 0.72 : 0.48})`;
+  ctx.strokeStyle = `rgba(${ink[0]},${ink[1]},${ink[2]},${gold ? 0.78 : 0.5})`;
   ctx.lineWidth = gold ? 1.8 : 1.2;
   ctx.beginPath();
   ctx.arc(cx, cy, mazeR + 6 + breath * 1.2, 0, Math.PI * 2);
@@ -185,7 +205,7 @@ export function paintMark(ctx: CanvasRenderingContext2D, w: number, h: number, m
     ctx.lineWidth = 0.8;
     ctx.setLineDash([3, 7]);
     ctx.beginPath();
-    ctx.arc(cx, cy, mazeR + 16, 0, Math.PI * 2);
+    ctx.arc(cx, cy, mazeR + 15, 0, Math.PI * 2);
     ctx.stroke();
     ctx.setLineDash([]);
   }
@@ -195,13 +215,13 @@ export function paintMark(ctx: CanvasRenderingContext2D, w: number, h: number, m
   ctx.arc(cx, cy, 3.2 + breath * 1.1, 0, Math.PI * 2);
   ctx.fill();
 
-  const ring = mazeR + s * 0.145;
+  const ring = mazeR + s * 0.13;
   const visited = new Set(me.rooms);
   ctx.textAlign = "center";
-  ctx.textBaseline = "top";
+  ctx.textBaseline = "middle";
   for (let i = 0; i < ROOMS.length; i++) {
     const room = ROOMS[i];
-    const a = -Math.PI / 2 + (i / ROOMS.length) * Math.PI * 2;
+    const a = -Math.PI / 2 + Math.PI / 6 + (i / ROOMS.length) * Math.PI * 2;
     const x = cx + Math.cos(a) * ring;
     const y = cy + Math.sin(a) * ring;
     const on = visited.has(room.id);
@@ -210,67 +230,66 @@ export function paintMark(ctx: CanvasRenderingContext2D, w: number, h: number, m
     const G = Math.round(gv * 255);
     const B = Math.round(b * 255);
     ctx.beginPath();
-    ctx.arc(x, y, on ? 7 : 5, 0, Math.PI * 2);
+    ctx.arc(x, y, on ? 8 : 4.5, 0, Math.PI * 2);
     if (on) {
-      ctx.fillStyle = `rgba(${R},${G},${B},0.95)`;
+      ctx.fillStyle = `rgba(${R},${G},${B},0.2)`;
       ctx.fill();
-      ctx.strokeStyle = `rgba(${R},${G},${B},0.35)`;
-      ctx.lineWidth = 8;
-      ctx.stroke();
       ctx.beginPath();
-      ctx.arc(x, y, 7, 0, Math.PI * 2);
+      ctx.arc(x, y, 5.5, 0, Math.PI * 2);
       ctx.fillStyle = `rgba(${R},${G},${B},0.95)`;
       ctx.fill();
     } else {
-      ctx.strokeStyle = `rgba(${ink[0]},${ink[1]},${ink[2]},0.22)`;
+      ctx.strokeStyle = `rgba(${ink[0]},${ink[1]},${ink[2]},0.2)`;
       ctx.lineWidth = 1;
       ctx.stroke();
     }
-    ctx.font = `${Math.max(9, s * 0.018)}px Outfit, system-ui, sans-serif`;
-    ctx.fillStyle = on ? `rgba(${R},${G},${B},0.82)` : `rgba(${ink[0]},${ink[1]},${ink[2]},0.28)`;
-    const ly = y + (Math.sin(a) > 0.2 ? 12 : -22);
-    ctx.fillText(room.word, x, ly);
+    ctx.font = `${Math.max(10, s * 0.02)}px Outfit, system-ui, sans-serif`;
+    ctx.fillStyle = on ? `rgba(${R},${G},${B},0.88)` : `rgba(${ink[0]},${ink[1]},${ink[2]},0.22)`;
+    const outward = 18 + s * 0.012;
+    ctx.fillText(room.word, x + Math.cos(a) * outward, y + Math.sin(a) * outward);
   }
 
   ctx.textBaseline = "alphabetic";
-  ctx.fillStyle = `rgba(${ink[0]},${ink[1]},${ink[2]},0.92)`;
-  ctx.font = `italic 300 ${Math.max(28, s * 0.062)}px "Cormorant Garamond", Georgia, serif`;
-  ctx.fillText(me.title, cx, h * 0.12);
-
-  ctx.font = `italic 300 ${Math.max(22, s * 0.048)}px "Cormorant Garamond", Georgia, serif`;
-  ctx.fillStyle = `rgba(${ink[0]},${ink[1]},${ink[2]},0.88)`;
-  ctx.fillText(`${me.done} из ${me.total}`, cx, h * 0.12 + Math.max(36, s * 0.07));
-
-  ctx.font = `${Math.max(10, s * 0.02)}px Outfit, system-ui, sans-serif`;
-  ctx.letterSpacing = "0.22em";
-  ctx.fillStyle = `rgba(${ink[0]},${ink[1]},${ink[2]},0.45)`;
-  ctx.fillText(`${me.time}  ·  ${me.shortId}`, cx, h * 0.12 + Math.max(58, s * 0.11));
-  ctx.letterSpacing = "0";
-
-  ctx.font = `italic 300 ${Math.max(14, s * 0.026)}px "Cormorant Garamond", Georgia, serif`;
-  ctx.fillStyle = `rgba(${ink[0]},${ink[1]},${ink[2]},0.62)`;
-  const lines = wrap(ctx, me.verdict.split("Заключение:")[0].trim(), Math.min(w * 0.72, s * 0.78), 3);
-  let ty = h * 0.78;
-  for (const line of lines) {
-    ctx.fillText(line, cx, ty);
-    ty += Math.max(20, s * 0.032);
+  ctx.textAlign = "center";
+  let titleSize = Math.max(22, s * 0.052);
+  ctx.fillStyle = `rgba(${ink[0]},${ink[1]},${ink[2]},0.94)`;
+  ctx.font = `italic 300 ${titleSize}px "Cormorant Garamond", Georgia, serif`;
+  while (titleSize > 18 && ctx.measureText(me.title).width > pw * 0.84) {
+    titleSize -= 1;
+    ctx.font = `italic 300 ${titleSize}px "Cormorant Garamond", Georgia, serif`;
   }
+  ctx.fillText(me.title, cx, py + ph * 0.11);
+
+  ctx.font = `italic 300 ${Math.max(20, s * 0.042)}px "Cormorant Garamond", Georgia, serif`;
+  ctx.fillStyle = `rgba(${ink[0]},${ink[1]},${ink[2]},0.88)`;
+  ctx.fillText(`${me.done} из ${me.total}`, cx, py + ph * 0.11 + titleSize * 1.15);
 
   ctx.font = `${Math.max(10, s * 0.018)}px Outfit, system-ui, sans-serif`;
-  ctx.letterSpacing = "0.28em";
-  ctx.fillStyle = `rgba(${ink[0]},${ink[1]},${ink[2]},0.38)`;
-  ctx.fillText("машина  ·  человек  ·  2026", cx, h * 0.92);
-  ctx.letterSpacing = "0.18em";
-  ctx.fillStyle = `rgba(${ink[0]},${ink[1]},${ink[2]},0.55)`;
-  ctx.fillText("art.gorelikov.ae", cx, h * 0.955);
-  ctx.letterSpacing = "0";
+  ctx.fillStyle = `rgba(${ink[0]},${ink[1]},${ink[2]},0.42)`;
+  ctx.fillText(`${me.time} · ${me.shortId}`, cx, py + ph * 0.11 + titleSize * 1.85);
 
-  const vig = ctx.createRadialGradient(cx, cy, s * 0.2, cx, cy, s * 0.72);
+  ctx.font = `italic 300 ${Math.max(14, s * 0.024)}px "Cormorant Garamond", Georgia, serif`;
+  ctx.fillStyle = `rgba(${ink[0]},${ink[1]},${ink[2]},0.64)`;
+  const lines = wrap(ctx, me.verdict.split("Заключение:")[0].trim(), pw * 0.78, 3);
+  let ty = py + ph * 0.78;
+  for (const line of lines) {
+    ctx.fillText(line, cx, ty);
+    ty += Math.max(20, s * 0.03);
+  }
+
+  ctx.font = `${Math.max(10, s * 0.016)}px Outfit, system-ui, sans-serif`;
+  ctx.fillStyle = `rgba(${ink[0]},${ink[1]},${ink[2]},0.36)`;
+  ctx.fillText("машина · человек · 2026", cx, py + ph * 0.9);
+  ctx.fillStyle = `rgba(${ink[0]},${ink[1]},${ink[2]},0.58)`;
+  ctx.fillText("art.gorelikov.ae", cx, py + ph * 0.935);
+
+  ctx.strokeStyle = `rgba(${ink[0]},${ink[1]},${ink[2]},0.1)`;
+  ctx.lineWidth = 1;
+  ctx.strokeRect(px + pw * 0.045, py + ph * 0.03, pw * 0.91, ph * 0.94);
+
+  const vig = ctx.createRadialGradient(cx, cy, s * 0.18, cx, cy, s * 0.7);
   vig.addColorStop(0, "rgba(5,3,8,0)");
-  vig.addColorStop(1, "rgba(5,3,8,0.42)");
+  vig.addColorStop(1, "rgba(5,3,8,0.35)");
   ctx.fillStyle = vig;
-  ctx.fillRect(0, 0, w, h);
+  ctx.fillRect(px, py, pw, ph);
 }
-
-export const POSTER_W = 1080;
-export const POSTER_H = 1350;
