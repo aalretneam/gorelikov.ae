@@ -784,12 +784,18 @@ body.is-sorting * { cursor: grabbing !important; }
 .sheet.fmt-auto .s-teach em { font-size: .64rem; }
 .sheet.fmt-auto .s-grid { flex: 1 1 auto; min-height: min-content; gap: 5px; }
 .sheet.fmt-auto .s-headrow { flex: 0 0 auto; }
-.sheet.fmt-auto .s-row { flex: 1 1 auto; min-height: min-content; }
+.sheet.fmt-auto .s-row { flex: 1 0 auto; min-height: min-content; }
+.sheet.fmt-auto .s-row:has(.s-span) { flex: 0 0 auto; }
 .sheet.fmt-auto .s-cell,
 .sheet.fmt-auto .s-num,
 .sheet.fmt-auto .s-span { height: auto; }
-.sheet.fmt-auto .s-cell { padding: 6px 8px; overflow: visible; min-height: 36px; }
-.sheet.fmt-auto .s-cell:has(.s-note:not(:empty)) { min-height: 48px; padding-top: 7px; padding-bottom: 7px; }
+.sheet.fmt-auto .s-cell {
+  padding: 8px 8px; overflow: visible; min-height: min-content;
+  flex-shrink: 0;
+}
+.sheet.fmt-auto .s-cell:has(.s-note:not(:empty)) { padding-top: 9px; padding-bottom: 10px; }
+.sheet.fmt-auto .s-subj,
+.sheet.fmt-auto .s-note { overflow: visible; flex-shrink: 0; }
 .sheet.fmt-auto .s-subj { font-size: .82rem; }
 .sheet.fmt-auto .s-note { font-size: .62rem; }
 .sheet.fmt-auto .s-dayh { padding: 6px 4px; }
@@ -820,15 +826,19 @@ body.is-sorting * { cursor: grabbing !important; }
 .sheet.fmt-a5 .s-teach em { font-size: .62rem; }
 .sheet.fmt-a5 .s-grid { flex: 1 1 auto; min-height: min-content; gap: 5px; }
 .sheet.fmt-a5 .s-headrow { flex: 0 0 auto; }
-.sheet.fmt-a5 .s-row { flex: 1 1 auto; min-height: min-content; }
+.sheet.fmt-a5 .s-row { flex: 1 0 auto; min-height: min-content; }
+.sheet.fmt-a5 .s-row:has(.s-span) { flex: 0 0 auto; }
 .sheet.fmt-a5 .s-cell,
 .sheet.fmt-a5 .s-num,
 .sheet.fmt-a5 .s-span { height: auto; }
 .sheet.fmt-a5 .s-cell {
-  padding: 6px 8px; overflow: visible; min-height: 32px;
+  padding: 8px 8px; overflow: visible; min-height: min-content;
   font-weight: 650; letter-spacing: .03em; line-height: 1.3;
+  flex-shrink: 0;
 }
-.sheet.fmt-a5 .s-cell:has(.s-note:not(:empty)) { min-height: 44px; padding-top: 7px; padding-bottom: 7px; }
+.sheet.fmt-a5 .s-cell:has(.s-note:not(:empty)) { padding-top: 9px; padding-bottom: 10px; }
+.sheet.fmt-a5 .s-subj,
+.sheet.fmt-a5 .s-note { overflow: visible; flex-shrink: 0; }
 .sheet.fmt-a5 .s-subj {
   font-size: .74rem; font-weight: 650; letter-spacing: .04em; line-height: 1.3;
 }
