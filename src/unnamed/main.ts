@@ -50,7 +50,7 @@ const jsz = new Float32Array(MAX);
 const delay = new Float32Array(MAX);
 const shine = new Float32Array(MAX);
 const chip = new Float32Array(MAX);
-const rooted = new Uint8Array(MAX);
+const homeAt = new Float64Array(MAX);
 
 type Phase = "chaos" | "hold" | "burst";
 let cols = 48;
@@ -72,7 +72,6 @@ let quoteN = 0;
 let quoteAt = 0;
 let quoteTyping = false;
 let switchAt = 0;
-let sealedAt = 0;
 
 function hash(i: number) {
   let a = Math.imul(i ^ 0x9e3779b9, 0x85ebca6b);
@@ -142,29 +141,26 @@ function layout(nextAspect = aspect) {
   }
   if (live > prevLive && phase !== "hold") {
     for (let i = prevLive; i < live; i++) {
-      const a = i * 0.47 + hash(i + 7) * 0.4;
-      const rad = Math.min(innerWidth, innerHeight) * (0.2 + hash(i + 3) * 0.55);
-      x[i] = innerWidth * 0.5 * dpr + Math.cos(a) * rad * dpr;
-      y[i] = innerHeight * 0.5 * dpr + Math.sin(a * 1.13) * rad * 0.78 * dpr;
-      vx[i] = Math.sin(a * 2.1) * 80 * dpr;
-      vy[i] = Math.cos(a * 1.7) * 80 * dpr;
-      rot[i] = (a % 2) - 1;
-      rooted[i] = 0;
+      x[i] = (0.04 + hash(i + 11) * 0.92) * innerWidth * dpr;
+      y[i] = (0.1 + hash(i + 23) * 0.78) * innerHeight * dpr;
+      vx[i] = (hash(i + 5) - 0.5) * 36 * dpr;
+      vy[i] = (hash(i + 9) - 0.5) * 36 * dpr;
+      rot[i] = (hash(i + 13) - 0.5) * 2.4;
+      vr[i] = (hash(i + 7) - 0.5) * 0.8;
+      homeAt[i] = 0;
     }
   }
 }
 
 function scatterLive() {
   for (let i = 0; i < live; i++) {
-    rooted[i] = 0;
-    const a = i * 0.47 + hash(i + 7) * 0.4;
-    const rad = Math.min(innerWidth, innerHeight) * (0.2 + hash(i + 3) * 0.55);
-    x[i] = innerWidth * 0.5 * dpr + Math.cos(a) * rad * dpr;
-    y[i] = innerHeight * 0.5 * dpr + Math.sin(a * 1.13) * rad * 0.78 * dpr;
-    vx[i] = Math.sin(a * 2.1) * 140 * dpr;
-    vy[i] = Math.cos(a * 1.7) * 140 * dpr;
-    rot[i] = (a % 2) - 1;
-    vr[i] = Math.sin(i) * 2.2;
+    homeAt[i] = 0;
+    x[i] = (0.03 + hash(i + 3) * 0.94) * innerWidth * dpr;
+    y[i] = (0.08 + hash(i + 11) * 0.8) * innerHeight * dpr;
+    vx[i] = (hash(i + 17) - 0.5) * 42 * dpr;
+    vy[i] = (hash(i + 29) - 0.5) * 42 * dpr;
+    rot[i] = (hash(i + 41) - 0.5) * 2.6;
+    vr[i] = (hash(i + 7) - 0.5) * 1.1;
   }
 }
 
@@ -184,7 +180,7 @@ function paintWork(index: number, scatter: boolean) {
           x[i] = tx[i] + jx[i];
           y[i] = ty[i] + jy[i];
           rot[i] = jrot[i];
-          rooted[i] = 1;
+          homeAt[i] = 1;
         }
       }
     })
@@ -199,15 +195,6 @@ function setPhase(next: Phase) {
   phaseAt = performance.now();
   captionEl.classList.toggle("is-on", next === "hold");
   if (next === "hold") {
-    for (let i = 0; i < live; i++) {
-      x[i] = tx[i] + jx[i];
-      y[i] = ty[i] + jy[i];
-      rot[i] = jrot[i];
-      vx[i] = 0;
-      vy[i] = 0;
-      vr[i] = 0;
-      rooted[i] = 1;
-    }
     hintEl.textContent = "коснись · следующая картина";
     hintEl.classList.remove("is-gone");
     if (!assembledOnce) {
@@ -249,19 +236,27 @@ function typeQuote(now: number) {
 function plantChunk() {
   if (phase !== "chaos") return;
   clicks += 1;
-  const target = Math.min(live, Math.ceil((clicks / need) * live));
+  const now = performance.now();
+  const last = clicks >= need;
+  const target = last ? live : Math.min(live, Math.ceil((clicks / need) * live));
   const order = Array.from({ length: live }, (_, i) => i).sort((a, b) => delay[a] - delay[b]);
   let have = 0;
-  for (let i = 0; i < live; i++) if (rooted[i]) have += 1;
-  for (const i of order) {
-    if (have >= target) break;
-    if (!rooted[i]) {
-      rooted[i] = 1;
-      have += 1;
+  let dMin = Infinity;
+  let dMax = -Infinity;
+  for (let i = 0; i < live; i++) {
+    if (homeAt[i]) have += 1;
+    else {
+      dMin = Math.min(dMin, delay[i]);
+      dMax = Math.max(dMax, delay[i]);
     }
   }
-  if (clicks >= need) {
-    for (let i = 0; i < live; i++) rooted[i] = 1;
+  const span = Math.max(0.001, dMax - dMin);
+  const stagger = last ? (reduced ? 240 : 1800) : reduced ? 90 : 520;
+  for (const i of order) {
+    if (have >= target) break;
+    if (homeAt[i]) continue;
+    homeAt[i] = now + ((delay[i] - dMin) / span) * stagger;
+    have += 1;
   }
   glass.clink();
 }
@@ -272,7 +267,6 @@ function nextWork() {
   switchAt = now;
   work = (work + 1) % WORKS.length;
   clicks = 0;
-  sealedAt = 0;
   if (reduced) {
     paintWork(work, false);
     setPhase("hold");
@@ -286,51 +280,62 @@ function tick(now: number) {
   const dt = Math.min(0.05, Math.max(0, now - lastTs) / 1000);
   lastTs = now;
   const t = (now - phaseAt) / 1000;
-  const mx = pointer.x * dpr;
-  const my = pointer.y * dpr;
   const sizeHold = cell * dpr * 0.495;
   const sizeChaos = cell * dpr * 0.46;
-  let drift = 0;
-  let rootedN = 0;
+  const W = innerWidth * dpr;
+  const H = innerHeight * dpr;
+  const margin = 32 * dpr;
+  let waiting = 0;
+  let flying = 0;
+  let settled = 0;
 
   for (let i = 0; i < live; i++) {
-    const dxm = x[i] - mx;
-    const dym = y[i] - my;
-    const md = Math.hypot(dxm, dym) + 0.001;
-    const falloff = Math.exp(-md / (90 * dpr));
-    const push = 16 * dpr;
     const hx = tx[i] + jx[i];
     const hy = ty[i] + jy[i];
+    const going = homeAt[i] > 0 && now >= homeAt[i] && phase !== "burst";
 
-    if (rooted[i] && phase !== "burst") {
-      rootedN += 1;
-      const k = phase === "hold" ? 22 : 12;
+    if (going) {
+      const k = reduced ? 15 : phase === "hold" ? 8.2 : 4.15;
       vx[i] += (hx - x[i]) * k * dt;
       vy[i] += (hy - y[i]) * k * dt;
-      vr[i] += (jrot[i] - rot[i]) * 8 * dt;
+      vr[i] += (jrot[i] - rot[i]) * (reduced ? 8 : 3.2) * dt;
+      const damp = reduced ? 0.86 : phase === "hold" ? 0.9 : 0.945;
+      vx[i] *= damp;
+      vy[i] *= damp;
+      vr[i] *= 0.94;
     } else if (phase === "burst") {
-      const a = Math.atan2(y[i] - innerHeight * 0.5 * dpr, x[i] - innerWidth * 0.5 * dpr);
-      vx[i] += Math.cos(a) * 520 * dpr * dt;
-      vy[i] += Math.sin(a) * 520 * dpr * dt;
-      vr[i] += (i % 2 ? 1 : -1) * 8 * dt;
+      const a = Math.atan2(y[i] - H * 0.5, x[i] - W * 0.5);
+      vx[i] += Math.cos(a) * 260 * dpr * dt;
+      vy[i] += Math.sin(a) * 260 * dpr * dt;
+      vr[i] += (i % 2 ? 1 : -1) * 5 * dt;
+      vx[i] *= 0.96;
+      vy[i] *= 0.96;
+      vr[i] *= 0.96;
     } else {
-      const swirl = now * 0.0011 + i * 0.02;
-      vx[i] += Math.cos(swirl) * 48 * dpr * dt;
-      vy[i] += Math.sin(swirl * 1.25) * 48 * dpr * dt;
-      vx[i] += (innerWidth * 0.5 * dpr - x[i]) * 0.08 * dt;
-      vy[i] += (innerHeight * 0.5 * dpr - y[i]) * 0.08 * dt;
-      vx[i] += (dxm / md) * push * falloff * dt;
-      vy[i] += (dym / md) * push * falloff * dt;
+      const wander = now * 0.00032 + i * 0.03;
+      vx[i] += Math.cos(wander) * 12 * dpr * dt;
+      vy[i] += Math.sin(wander * 1.18) * 12 * dpr * dt;
+      if (x[i] < margin) vx[i] += (margin - x[i]) * 1.1 * dt;
+      if (x[i] > W - margin) vx[i] += (W - margin - x[i]) * 1.1 * dt;
+      if (y[i] < margin) vy[i] += (margin - y[i]) * 1.1 * dt;
+      if (y[i] > H - margin) vy[i] += (H - margin - y[i]) * 1.1 * dt;
+      vx[i] *= 0.987;
+      vy[i] *= 0.987;
+      vr[i] *= 0.992;
     }
 
-    vx[i] *= 0.9;
-    vy[i] *= 0.9;
-    vr[i] *= 0.96;
     x[i] += vx[i] * dt;
     y[i] += vy[i] * dt;
     rot[i] += vr[i] * dt;
 
-    if (rooted[i] && phase !== "burst") drift += Math.hypot(x[i] - hx, y[i] - hy);
+    if (!homeAt[i]) waiting += 1;
+    else if (now < homeAt[i] || phase === "burst") flying += 1;
+    else {
+      const dist = Math.hypot(x[i] - hx, y[i] - hy);
+      const spd = Math.hypot(vx[i], vy[i]);
+      if (dist < 5.5 * dpr && spd < 22 * dpr) settled += 1;
+      else flying += 1;
+    }
 
     const o = i * 4;
     pose[o] = x[i];
@@ -341,14 +346,9 @@ function tick(now: number) {
     extra[o + 1] = chip[i];
   }
 
-  if (phase === "chaos" && rootedN === live && live > 0) {
-    if (!sealedAt) sealedAt = now;
-    if (now - sealedAt > (reduced ? 180 : 900) || drift / live < 3.2 * dpr) {
-      setPhase("hold");
-    }
-  } else if (phase === "chaos") {
-    sealedAt = 0;
-  } else if (phase === "burst" && t > 1.2) {
+  if (phase === "chaos" && waiting === 0 && flying === 0 && settled === live && live > 0) {
+    setPhase("hold");
+  } else if (phase === "burst" && t > 1.05) {
     scatterLive();
     setPhase("chaos");
   }

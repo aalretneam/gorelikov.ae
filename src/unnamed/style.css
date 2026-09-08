@@ -55,19 +55,21 @@ canvas {
 .caption strong {
   display: block;
   font-weight: 300;
-  font-size: 13px;
+  font-size: 15px;
   letter-spacing: 0.28em;
   text-transform: lowercase;
-  color: rgba(230, 225, 214, 0.72);
+  color: rgba(236, 231, 220, 0.94);
+  text-shadow: 0 1px 14px rgba(0, 0, 0, 0.55);
 }
 
 .caption span {
   display: block;
   margin-top: 8px;
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0.22em;
   text-transform: lowercase;
-  color: rgba(230, 225, 214, 0.32);
+  color: rgba(230, 225, 214, 0.62);
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.45);
 }
 
 .quote {
