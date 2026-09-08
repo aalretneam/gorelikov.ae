@@ -3,6 +3,7 @@ import { PresenceClock, writeClock } from "../clock";
 import { dprCap, isMobileGpu, reducedMotion } from "../shared/gpu";
 import { markOpened, openedGates } from "../shared/memory";
 import { bindSoundToggle } from "../shared/sound-toggle";
+import { bind as bindTrace, claimVisit, markContinue } from "../shared/trace";
 import { GestureTrail } from "../shared/trail";
 import { bindWhisper, isChromeTarget } from "../shared/whisper";
 import { GATES, HIT, Maze } from "./maze";
@@ -41,6 +42,15 @@ const whisper = bindWhisper(whisperEl);
 bindSoundToggle(soundEl, sound);
 
 const visited = openedGates();
+bindTrace("hub");
+const INTRO: string[] = [];
+if (claimVisit()) {
+  INTRO.push("Ты здесь не для того, чтобы смотреть.", "Ты здесь, чтобы оставить след.");
+}
+if (visited.size >= 5) INTRO.push("ты уже был");
+const SPEAK = INTRO.length ? [...INTRO, ...LINES] : LINES;
+const speakFirst = INTRO.length ? (reduced ? 2500 : 4500) : FIRST_LINE;
+const speakStep = INTRO.length ? (reduced ? 8000 : 11000) : LINE_STEP;
 const pointer = { x: innerWidth * 0.5, y: innerHeight * 0.5, tx: innerWidth * 0.5, ty: innerHeight * 0.5 };
 let lastTs = performance.now();
 let raf = 0;
@@ -71,6 +81,7 @@ function layoutHits() {
     a.append(word);
     a.addEventListener("click", () => {
       markOpened(GATES[i].id);
+      markContinue();
     });
     hitsEl.append(a);
   }
@@ -111,10 +122,6 @@ function resize() {
   maze.resize(innerWidth, innerHeight, dpr);
   trail.resize(innerWidth, innerHeight, dpr);
   placeHits();
-}
-
-function showLine(i: number) {
-  whisper.show(LINES[i], LINE_DUR);
 }
 
 function onPointer(x: number, y: number) {
@@ -169,6 +176,7 @@ window.addEventListener("pointerup", (e) => {
   const i = maze.hitIndex(pointer.tx, pointer.ty, revealed);
   if (i >= 0) {
     markOpened(GATES[i].id);
+    markContinue();
     window.location.href = GATES[i].href;
     return;
   }
@@ -213,10 +221,10 @@ function tick(now: number) {
   maze.zoomTo(elapsed, reduced);
 
   const nextLine = lineI + 1;
-  const at = FIRST_LINE + nextLine * LINE_STEP;
-  if (nextLine < LINES.length && elapsed >= at) {
+  const at = speakFirst + nextLine * speakStep;
+  if (nextLine < SPEAK.length && elapsed >= at) {
     lineI = nextLine;
-    showLine(lineI);
+    whisper.show(SPEAK[lineI], LINE_DUR);
   }
 
   if (!panHinted && elapsed > (reduced ? 2200 : 4000) && revealed.length === 0) {

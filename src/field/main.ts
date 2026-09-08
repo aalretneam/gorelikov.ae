@@ -5,8 +5,9 @@ import { Organism } from "../organism";
 import { Soundscape } from "../sound";
 import { mixPalette, palettes } from "../palettes";
 import { gpuScale } from "../shared/gpu";
-import { bindSoundToggle } from "../shared/sound-toggle";
+import { bindSoundToggle, SOUND_OFF, SOUND_ON } from "../shared/sound-toggle";
 import { bindWhisper, isChromeTarget } from "../shared/whisper";
+import { bind as bindTrace, markContinue } from "../shared/trace";
 
 const THOUGHT = [
   { at: 20, text: "Живи с людьми" },
@@ -42,6 +43,8 @@ const organism = new Organism(
 );
 const sound = new Soundscape();
 bindSoundToggle(soundEl, sound);
+bindTrace("field");
+doorEl.addEventListener("click", () => markContinue());
 
 const pointer = { x: innerWidth * 0.5, y: innerHeight * 0.5, tx: innerWidth * 0.5, ty: innerHeight * 0.5 };
 const core = { x: innerWidth * 0.5, y: innerHeight * 0.5 };
@@ -102,9 +105,11 @@ function onDown() {
   sound.pluck();
   if (!entered) {
     entered = true;
-    hintEl.textContent = "1–4 палитры · колёсико · пробел";
-    hintEl.classList.remove("is-gone");
-    window.setTimeout(() => hintEl.classList.add("is-gone"), 9200);
+    if (!matchMedia("(pointer: coarse)").matches) {
+      hintEl.textContent = "1–4 палитры · колёсико · пробел";
+      hintEl.classList.remove("is-gone");
+      window.setTimeout(() => hintEl.classList.add("is-gone"), 9200);
+    }
   }
 }
 
@@ -160,7 +165,7 @@ window.addEventListener("keydown", (e) => {
   }
   if (e.key === "m" || e.key === "M") {
     void sound.toggle();
-    soundEl.textContent = sound.enabled ? "звук / вкл" : "звук / выкл";
+    soundEl.textContent = sound.enabled ? SOUND_ON : SOUND_OFF;
     soundEl.setAttribute("aria-pressed", sound.enabled ? "true" : "false");
   }
 });

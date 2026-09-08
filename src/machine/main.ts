@@ -7,9 +7,11 @@ import { Dust } from "./dust";
 import { MachineSound } from "./audio";
 import { formatVisitors, loadVisitorCount } from "./visitors";
 import { autoStartSound } from "../shared/sound-toggle";
+import { bind as bindTrace, markContinue } from "../shared/trace";
 
 const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const session = new Session();
+bindTrace("machine");
 const clock = new PresenceClock();
 const params: ArtParams = defaultParams();
 const field = new MachineField(document.querySelector("#field")!);
@@ -403,10 +405,12 @@ autoStartSound(sound, () => {
 
 continueEl.addEventListener("click", () => void onContinue());
 againEl.addEventListener("click", () => window.location.reload());
+doorEl.addEventListener("click", () => markContinue());
 
 async function onContinue() {
   if (continued) return;
   continued = true;
+  markContinue();
   voidEl.classList.add("is-on");
   continueEl.classList.remove("is-on");
   await wait(reduced ? 200 : 1000);

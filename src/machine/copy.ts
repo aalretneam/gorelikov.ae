@@ -23,8 +23,8 @@ export const copy = {
   remembers: "машина помнит мгновение.",
   session: "сессия завершена",
   again: "начать снова",
-  soundOff: "звук / выкл",
-  soundOn: "звук / вкл",
+  soundOff: "слушать",
+  soundOn: "тишина",
 };
 
 export type StateName =

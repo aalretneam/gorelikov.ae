@@ -2,6 +2,7 @@ import "./style.css";
 import { PresenceClock, writeClock } from "../clock";
 import { dprCap, reducedMotion } from "../shared/gpu";
 import { bindSoundToggle } from "../shared/sound-toggle";
+import { bind as bindTrace } from "../shared/trace";
 import { GestureTrail } from "../shared/trail";
 import { bindWhisper, isChromeTarget } from "../shared/whisper";
 import { Mass } from "./mass";
@@ -24,6 +25,7 @@ const sound = new WantSound();
 const clock = new PresenceClock();
 const whisper = bindWhisper(whisperEl);
 bindSoundToggle(soundEl, sound);
+bindTrace("want");
 
 const pointer = { x: innerWidth * 0.5, y: innerHeight * 0.5 };
 let holding = false;

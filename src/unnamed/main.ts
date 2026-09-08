@@ -4,6 +4,7 @@ import { Tiles } from "./tiles";
 import { Glass } from "./glass";
 import { fitGrid, loadWorkImage, maxTiles, preloadMosaics, WORKS } from "./works";
 import { bindSoundToggle } from "../shared/sound-toggle";
+import { bind as bindTrace } from "../shared/trace";
 import { GestureTrail } from "../shared/trail";
 import { bindWhisper, isChromeTarget } from "../shared/whisper";
 import { reducedMotion } from "../shared/gpu";
@@ -30,6 +31,7 @@ const trail = new GestureTrail(trailCanvas);
 const clock = new PresenceClock();
 const whisper = bindWhisper(whisperEl);
 bindSoundToggle(soundEl, glass);
+bindTrace("mosaic");
 
 const pose = new Float32Array(MAX * 4);
 const uv = new Float32Array(MAX * 4);

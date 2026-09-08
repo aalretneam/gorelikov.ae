@@ -10,6 +10,11 @@ export type Work = {
 
 export const WORKS: Work[] = [
   { title: "труд", meta: "стена · ссср", src: "/mosaics/trud.jpg" },
+  { title: "мир", meta: "стена · ссср", src: "/mosaics/mir.jpg" },
+  { title: "время", meta: "стена · ссср", src: "/mosaics/vremya.jpg" },
+  { title: "завод", meta: "стена · ссср", src: "/mosaics/zavod.jpg" },
+  { title: "орбита", meta: "стена · ссср", src: "/mosaics/orbita.jpg" },
+  { title: "солнце", meta: "стена · ссср", src: "/mosaics/solntse.jpg" },
   { title: "феодора", meta: "сан-витале · равенна · vi век", src: "/mosaics/theodora.jpg" },
   { title: "битва при иссе", meta: "дом фавна · помпеи · i век до н.э.", src: "/mosaics/alexander.jpg" },
   { title: "деисус", meta: "святая софия · константинополь · xii век", src: "/mosaics/deesis.jpg" },
@@ -54,5 +59,15 @@ export function loadWorkImage(work: Work): Promise<HTMLImageElement> {
 }
 
 export function preloadMosaics(): Promise<void> {
-  return Promise.all(WORKS.map((w) => loadWorkImage(w).catch(() => null))).then(() => undefined);
+  const rest = WORKS.slice(1);
+  return loadWorkImage(WORKS[0])
+    .catch(() => null)
+    .then(() => {
+      const later = () => {
+        void Promise.all(rest.map((w) => loadWorkImage(w).catch(() => null)));
+      };
+      const ric = (window as Window & { requestIdleCallback?: (cb: () => void) => number }).requestIdleCallback;
+      if (ric) ric(later);
+      else window.setTimeout(later, 500);
+    });
 }
