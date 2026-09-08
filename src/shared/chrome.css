@@ -122,13 +122,19 @@
   opacity: 0;
   pointer-events: none;
   mix-blend-mode: screen;
-  transition: opacity 1.8s ease, transform 2.4s ease, filter 1.8s ease;
+  transition:
+    opacity 1.6s ease,
+    transform 1.7s cubic-bezier(0.22, 1, 0.36, 1),
+    top 1.7s cubic-bezier(0.22, 1, 0.36, 1),
+    font-size 1.7s ease,
+    letter-spacing 1.6s ease,
+    filter 1.6s ease;
   max-width: 86vw;
 }
 
 .whisper.is-on {
   opacity: 1;
-  transform: translate(-50%, -54%);
+  transform: translate(-50%, -50%);
 }
 
 .whisper.is-off {
@@ -137,11 +143,54 @@
   transform: translate(-50%, -58%);
 }
 
+.whisper.is-rise {
+  top: max(58px, calc(env(safe-area-inset-top) + 50px));
+  transform: translate(-50%, 0);
+  font-size: clamp(15px, 2.1vw, 22px);
+  letter-spacing: 0.06em;
+  line-height: 1.45;
+  opacity: 0.72;
+  mix-blend-mode: normal;
+  text-shadow: none;
+}
+
 .whisper.is-small {
   font-size: clamp(16px, 3.2vw, 28px);
   letter-spacing: 0.28em;
   text-transform: lowercase;
   font-style: italic;
+}
+
+.cites {
+  position: fixed;
+  z-index: 11;
+  top: max(58px, calc(env(safe-area-inset-top) + 50px));
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(36rem, 78vw);
+  margin: 0;
+  pointer-events: none;
+  text-align: center;
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-style: italic;
+  font-weight: 300;
+  font-size: clamp(15px, 2.1vw, 22px);
+  letter-spacing: 0.06em;
+  line-height: 1.45;
+  color: rgba(230, 225, 214, 0.58);
+  opacity: 0;
+}
+
+.cites.is-on {
+  opacity: 1;
+}
+
+.cites p {
+  margin: 0;
+}
+
+.cites p + p {
+  margin-top: 0.28em;
 }
 
 .cursor {

@@ -146,7 +146,17 @@ export class Maze {
     this.vy = -vyScreen / this.scale;
   }
 
-  zoomTo(elapsed: number, reduced: boolean) {
+  snapWide() {
+    this.scale = SCALE_FAR;
+    this.clampCam();
+  }
+
+  zoomTo(elapsed: number, reduced: boolean, wide = false) {
+    if (wide) {
+      this.scale = SCALE_FAR;
+      this.clampCam();
+      return;
+    }
     const dur = reduced ? 22 : 40;
     const u = Math.min(1, elapsed / 1000 / dur);
     const k = 1 - Math.exp(-u * 2.8);

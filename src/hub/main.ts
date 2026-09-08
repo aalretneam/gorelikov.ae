@@ -19,6 +19,25 @@ const LINES = [
   "И твоего выбора ..",
 ];
 
+const HUB_WIDE = "ag-hub-wide";
+
+function hubIsWide() {
+  try {
+    if (sessionStorage.getItem(HUB_WIDE) === "1") return true;
+  } catch {
+    /* private mode */
+  }
+  return /(?:field|unnamed|machine|want|behind)\.html(?:$|[?#])/.test(document.referrer);
+}
+
+function markHubWide() {
+  try {
+    sessionStorage.setItem(HUB_WIDE, "1");
+  } catch {
+    /* private mode */
+  }
+}
+
 const reduced = reducedMotion();
 const FIRST_LINE = reduced ? 7000 : 14000;
 const LINE_STEP = reduced ? 13000 : 21000;
@@ -39,6 +58,11 @@ const trail = new GestureTrail(trailCanvas);
 const sound = new HubSound();
 const clock = new PresenceClock();
 const whisper = bindWhisper(whisperEl);
+const wide = hubIsWide();
+if (wide) {
+  markHubWide();
+  maze.snapWide();
+}
 bindSoundToggle(soundEl, sound);
 
 const visited = openedGates();
@@ -82,6 +106,7 @@ function layoutHits() {
     a.addEventListener("click", () => {
       markOpened(GATES[i].id);
       markContinue();
+      markHubWide();
     });
     hitsEl.append(a);
   }
@@ -177,6 +202,7 @@ window.addEventListener("pointerup", (e) => {
   if (i >= 0) {
     markOpened(GATES[i].id);
     markContinue();
+    markHubWide();
     window.location.href = GATES[i].href;
     return;
   }
@@ -218,11 +244,11 @@ function tick(now: number) {
   pointer.y += (pointer.ty - pointer.y) * (reduced ? 1 : 0.14);
   hold += ((holding ? 1 : 0) - hold) * 0.1;
 
-  maze.zoomTo(elapsed, reduced);
+  maze.zoomTo(elapsed, reduced, wide);
 
   const nextLine = lineI + 1;
   const at = speakFirst + nextLine * speakStep;
-  if (nextLine < SPEAK.length && elapsed >= at) {
+  if (nextLine < SPEAK.length && elapsed >= at && !whisper.busy(now)) {
     lineI = nextLine;
     whisper.show(SPEAK[lineI], LINE_DUR);
   }
@@ -263,7 +289,7 @@ function tick(now: number) {
     visited,
     hold,
     simple,
-        awake: Math.min(1, elapsed / (reduced ? 22000 : 40000)),
+        awake: wide ? 1 : Math.min(1, elapsed / (reduced ? 22000 : 40000)),
   });
   trail.step(dt);
   trail.draw();
