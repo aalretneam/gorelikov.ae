@@ -549,6 +549,7 @@ function tick(now: number) {
 
 window.addEventListener("visibilitychange", () => {
   cancelAnimationFrame(raf);
+  sound.setMuted(document.hidden);
   if (!document.hidden) {
     lastTs = performance.now();
     raf = requestAnimationFrame(tick);

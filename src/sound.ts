@@ -6,8 +6,24 @@ export class Soundscape {
   private started = false;
   enabled = false;
 
+  setMuted(muted: boolean) {
+    if (!this.ctx || !this.master) return;
+    const t = this.ctx.currentTime;
+    this.master.gain.cancelScheduledValues(t);
+    this.master.gain.setTargetAtTime(muted || !this.enabled ? 0 : 0.16, t, 0.08);
+  }
+
+  stop() {
+    this.enabled = false;
+    this.setMuted(true);
+  }
+
   async start() {
-    if (this.started) return;
+    if (this.started) {
+      this.enabled = true;
+      this.setMuted(false);
+      return;
+    }
     const ctx = new AudioContext();
     if (ctx.state === "suspended") await ctx.resume();
     this.ctx = ctx;
@@ -106,14 +122,7 @@ export class Soundscape {
   }
 
   async toggle() {
-    if (!this.started) {
-      await this.start();
-      return;
-    }
-    if (!this.ctx || !this.master) return;
-    this.enabled = !this.enabled;
-    const t = this.ctx.currentTime;
-    this.master.gain.cancelScheduledValues(t);
-    this.master.gain.setTargetAtTime(this.enabled ? 0.16 : 0, t, 0.3);
+    if (this.enabled) this.stop();
+    else await this.start();
   }
 }

@@ -14,7 +14,10 @@ export class Organism {
   private w = 1;
   private h = 1;
 
-  constructor(canvas: HTMLCanvasElement, count = Math.min(4800, Math.floor((innerWidth * innerHeight) / 280))) {
+  constructor(
+    canvas: HTMLCanvasElement,
+    count = Math.min(4800, Math.floor((innerWidth * innerHeight) / 280)),
+  ) {
     const ctx = canvas.getContext("2d", { alpha: true });
     if (!ctx) throw new Error("2d");
     this.canvas = canvas;
@@ -47,7 +50,7 @@ export class Organism {
   }
 
   resize(width: number, height: number) {
-    this.dpr = Math.min(window.devicePixelRatio || 1, 1.6);
+    this.dpr = Math.min(window.devicePixelRatio || 1, this.n < 2400 ? 1.25 : 1.6);
     const w = Math.max(1, Math.floor(width * this.dpr));
     const h = Math.max(1, Math.floor(height * this.dpr));
     if (this.canvas.width !== w || this.canvas.height !== h) {

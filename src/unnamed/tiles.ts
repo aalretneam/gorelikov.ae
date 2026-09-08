@@ -1,3 +1,5 @@
+import { dprCap } from "../shared/gpu";
+
 const VERT = `#version 300 es
 in vec2 a_unit;
 in vec4 a_pose;
@@ -68,7 +70,11 @@ export class Tiles {
     private canvas: HTMLCanvasElement,
     count: number,
   ) {
-    const gl = canvas.getContext("webgl2", { antialias: true, alpha: false, powerPreference: "high-performance" });
+    const gl = canvas.getContext("webgl2", {
+      antialias: count > 2000,
+      alpha: false,
+      powerPreference: "high-performance",
+    });
     if (!gl) throw new Error("webgl2");
     this.gl = gl;
     this.count = count;
@@ -117,7 +123,7 @@ export class Tiles {
   }
 
   resize(w: number, h: number) {
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const dpr = dprCap(2, 1.25);
     const cw = Math.max(1, Math.floor(w * dpr));
     const ch = Math.max(1, Math.floor(h * dpr));
     if (this.canvas.width !== cw || this.canvas.height !== ch) {

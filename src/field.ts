@@ -1,3 +1,5 @@
+import { dprCap, isMobileGpu } from "./shared/gpu";
+
 const VERT = `
 attribute vec2 a_pos;
 void main() {
@@ -161,8 +163,10 @@ export class Field {
     this.canvas = canvas;
     this.gl = gl;
 
+    const octaves = isMobileGpu() ? 4 : 6;
+    const frag = FRAG.replace("for (int i = 0; i < 6; i++)", `for (int i = 0; i < ${octaves}; i++)`);
     const vs = compile(gl, gl.VERTEX_SHADER, VERT);
-    const fs = compile(gl, gl.FRAGMENT_SHADER, FRAG);
+    const fs = compile(gl, gl.FRAGMENT_SHADER, frag);
     const program = gl.createProgram();
     if (!program) throw new Error("program");
     gl.attachShader(program, vs);
@@ -206,7 +210,7 @@ export class Field {
   }
 
   resize(width: number, height: number) {
-    this.dpr = Math.min(window.devicePixelRatio || 1, 1.6);
+    this.dpr = dprCap();
     const w = Math.max(1, Math.floor(width * this.dpr));
     const h = Math.max(1, Math.floor(height * this.dpr));
     if (this.canvas.width !== w || this.canvas.height !== h) {
