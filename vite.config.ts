@@ -9,8 +9,11 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: "index.html",
+        field: "field.html",
         machine: "machine.html",
         unnamed: "unnamed.html",
+        want: "want.html",
+        behind: "behind.html",
       },
     },
   },

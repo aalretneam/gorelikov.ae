@@ -1,11 +1,7 @@
-:root {
-  color-scheme: dark;
-}
+@import "../shared/chrome.css";
 
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+:root {
+  --bg: #09080b;
 }
 
 html,
@@ -31,35 +27,13 @@ canvas {
   display: block;
 }
 
-.cursor {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 10px;
-  height: 10px;
-  margin: -5px 0 0 -5px;
-  border: 1px solid rgba(230, 225, 214, 0.7);
-  border-radius: 50%;
-  z-index: 20;
+#mosaic {
+  z-index: 0;
+}
+
+#trail {
+  z-index: 1;
   pointer-events: none;
-  transform: translate3d(-40px, -40px, 0);
-}
-
-.mark {
-  position: fixed;
-  top: max(22px, env(safe-area-inset-top));
-  left: max(22px, env(safe-area-inset-left));
-  z-index: 8;
-  width: 80px;
-  opacity: 0.7;
-  pointer-events: auto;
-  line-height: 0;
-}
-
-.mark img {
-  display: block;
-  width: 80px;
-  height: auto;
 }
 
 .caption {
@@ -97,35 +71,14 @@ canvas {
 }
 
 .hint {
-  position: fixed;
-  left: 50%;
-  top: max(28px, env(safe-area-inset-top));
-  transform: translateX(-50%);
-  z-index: 8;
-  font-size: 10px;
-  letter-spacing: 0.32em;
-  text-transform: lowercase;
-  color: rgba(230, 225, 214, 0.28);
-  pointer-events: none;
-  transition: opacity 1.2s ease;
-}
-
-.hint.is-gone {
-  opacity: 0;
-}
-
-@media (hover: none) {
-  body {
-    cursor: auto;
-  }
-  .cursor {
-    display: none;
-  }
+  top: auto;
+  bottom: max(88px, calc(env(safe-area-inset-bottom) + 72px));
 }
 
 @media (prefers-reduced-motion: reduce) {
   .caption,
-  .hint {
+  .hint,
+  .whisper {
     transition: none;
   }
 }

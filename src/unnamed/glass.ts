@@ -1,20 +1,43 @@
 export class Glass {
   private ctx: AudioContext | null = null;
   private master: GainNode | null = null;
+  private rustleGain: GainNode | null = null;
   started = false;
+  enabled = false;
+  private muted = false;
+
+  setMuted(muted: boolean) {
+    this.muted = muted;
+    this.apply();
+  }
+
+  private apply() {
+    if (!this.ctx || !this.master) return;
+    this.master.gain.setTargetAtTime(this.enabled && !this.muted ? 0.18 : 0, this.ctx.currentTime, 0.2);
+  }
 
   async start() {
-    if (this.started) return;
+    if (this.started) {
+      this.enabled = true;
+      this.apply();
+      return;
+    }
     const ctx = new AudioContext();
     if (ctx.state === "suspended") await ctx.resume();
     const master = ctx.createGain();
-    master.gain.value = 0.0;
+    master.gain.value = 0;
     master.connect(ctx.destination);
     this.ctx = ctx;
     this.master = master;
     this.started = true;
-    master.gain.linearRampToValueAtTime(0.22, ctx.currentTime + 0.8);
+    this.enabled = true;
+    this.apply();
     this.hum();
+  }
+
+  stop() {
+    this.enabled = false;
+    this.apply();
   }
 
   private hum() {
@@ -33,12 +56,35 @@ export class Glass {
     g.connect(f);
     f.connect(master);
     osc.start();
+
+    const noise = ctx.createBufferSource();
+    const buf = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * 0.35;
+    noise.buffer = buf;
+    noise.loop = true;
+    const ng = ctx.createGain();
+    ng.gain.value = 0;
+    const bp = ctx.createBiquadFilter();
+    bp.type = "bandpass";
+    bp.frequency.value = 1800;
+    bp.Q.value = 0.8;
+    noise.connect(bp);
+    bp.connect(ng);
+    ng.connect(master);
+    noise.start();
+    this.rustleGain = ng;
+  }
+
+  rustle(amount: number) {
+    if (!this.ctx || !this.rustleGain || !this.enabled) return;
+    this.rustleGain.gain.setTargetAtTime(amount * 0.04, this.ctx.currentTime, 0.2);
   }
 
   clink() {
     const ctx = this.ctx;
     const master = this.master;
-    if (!ctx || !master) return;
+    if (!ctx || !master || !this.enabled) return;
     const t = ctx.currentTime;
     const buf = ctx.createBuffer(1, ctx.sampleRate * 0.12, ctx.sampleRate);
     const data = buf.getChannelData(0);

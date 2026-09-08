@@ -1,3 +1,5 @@
+import { isMobileGpu } from "../shared/gpu";
+
 export const COLS = 78;
 export const ROWS = 50;
 export const COUNT = COLS * ROWS;
@@ -387,4 +389,27 @@ export function raster(index: number) {
     cache[i] = g.rgb;
   }
   return cache[i];
+}
+
+export function mosaicGrid() {
+  const step = isMobileGpu() ? 2 : 1;
+  const cols = Math.floor(COLS / step);
+  const rows = Math.floor(ROWS / step);
+  return { cols, rows, step, count: cols * rows };
+}
+
+export function rasterDisplay(index: number, cols: number, rows: number, step: number) {
+  const full = raster(index);
+  if (step === 1 && cols === COLS && rows === ROWS) return full;
+  const rgb = new Uint8Array(cols * rows * 3);
+  for (let y = 0; y < rows; y++) {
+    for (let x = 0; x < cols; x++) {
+      const si = (y * step * COLS + x * step) * 3;
+      const di = (y * cols + x) * 3;
+      rgb[di] = full[si];
+      rgb[di + 1] = full[si + 1];
+      rgb[di + 2] = full[si + 2];
+    }
+  }
+  return rgb;
 }

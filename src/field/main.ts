@@ -1,16 +1,28 @@
-import "./style.css";
-import { PresenceClock, writeClock } from "./clock";
-import { Field } from "./field";
-import { Organism } from "./organism";
-import { Soundscape } from "./sound";
-import { mixPalette, palettes } from "./palettes";
+import "../style.css";
+import { PresenceClock, writeClock } from "../clock";
+import { Field } from "../field";
+import { Organism } from "../organism";
+import { Soundscape } from "../sound";
+import { mixPalette, palettes } from "../palettes";
+import { gpuScale } from "../shared/gpu";
+import { bindSoundToggle } from "../shared/sound-toggle";
+import { bindWhisper, isChromeTarget } from "../shared/whisper";
+
+const THOUGHT = [
+  { at: 20, text: "Живи с людьми" },
+  { at: 40, text: "так, будто" },
+  { at: 60, text: "на тебя смотрит Бог" },
+  { at: 80, text: "говори с Богом" },
+  { at: 100, text: "так, будто" },
+  { at: 120, text: "тебя слушают люди" },
+];
 
 const QUEST = [
-  { at: 22, text: "жди ещё немного", before: "", glyph: "ж", after: "ди ещё немного" },
-  { at: 78, text: "и это уже твоё", before: "", glyph: "и", after: " это уже твоё" },
-  { at: 138, text: "здесь нет цели", before: "", glyph: "з", after: "десь нет цели" },
-  { at: 198, text: "не уходи сразу", before: "", glyph: "н", after: "е уходи сразу" },
-  { at: 258, text: "лишь останься", before: "лиш", glyph: "ь", after: " останься" },
+  { at: 32, text: "жди ещё немного" },
+  { at: 92, text: "и это станет твоим" },
+  { at: 155, text: "здесь нет цели" },
+  { at: 215, text: "но…" },
+  { at: 275, text: "есть смысл" },
 ];
 
 const fieldCanvas = document.querySelector<HTMLCanvasElement>("#field")!;
@@ -20,11 +32,16 @@ const hintEl = document.querySelector<HTMLParagraphElement>("#hint")!;
 const whisperEl = document.querySelector<HTMLParagraphElement>("#whisper")!;
 const presenceEl = document.querySelector<HTMLElement>("#presence")!;
 const doorEl = document.querySelector<HTMLAnchorElement>("#door")!;
-const lifeEl = document.querySelector<HTMLOListElement>("#life")!;
+const soundEl = document.querySelector<HTMLButtonElement>("#sound")!;
 
+const scale = gpuScale();
 const field = new Field(fieldCanvas);
-const organism = new Organism(dustCanvas);
+const organism = new Organism(
+  dustCanvas,
+  Math.max(400, Math.floor(Math.min(4800, Math.floor((innerWidth * innerHeight) / 280)) * scale)),
+);
 const sound = new Soundscape();
+bindSoundToggle(soundEl, sound);
 
 const pointer = { x: innerWidth * 0.5, y: innerHeight * 0.5, tx: innerWidth * 0.5, ty: innerHeight * 0.5 };
 const core = { x: innerWidth * 0.5, y: innerHeight * 0.5 };
@@ -42,13 +59,13 @@ let targetZoom = 1;
 const clock = new PresenceClock();
 let lastTs = performance.now();
 let raf = 0;
-let whisperUntil = 0;
+const whisper = bindWhisper(whisperEl);
 let nextDrift = 18000;
 let hinted = false;
 let entered = false;
 let doorOpened = false;
-let lifeOpened = false;
-let questIndex = 0;
+let thoughtI = 0;
+let questI = 0;
 let reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const DOOR_AFTER_MS = 5 * 60 * 1000;
 
@@ -60,41 +77,6 @@ function toShaderPoint(x: number, y: number): [number, number] {
 function resize() {
   field.resize(innerWidth, innerHeight);
   organism.resize(innerWidth, innerHeight);
-}
-
-function showWhisper(text: string, duration = 3200) {
-  whisperEl.textContent = text;
-  whisperEl.classList.remove("is-off");
-  whisperEl.classList.add("is-on");
-  whisperUntil = performance.now() + duration;
-}
-
-function hideWhisper() {
-  whisperEl.classList.remove("is-on");
-  whisperEl.classList.add("is-off");
-}
-
-for (const line of QUEST) {
-  const li = document.createElement("li");
-  const before = document.createElement("span");
-  const glyph = document.createElement("span");
-  const after = document.createElement("span");
-  before.className = "life-before";
-  glyph.className = "life-glyph";
-  after.className = "life-after";
-  before.textContent = line.before;
-  glyph.textContent = line.glyph;
-  after.textContent = line.after;
-  li.append(before, glyph, after);
-  lifeEl.append(li);
-}
-
-function revealLife() {
-  if (lifeOpened) return;
-  lifeOpened = true;
-  hideWhisper();
-  lifeEl.classList.add("is-open");
-  lifeEl.removeAttribute("aria-hidden");
 }
 
 function onPointer(x: number, y: number) {
@@ -112,7 +94,7 @@ function onPointer(x: number, y: number) {
   }
 }
 
-async function onDown() {
+function onDown() {
   holding = true;
   cursorEl.classList.add("is-hold");
   lastClick = 0;
@@ -120,7 +102,6 @@ async function onDown() {
   sound.pluck();
   if (!entered) {
     entered = true;
-    await sound.start();
     hintEl.textContent = "1–4 палитры · колёсико · пробел";
     hintEl.classList.remove("is-gone");
     window.setTimeout(() => hintEl.classList.add("is-gone"), 4200);
@@ -137,9 +118,9 @@ window.addEventListener("pointermove", (e) => {
 });
 
 window.addEventListener("pointerdown", (e) => {
-  if ((e.target as HTMLElement).closest(".door")) return;
+  if (isChromeTarget(e.target)) return;
   onPointer(e.clientX, e.clientY);
-  void onDown();
+  onDown();
   e.preventDefault();
 });
 
@@ -173,17 +154,35 @@ window.addEventListener("keydown", (e) => {
     targetPalette = Number(e.key) - 1;
     paletteMix = targetPalette;
     paletteSpeed = 0.12;
-    if (!lifeOpened) {
-      showWhisper(["фиолетовое море", "янтарный жар", "глубокая вода", "ночной цветок"][targetPalette], 1800);
+    if (!whisper.busy()) {
+      whisper.show(["фиолетовое море", "янтарный жар", "глубокая вода", "ночной цветок"][targetPalette], 1800);
     }
   }
   if (e.key === "m" || e.key === "M") {
     void sound.toggle();
+    soundEl.textContent = sound.enabled ? "звук / вкл" : "звук / выкл";
+    soundEl.setAttribute("aria-pressed", sound.enabled ? "true" : "false");
   }
 });
 
 window.addEventListener("resize", resize);
 resize();
+
+function maybeLine(presence: number, now: number) {
+  if (whisper.busy(now)) return;
+  const dur = reduced ? 2200 : 5200;
+  const t = THOUGHT[thoughtI];
+  if (t && presence >= t.at) {
+    whisper.show(t.text, dur);
+    thoughtI += 1;
+    return;
+  }
+  const q = QUEST[questI];
+  if (q && presence >= q.at) {
+    whisper.show(q.text, dur);
+    questI += 1;
+  }
+}
 
 function tick(now: number) {
   const elapsed = clock.elapsed();
@@ -212,16 +211,8 @@ function tick(now: number) {
   const to = palettes[Math.ceil(paletteMix) % palettes.length];
   const palette = mixPalette(from, to, paletteMix % 1);
 
-  if (!lifeOpened && questIndex < QUEST.length && presence >= QUEST[questIndex].at) {
-    showWhisper(QUEST[questIndex].text, reduced ? 2200 : 5200);
-    questIndex += 1;
-  }
-  if (whisperUntil && now > whisperUntil) {
-    hideWhisper();
-    whisperUntil = 0;
-  }
-
-  if (!lifeOpened && elapsed >= DOOR_AFTER_MS) revealLife();
+  maybeLine(presence, now);
+  whisper.tick(now);
 
   if (!doorOpened && elapsed >= DOOR_AFTER_MS) {
     doorOpened = true;
@@ -261,6 +252,7 @@ function tick(now: number) {
 
 window.addEventListener("visibilitychange", () => {
   cancelAnimationFrame(raf);
+  sound.setMuted(document.hidden);
   if (!document.hidden) {
     lastTs = performance.now();
     raf = requestAnimationFrame(tick);
@@ -274,8 +266,4 @@ if (import.meta.hot) {
     cancelAnimationFrame(raf);
     clock.dispose();
   });
-}
-
-if (import.meta.env.DEV) {
-  Object.assign(window, { revealLife });
 }

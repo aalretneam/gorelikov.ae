@@ -69,6 +69,11 @@ export class MachineSound {
     this.setGain(0);
   }
 
+  setMuted(muted: boolean) {
+    if (!this.ctx || !this.master) return;
+    this.master.gain.setTargetAtTime(muted || !this.enabled ? 0 : 0.12, this.ctx.currentTime, 0.08);
+  }
+
   private setGain(v: number) {
     if (!this.ctx || !this.master) return;
     this.master.gain.setTargetAtTime(v, this.ctx.currentTime, 0.35);

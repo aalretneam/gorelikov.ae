@@ -97,11 +97,20 @@ canvas {
 }
 
 .mark {
+  display: flex;
+  align-items: center;
+  min-width: 48px;
+  min-height: 44px;
+  width: 88px;
+  opacity: 0.78;
+  pointer-events: auto;
+  line-height: 0;
+}
+
+.mark img {
   display: block;
   width: 88px;
   height: auto;
-  opacity: 0.78;
-  pointer-events: none;
 }
 
 .meta {
@@ -145,6 +154,33 @@ canvas {
   color: var(--mute);
   opacity: 0;
   animation: rise 2.2s 1.8s ease forwards;
+}
+
+.sound {
+  pointer-events: auto;
+  position: absolute;
+  top: calc(max(28px, env(safe-area-inset-top)) + 64px);
+  left: max(28px, env(safe-area-inset-left));
+  min-width: 48px;
+  min-height: 44px;
+  padding: 8px 4px 8px 0;
+  background: none;
+  border: 0;
+  color: var(--mute);
+  font: inherit;
+  font-size: 10px;
+  letter-spacing: 0.28em;
+  text-transform: lowercase;
+  cursor: none;
+  text-align: left;
+  opacity: 0;
+  animation: rise 2.2s 1.6s ease forwards;
+}
+
+.sound:hover,
+.sound:focus-visible {
+  color: var(--ink);
+  outline: none;
 }
 
 .whisper {
@@ -361,6 +397,12 @@ canvas {
 
   body {
     cursor: auto;
+  }
+
+  .sound,
+  .door,
+  .mark {
+    cursor: pointer;
   }
 }
 

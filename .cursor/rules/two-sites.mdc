@@ -1,0 +1,20 @@
+---
+description: art.gorelikov.ae и gorelikov.ae — разные сайты, никогда не путать
+alwaysApply: true
+---
+
+# Два разных сайта
+
+| | Расписалка | Арт |
+|---|---|---|
+| Домен | gorelikov.ae | art.gorelikov.ae |
+| Ветка | `main` | `artgorelikov` |
+| Код на сервере | `/opt/gorelikov.ae` | `/opt/art.gorelikov.ae` |
+| Веб-корень | `/var/www/gorelikov.ae` | `/var/www/art.gorelikov.ae` |
+| nginx | `gorelikov.ae` | `art.gorelikov.ae` |
+| SSL | `live/gorelikov.ae` | `live/art.gorelikov.ae` |
+| Деплой | таймер `raspisalka-deploy` | workflow **Deploy art.gorelikov.ae** + `deploy/install.sh` |
+
+Beget один: `159.194.227.211`. DNS: A `art` → этот IP. A у `@` и `www` **не трогать**. MX/почту корня не ломать.
+
+`deploy/install.sh` арта обязан отказаться, если цель — `/var/www/gorelikov.ae`. **Не мержить `artgorelikov` в `main`.**

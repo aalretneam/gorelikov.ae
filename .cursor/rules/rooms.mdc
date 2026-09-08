@@ -1,0 +1,19 @@
+---
+description: Карта art.gorelikov.ae — хаб и комнаты. Цель в TZ-dorabotka.md
+alwaysApply: true
+---
+
+# Закон сайта
+
+Произведение ИИ под надзором человека. Не лендинг. Текст русский. Логотип `ag`. Не путать с Расписалкой.
+
+**Целевая карта и механика генерации:** `TZ-dorabotka.md`
+
+- `/` — лабиринт (выбор любой из пяти)
+- `/field.html` — поле
+- `/unnamed.html` — мозаика
+- `/machine.html` — машина (внутри не ломать)
+- `/want.html` — желание
+- `/behind.html` — за плечами
+
+Пуш только в `artgorelikov`, не в `main`. Проверка: https://art.gorelikov.ae/
