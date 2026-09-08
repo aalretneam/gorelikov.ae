@@ -54,22 +54,33 @@ canvas {
 
 .caption strong {
   display: block;
-  font-weight: 300;
-  font-size: 15px;
-  letter-spacing: 0.28em;
+  font-weight: 400;
+  font-size: 16px;
+  letter-spacing: 0.22em;
   text-transform: lowercase;
-  color: rgba(236, 231, 220, 0.94);
-  text-shadow: 0 1px 14px rgba(0, 0, 0, 0.55);
+  color: #f6f1e6;
+  text-shadow:
+    0 0 18px rgba(0, 0, 0, 0.82),
+    0 1px 0 rgba(255, 252, 245, 0.18);
 }
 
 .caption span {
   display: block;
   margin-top: 8px;
-  font-size: 11px;
-  letter-spacing: 0.22em;
+  font-size: 12px;
+  letter-spacing: 0.18em;
   text-transform: lowercase;
-  color: rgba(230, 225, 214, 0.62);
-  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.45);
+  color: rgba(246, 241, 230, 0.86);
+  text-shadow:
+    0 0 14px rgba(0, 0, 0, 0.75),
+    0 1px 0 rgba(255, 252, 245, 0.1);
+}
+
+.hint {
+  top: auto;
+  bottom: max(88px, calc(env(safe-area-inset-bottom) + 72px));
+  color: rgba(246, 241, 230, 0.78);
+  text-shadow: 0 0 12px rgba(0, 0, 0, 0.7);
 }
 
 .quote {
@@ -97,11 +108,6 @@ canvas {
 
 .quote.is-on {
   opacity: 1;
-}
-
-.hint {
-  top: auto;
-  bottom: max(88px, calc(env(safe-area-inset-bottom) + 72px));
 }
 
 @media (max-width: 720px) {
