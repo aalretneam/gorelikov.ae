@@ -2,7 +2,7 @@ import "./style.css";
 import { PresenceClock, writeClock } from "../clock";
 import { Tiles } from "./tiles";
 import { Glass } from "./glass";
-import { mosaicGrid, rasterDisplay, WORKS } from "./works";
+import { mosaicGrid, mosaicGridSync, preloadMosaics, rasterDisplay, WORKS } from "./works";
 import { bindSoundToggle } from "../shared/sound-toggle";
 import { GestureTrail } from "../shared/trail";
 import { bindWhisper, isChromeTarget } from "../shared/whisper";
@@ -11,8 +11,8 @@ import { reducedMotion } from "../shared/gpu";
 const MEANING = ["Ничто, кроме души, недостойно восхищения", "а для великой души всё меньше неё"];
 
 const reduced = reducedMotion();
-const grid = mosaicGrid();
-const { cols, rows, step, count } = grid;
+const { cols, rows } = rasterDisplay();
+const count = cols * rows;
 
 const canvas = document.querySelector<HTMLCanvasElement>("#mosaic")!;
 const trailCanvas = document.querySelector<HTMLCanvasElement>("#trail")!;
@@ -99,12 +99,7 @@ function layout() {
   }
 }
 
-function paintWork(index: number, scatter: boolean) {
-  const rgb = rasterDisplay(index, cols, rows, step);
-  const w = WORKS[index];
-  titleEl.textContent = w.title;
-  metaEl.textContent = w.meta;
-  captionEl.classList.toggle("is-on", phase === "hold");
+function applyGrid(rgb: Uint8Array, scatter: boolean) {
   for (let i = 0; i < count; i++) {
     tr[i] = rgb[i * 3] / 255;
     tg[i] = rgb[i * 3 + 1] / 255;
@@ -128,6 +123,22 @@ function paintWork(index: number, scatter: boolean) {
       cb[i] = tb[i];
     }
   }
+}
+
+function paintWork(index: number, scatter: boolean) {
+  const w = WORKS[index];
+  titleEl.textContent = w.title;
+  metaEl.textContent = w.meta;
+  captionEl.classList.toggle("is-on", phase === "hold");
+  const cached = mosaicGridSync(w);
+  if (cached) {
+    applyGrid(cached.data, scatter);
+    return;
+  }
+  void mosaicGrid(w).then((g) => {
+    if (work !== index) return;
+    applyGrid(g.data, scatter);
+  });
 }
 
 function setPhase(next: Phase) {
@@ -350,9 +361,17 @@ window.addEventListener(
 );
 
 layout();
-paintWork(0, true);
 hintEl.textContent = "коснись · собери";
+for (let i = 0; i < count; i++) {
+  const a = i * 0.47;
+  const rad = Math.min(innerWidth, innerHeight) * (0.22 + ((i * 31) % 20) * 0.04);
+  x[i] = innerWidth * 0.5 * dpr + Math.cos(a) * rad * dpr;
+  y[i] = innerHeight * 0.5 * dpr + Math.sin(a * 1.13) * rad * 0.78 * dpr;
+  cr[i] = cg[i] = cb[i] = 0.12;
+  tr[i] = tg[i] = tb[i] = 0.12;
+}
 raf = requestAnimationFrame(tick);
+void preloadMosaics().then(() => paintWork(0, true));
 
 if (import.meta.hot) {
   import.meta.hot.dispose(() => {

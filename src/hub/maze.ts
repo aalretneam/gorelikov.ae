@@ -1,4 +1,4 @@
-import { gpuScale } from "../shared/gpu";
+import { gpuScale, isMobileGpu } from "../shared/gpu";
 import type { GateId } from "../shared/memory";
 
 export type Gate = {
@@ -22,9 +22,13 @@ export const GATES: Gate[] = [
 export const HIT = 72;
 
 type Pt = { x: number; y: number };
-type Path = { pts: Pt[]; gate: number | null; hue: number };
 type Ripple = { x: number; y: number; t: number };
 type Mote = { x: number; y: number; vx: number; vy: number; life: number; s: number };
+type Seg = { x0: number; y0: number; x1: number; y1: number };
+type Cell = { x: number; y: number };
+
+const DX = [0, 1, 0, -1];
+const DY = [-1, 0, 1, 0];
 
 function mulberry(seed: number) {
   let a = seed | 0;
@@ -36,13 +40,26 @@ function mulberry(seed: number) {
   };
 }
 
+function odd(n: number) {
+  const v = Math.max(11, n | 0);
+  return v % 2 === 0 ? v - 1 : v;
+}
+
 export class Maze {
   private ctx: CanvasRenderingContext2D;
   private canvas: HTMLCanvasElement;
   private dpr = 1;
   private w = 1;
   private h = 1;
-  private paths: Path[] = [];
+  private cols = 0;
+  private rows = 0;
+  private cell = 16;
+  private ox = 0;
+  private oy = 0;
+  private grid = new Uint8Array(0);
+  private exits: Cell[] = GATES.map(() => ({ x: 0, y: 0 }));
+  private segs: Seg[] = [];
+  private floor: Cell[] = [];
   private ripples: Ripple[] = [];
   private motes: Mote[] = [];
   pulse = 0;
@@ -70,61 +87,202 @@ export class Maze {
     this.build(width, height);
   }
 
+  private ix(x: number, y: number) {
+    return y * this.cols + x;
+  }
+
+  private at(x: number, y: number) {
+    if (x < 0 || y < 0 || x >= this.cols || y >= this.rows) return 0;
+    return this.grid[this.ix(x, y)];
+  }
+
+  private set(x: number, y: number, v = 1) {
+    if (x < 0 || y < 0 || x >= this.cols || y >= this.rows) return;
+    this.grid[this.ix(x, y)] = v;
+  }
+
+  private cellPt(x: number, y: number): Pt {
+    return {
+      x: this.ox + (x + 0.5) * this.cell,
+      y: this.oy + (y + 0.5) * this.cell,
+    };
+  }
+
   private build(w: number, h: number) {
-    const cx = w * 0.5;
-    const cy = h * 0.5;
-    const rnd = mulberry(2026);
-    const paths: Path[] = [];
+    const simple = isMobileGpu();
+    const target = simple ? 26 : 18;
+    const cols = odd(Math.floor(w / target));
+    const rows = odd(Math.floor(h / target));
+    const cell = Math.min(w / cols, h / rows);
+    this.cell = cell;
+    this.ox = (w - cols * cell) / 2;
+    this.oy = (h - rows * cell) / 2;
+    if (cols === this.cols && rows === this.rows && this.grid.length) {
+      this.spawnMotes();
+      return;
+    }
+    this.cols = cols;
+    this.rows = rows;
+    this.carve(simple);
+    this.collect();
+    this.spawnMotes();
+  }
 
-    for (let i = 0; i < GATES.length; i++) {
-      const g = GATES[i];
-      const tx = g.nx * w;
-      const ty = g.ny * h;
-      const mx = cx + (tx - cx) * 0.42 + (rnd() - 0.5) * 50;
-      const my = cy + (ty - cy) * 0.4 + (rnd() - 0.5) * 46;
-      paths.push({
-        pts: [
-          { x: cx, y: cy },
-          { x: mx, y: my },
-          { x: tx, y: ty },
-        ],
-        gate: i,
-        hue: i,
-      });
+  private carve(simple: boolean) {
+    const cols = this.cols;
+    const rows = this.rows;
+    const rnd = mulberry(2026 + cols * 97 + rows);
+    this.grid = new Uint8Array(cols * rows);
+
+    const inb = (x: number, y: number) => x > 0 && y > 0 && x < cols - 1 && y < rows - 1;
+
+    const cx = Math.floor(cols / 2) | 1;
+    const cy = Math.floor(rows / 2) | 1;
+    this.set(cx, cy, 1);
+
+    const stack: [number, number, number][] = [[cx, cy, 0]];
+    while (stack.length) {
+      const [x, y, last] = stack[stack.length - 1];
+      const order = [0, 1, 2, 3];
+      for (let i = 3; i > 0; i--) {
+        const j = (rnd() * (i + 1)) | 0;
+        const tmp = order[i];
+        order[i] = order[j];
+        order[j] = tmp;
+      }
+      if (rnd() < 0.62) {
+        const i = order.indexOf(last);
+        if (i > 0) {
+          order[i] = order[0];
+          order[0] = last;
+        }
+      }
+      let found = false;
+      for (const d of order) {
+        const nx = x + DX[d] * 2;
+        const ny = y + DY[d] * 2;
+        if (!inb(nx, ny) || this.at(nx, ny)) continue;
+        this.set(x + DX[d], y + DY[d], 1);
+        this.set(nx, ny, 1);
+        stack.push([nx, ny, d]);
+        found = true;
+        break;
+      }
+      if (!found) stack.pop();
     }
 
-    for (let i = 0; i < 18; i++) {
-      const a = rnd() * Math.PI * 2;
-      const len = Math.min(w, h) * (0.16 + rnd() * 0.38);
-      const tx = cx + Math.cos(a) * len;
-      const ty = cy + Math.sin(a) * len * 0.82;
-      const mx = cx + Math.cos(a + (rnd() - 0.5) * 1.1) * len * 0.52;
-      const my = cy + Math.sin(a + (rnd() - 0.5) * 0.9) * len * 0.44;
-      paths.push({
-        pts: [{ x: cx, y: cy }, { x: mx, y: my }, { x: tx, y: ty }],
-        gate: null,
-        hue: rnd(),
-      });
+    const room = simple ? 2 : 3;
+    for (let y = cy - room; y <= cy + room; y++) {
+      for (let x = cx - room; x <= cx + room; x++) this.set(x, y, 1);
     }
-    this.paths = paths;
 
-    const n = Math.floor(900 * gpuScale());
+    const loops = Math.floor(cols * rows * (simple ? 0.012 : 0.018));
+    for (let n = 0; n < loops; n++) {
+      const x = 1 + (((rnd() * (cols - 2)) | 0) | 1);
+      const y = 1 + (((rnd() * (rows - 2)) | 0) | 1);
+      const d = (rnd() * 4) | 0;
+      const wx = x + DX[d];
+      const wy = y + DY[d];
+      const ox = x + DX[d] * 2;
+      const oy = y + DY[d] * 2;
+      if (this.at(x, y) && this.at(ox, oy) && !this.at(wx, wy)) this.set(wx, wy, 1);
+    }
+
+    const sides: Array<"n" | "e" | "s" | "w"> = ["n", "w", "e", "s", "s"];
+    this.exits = GATES.map((g, i) => this.openExit(g.nx, g.ny, sides[i] ?? "n", cx, cy));
+  }
+
+  private openExit(nx: number, ny: number, prefer: "n" | "e" | "s" | "w", cx: number, cy: number): Cell {
+    const tx = Math.min(this.cols - 2, Math.max(1, Math.round(nx * (this.cols - 1))));
+    const ty = Math.min(this.rows - 2, Math.max(1, Math.round(ny * (this.rows - 1))));
+    let x = tx | 1;
+    let y = ty | 1;
+    if (prefer === "n") y = 1;
+    else if (prefer === "s") {
+      y = this.rows - 2;
+      if ((y & 1) === 0) y -= 1;
+    } else if (prefer === "w") x = 1;
+    else {
+      x = this.cols - 2;
+      if ((x & 1) === 0) x -= 1;
+    }
+    x = Math.min(this.cols - 2, Math.max(1, x | 1));
+    y = Math.min(this.rows - 2, Math.max(1, y | 1));
+
+    this.tunnel(cx, cy, x, y);
+    this.set(x, y, 1);
+
+    if (prefer === "n") {
+      for (let yy = y; yy >= 0; yy--) this.set(x, yy, 1);
+      return { x, y: Math.min(y + 2, this.rows - 3) | 1 };
+    }
+    if (prefer === "s") {
+      for (let yy = y; yy < this.rows; yy++) this.set(x, yy, 1);
+      return { x, y: Math.max(y - 2, 3) | 1 };
+    }
+    if (prefer === "w") {
+      for (let xx = x; xx >= 0; xx--) this.set(xx, y, 1);
+      return { x: Math.min(x + 2, this.cols - 3) | 1, y };
+    }
+    for (let xx = x; xx < this.cols; xx++) this.set(xx, y, 1);
+    return { x: Math.max(x - 2, 3) | 1, y };
+  }
+
+  private tunnel(x0: number, y0: number, x1: number, y1: number) {
+    let x = x0;
+    let y = y0;
+    this.set(x, y, 1);
+    while (x !== x1) {
+      x += x1 > x ? 1 : -1;
+      this.set(x, y, 1);
+    }
+    while (y !== y1) {
+      y += y1 > y ? 1 : -1;
+      this.set(x, y, 1);
+    }
+  }
+
+  private collect() {
+    const segs: Seg[] = [];
+    const floor: Cell[] = [];
+    for (let y = 0; y < this.rows; y++) {
+      for (let x = 0; x < this.cols; x++) {
+        if (!this.at(x, y)) continue;
+        floor.push({ x, y });
+        if (x + 1 < this.cols && this.at(x + 1, y)) segs.push({ x0: x, y0: y, x1: x + 1, y1: y });
+        if (y + 1 < this.rows && this.at(x, y + 1)) segs.push({ x0: x, y0: y, x1: x, y1: y + 1 });
+      }
+    }
+    this.segs = segs;
+    this.floor = floor;
+  }
+
+  private spawnMotes() {
+    const n = Math.floor(180 * gpuScale());
+    const rnd = mulberry(9);
     this.motes = [];
+    if (!this.floor.length) return;
     for (let i = 0; i < n; i++) {
+      const c = this.floor[(rnd() * this.floor.length) | 0];
+      const p = this.cellPt(c.x, c.y);
       this.motes.push({
-        x: rnd() * w,
-        y: rnd() * h,
-        vx: (rnd() - 0.5) * 12,
-        vy: (rnd() - 0.5) * 12,
-        life: 0.25 + rnd() * 0.75,
-        s: 0.6 + rnd() * 1.6,
+        x: p.x + (rnd() - 0.5) * this.cell * 0.4,
+        y: p.y + (rnd() - 0.5) * this.cell * 0.4,
+        vx: (rnd() - 0.5) * 8,
+        vy: (rnd() - 0.5) * 8,
+        life: 0.2 + rnd() * 0.7,
+        s: 0.6 + rnd() * 1.2,
       });
     }
   }
 
   gatePos(i: number): Pt {
-    const g = GATES[i];
-    return { x: g.nx * this.w, y: g.ny * this.h };
+    const e = this.exits[i];
+    if (!e) {
+      const g = GATES[i];
+      return { x: g.nx * this.w, y: g.ny * this.h };
+    }
+    return this.cellPt(e.x, e.y);
   }
 
   hitIndex(x: number, y: number, revealed: number[]): number {
@@ -153,29 +311,27 @@ export class Maze {
     for (const r of this.ripples) r.t += dt;
     this.ripples = this.ripples.filter((r) => r.t < 2.4);
 
-    const cx = this.w * 0.5;
-    const cy = this.h * 0.5;
+    const cell = this.cell;
     for (const m of this.motes) {
+      const gx = Math.floor((m.x - this.ox) / cell);
+      const gy = Math.floor((m.y - this.oy) / cell);
+      if (!this.at(gx, gy)) {
+        m.vx *= -1;
+        m.vy *= -1;
+        m.x += m.vx * dt * 4;
+        m.y += m.vy * dt * 4;
+      }
       const dx = mx - m.x;
       const dy = my - m.y;
-      const d = Math.hypot(dx, dy) + 40;
-      m.vx += (dx / d) * 18 * dt;
-      m.vy += (dy / d) * 18 * dt;
-      const ox = cx - m.x;
-      const oy = cy - m.y;
-      const od = Math.hypot(ox, oy) + 80;
-      m.vx += (ox / od) * 6 * dt;
-      m.vy += (oy / od) * 6 * dt;
-      m.vx += Math.sin(this.t * 0.35 + m.x * 0.01) * 4 * dt;
-      m.vy += Math.cos(this.t * 0.28 + m.y * 0.01) * 4 * dt;
-      m.vx *= 0.985;
-      m.vy *= 0.985;
+      const d = Math.hypot(dx, dy) + 50;
+      m.vx += (dx / d) * 10 * dt;
+      m.vy += (dy / d) * 10 * dt;
+      m.vx += Math.sin(this.t * 0.4 + m.x * 0.02) * 3 * dt;
+      m.vy += Math.cos(this.t * 0.33 + m.y * 0.02) * 3 * dt;
+      m.vx *= 0.96;
+      m.vy *= 0.96;
       m.x += m.vx * dt;
       m.y += m.vy * dt;
-      if (m.x < -20) m.x = this.w + 20;
-      if (m.x > this.w + 20) m.x = -20;
-      if (m.y < -20) m.y = this.h + 20;
-      if (m.y > this.h + 20) m.y = -20;
     }
   }
 
@@ -196,69 +352,123 @@ export class Maze {
     ctx.fillRect(0, 0, this.w, this.h);
 
     const { mx, my, reveal, hover, visited, hold, simple, awake } = opts;
+
     const cx = this.w * 0.5;
     const cy = this.h * 0.5;
     const breath = 0.5 + 0.5 * Math.sin(this.t * 0.55);
+    const cell = this.cell;
+    const lamp = 130 + hold * 90 + awake * 40;
 
-    const well = ctx.createRadialGradient(cx, cy, 8, cx, cy, Math.min(this.w, this.h) * 0.62);
-    well.addColorStop(0, `rgba(214, 186, 150, ${0.07 + awake * 0.08 + breath * 0.03})`);
-    well.addColorStop(0.35, `rgba(80, 54, 90, ${0.04 + awake * 0.05})`);
-    well.addColorStop(1, "rgba(5, 3, 8, 0)");
-    ctx.fillStyle = well;
-    ctx.fillRect(0, 0, this.w, this.h);
-
-    const seek = ctx.createRadialGradient(mx, my, 0, mx, my, 180 + hold * 80);
-    seek.addColorStop(0, `rgba(244, 220, 180, ${0.06 + hold * 0.05})`);
-    seek.addColorStop(1, "rgba(5, 3, 8, 0)");
-    ctx.fillStyle = seek;
-    ctx.fillRect(0, 0, this.w, this.h);
+    const vis = (x: number, y: number) => {
+      const d = Math.hypot(x - mx, y - my);
+      return Math.exp(-d / lamp);
+    };
 
     const warp = (p: Pt): Pt => {
       const dx = mx - p.x;
       const dy = my - p.y;
       const d = Math.hypot(dx, dy) + 1;
-      const k = Math.exp(-d / 240) * (14 + hold * 10);
-      return { x: p.x + dx * 0.018 * k, y: p.y + dy * 0.018 * k };
+      const k = Math.exp(-d / 240) * (10 + hold * 8);
+      return { x: p.x + (dx / d) * k * 0.12, y: p.y + (dy / d) * k * 0.12 };
     };
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(this.ox, this.oy, this.cols * cell, this.rows * cell);
+    ctx.clip();
+
+    if (!simple) {
+      for (let y = 0; y < this.rows; y++) {
+        for (let x = 0; x < this.cols; x++) {
+          const n = (x * 19 + y * 37) & 7;
+          if (this.at(x, y)) continue;
+          ctx.fillStyle = `rgb(${10 + n},${8 + (n >> 1)},${12 + n})`;
+          ctx.fillRect(this.ox + x * cell, this.oy + y * cell, cell + 0.5, cell + 0.5);
+        }
+      }
+    } else {
+      ctx.fillStyle = "#0c0a0e";
+      ctx.fillRect(this.ox, this.oy, this.cols * cell, this.rows * cell);
+      ctx.fillStyle = "#050308";
+      for (const c of this.floor) {
+        ctx.fillRect(this.ox + c.x * cell, this.oy + c.y * cell, cell + 0.4, cell + 0.4);
+      }
+    }
+
+    const floorA = 0.04 + awake * 0.05;
+    ctx.fillStyle = `rgba(214,186,150,${floorA})`;
+    for (const c of this.floor) {
+      const p = this.cellPt(c.x, c.y);
+      const a = floorA + vis(p.x, p.y) * 0.1;
+      if (a < 0.05) continue;
+      ctx.fillStyle = `rgba(214,186,150,${a})`;
+      const inset = cell * 0.18;
+      ctx.fillRect(this.ox + c.x * cell + inset, this.oy + c.y * cell + inset, cell - inset * 2, cell - inset * 2);
+    }
 
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
-    const dash = (this.t * 28) % 80;
-
-    for (const path of this.paths) {
-      const pts = path.pts.map(warp);
-      const gateOn = path.gate !== null && reveal.includes(path.gate);
-      const hot = path.gate !== null && hover === path.gate;
-      let a = path.gate === null ? 0.05 + awake * 0.07 : 0.07 + awake * 0.1;
-      if (gateOn) a = 0.28 + (hot ? 0.32 : 0);
-      ctx.strokeStyle = `rgba(244,232,210,${a + this.pulse * 0.1})`;
-      ctx.lineWidth = gateOn ? (hot ? 2.2 : 1.6) : 0.85 + awake * 0.35;
-      if (!simple && !gateOn) ctx.setLineDash([10, 18]);
-      else ctx.setLineDash([]);
-      if (!gateOn) ctx.lineDashOffset = -dash * (0.4 + path.hue);
+    const slit = Math.max(1.15, cell * 0.22);
+    for (const seg of this.segs) {
+      const a0 = this.cellPt(seg.x0, seg.y0);
+      const a1 = this.cellPt(seg.x1, seg.y1);
+      const p0 = warp(a0);
+      const p1 = warp(a1);
+      const midX = (p0.x + p1.x) * 0.5;
+      const midY = (p0.y + p1.y) * 0.5;
+      const near = vis(midX, midY);
+      const a = 0.07 + awake * 0.1 + near * 0.45 + this.pulse * 0.12 + breath * 0.03;
+      ctx.strokeStyle = `rgba(244,232,210,${Math.min(0.78, a)})`;
+      ctx.lineWidth = slit * (0.75 + near * 0.45);
       ctx.beginPath();
-      ctx.moveTo(pts[0].x, pts[0].y);
-      ctx.quadraticCurveTo(pts[1].x, pts[1].y, pts[2].x, pts[2].y);
+      ctx.moveTo(p0.x, p0.y);
+      ctx.lineTo(p1.x, p1.y);
       ctx.stroke();
     }
-    ctx.setLineDash([]);
+
+    const room = this.cellPt(Math.floor(this.cols / 2) | 1, Math.floor(this.rows / 2) | 1);
+    const well = ctx.createRadialGradient(room.x, room.y, 4, room.x, room.y, cell * 4.2);
+    well.addColorStop(0, `rgba(214,186,150,${0.16 + awake * 0.1 + breath * 0.05})`);
+    well.addColorStop(1, "rgba(214,186,150,0)");
+    ctx.fillStyle = well;
+    ctx.beginPath();
+    ctx.arc(room.x, room.y, cell * 4.2, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+
+    const seek = ctx.createRadialGradient(mx, my, 0, mx, my, lamp);
+    seek.addColorStop(0, `rgba(244,220,180,${0.07 + hold * 0.05})`);
+    seek.addColorStop(0.45, `rgba(244,220,180,${0.02 + hold * 0.02})`);
+    seek.addColorStop(1, "rgba(5,3,8,0)");
+    ctx.fillStyle = seek;
+    ctx.fillRect(0, 0, this.w, this.h);
+
+    const dusk = 0.62 - awake * 0.22;
+    const shade = ctx.createRadialGradient(mx, my, lamp * 0.18, mx, my, lamp * 1.35);
+    shade.addColorStop(0, "rgba(5,3,8,0)");
+    shade.addColorStop(0.55, `rgba(5,3,8,${dusk * 0.35})`);
+    shade.addColorStop(1, `rgba(5,3,8,${dusk})`);
+    ctx.fillStyle = shade;
+    ctx.fillRect(0, 0, this.w, this.h);
 
     if (!simple) {
       for (const m of this.motes) {
-        const a = m.life * (0.12 + awake * 0.16);
+        const a = m.life * (0.08 + vis(m.x, m.y) * 0.35);
+        if (a < 0.03) continue;
         ctx.fillStyle = `rgba(244,230,200,${a})`;
         ctx.fillRect(m.x, m.y, m.s, m.s);
       }
     }
 
-    ctx.fillStyle = `rgba(244,236,214,${0.18 + breath * 0.12 + awake * 0.12})`;
+    ctx.fillStyle = `rgba(244,236,214,${0.22 + breath * 0.14 + awake * 0.12})`;
     ctx.beginPath();
-    ctx.arc(cx, cy, 3.2 + breath * 1.4, 0, Math.PI * 2);
+    ctx.arc(room.x, room.y, 3.2 + breath * 1.4, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = `rgba(244,236,214,${0.12 + breath * 0.08})`;
+    ctx.strokeStyle = `rgba(244,236,214,${0.14 + breath * 0.08})`;
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.arc(cx, cy, 14 + breath * 4, 0, Math.PI * 2);
+    ctx.arc(room.x, room.y, cell * 1.1 + breath * 3, 0, Math.PI * 2);
     ctx.stroke();
 
     for (const i of reveal) {
@@ -273,7 +483,7 @@ export class Maze {
       const beat = 0.55 + 0.45 * Math.sin(this.t * 2.1 + i);
       const glowR = (hot ? 34 : 24) + beat * 6 + this.pulse * 10;
 
-      ctx.fillStyle = `rgba(${R},${G},${B},${0.14 + beat * 0.1 + (hot ? 0.18 : 0)})`;
+      ctx.fillStyle = `rgba(${R},${G},${B},${0.16 + beat * 0.1 + (hot ? 0.2 : 0)})`;
       ctx.beginPath();
       ctx.arc(p.x, p.y, glowR, 0, Math.PI * 2);
       ctx.fill();
@@ -300,9 +510,9 @@ export class Maze {
       ctx.stroke();
     }
 
-    const vig = ctx.createRadialGradient(cx, cy, Math.min(this.w, this.h) * 0.2, cx, cy, Math.min(this.w, this.h) * 0.78);
+    const vig = ctx.createRadialGradient(cx, cy, Math.min(this.w, this.h) * 0.22, cx, cy, Math.min(this.w, this.h) * 0.82);
     vig.addColorStop(0, "rgba(5,3,8,0)");
-    vig.addColorStop(1, "rgba(5,3,8,0.55)");
+    vig.addColorStop(1, "rgba(5,3,8,0.5)");
     ctx.fillStyle = vig;
     ctx.fillRect(0, 0, this.w, this.h);
   }
