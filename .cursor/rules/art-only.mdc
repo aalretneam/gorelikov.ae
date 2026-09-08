@@ -9,4 +9,4 @@ alwaysApply: true
 
 Это не Расписалка. Не открывать `site/` Расписалки, не править `gorelikov.ae`, не выкатывать https://gorelikov.ae/, не мержить эту ветку в `main`.
 
-Код арта — Vite + TypeScript в корне этой ветки (`index.html`, `machine.html`, `unnamed.html`, `src/`). Сборка: `npm run build` → `dist/`.
+Код арта — Vite + TypeScript в корне этой ветки. Сборка: `npm run build` → `dist/`. Целевые страницы: `index.html` (лабиринт), `field.html`, `machine.html`, `unnamed.html`, `want.html`, `behind.html` — см. `TZ-dorabotka.md`.
