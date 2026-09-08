@@ -102,6 +102,7 @@ const ROOM_WORD: Record<string, string> = {
 };
 
 export type Portrait = {
+  id: string;
   done: number;
   total: number;
   time: string;
@@ -112,6 +113,7 @@ export type Portrait = {
   returns: number;
   unique: boolean;
   first: string;
+  rooms: GateId[];
   traits: string[];
   verdict: string;
   title: string;
@@ -242,6 +244,7 @@ export function portrait(trace: Trace = snapshot()): Portrait {
   }
 
   return {
+    id: trace.id,
     done,
     total: TOTAL_ROOMS,
     time: fmt(ms),
@@ -252,6 +255,7 @@ export function portrait(trace: Trace = snapshot()): Portrait {
     returns: trace.returns,
     unique,
     first: first ? ROOM_WORD[first] ?? first : "—",
+    rooms: order,
     traits,
     verdict,
     title,

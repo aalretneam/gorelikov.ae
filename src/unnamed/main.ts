@@ -5,7 +5,6 @@ import { Glass } from "./glass";
 import { fitGrid, loadWorkImage, maxTiles, preloadMosaics, WORKS } from "./works";
 import { bindSoundToggle } from "../shared/sound-toggle";
 import { bind as bindTrace } from "../shared/trace";
-import { GestureTrail } from "../shared/trail";
 import { isChromeTarget } from "../shared/whisper";
 import { bindBack } from "../shared/back";
 import { reducedMotion } from "../shared/gpu";
@@ -16,7 +15,6 @@ const reduced = reducedMotion();
 const MAX = maxTiles();
 
 const canvas = document.querySelector<HTMLCanvasElement>("#mosaic")!;
-const trailCanvas = document.querySelector<HTMLCanvasElement>("#trail")!;
 const captionEl = document.querySelector<HTMLElement>("#caption")!;
 const titleEl = document.querySelector<HTMLElement>("#work-title")!;
 const metaEl = document.querySelector<HTMLElement>("#work-meta")!;
@@ -27,7 +25,6 @@ const soundEl = document.querySelector<HTMLButtonElement>("#sound")!;
 
 const tiles = new Tiles(canvas, MAX);
 const glass = new Glass();
-const trail = new GestureTrail(trailCanvas);
 const clock = new PresenceClock();
 bindSoundToggle(soundEl, glass);
 bindTrace("mosaic");
@@ -112,7 +109,6 @@ function layout(nextAspect = aspect) {
   const prevLive = live;
   aspect = nextAspect;
   dpr = tiles.resize(innerWidth, innerHeight);
-  trail.resize(innerWidth, innerHeight, dpr);
   const w = innerWidth;
   const h = innerHeight;
   const padX = Math.min(w, h) * 0.055;
@@ -467,8 +463,6 @@ function tick(now: number) {
   glass.rustle(phase === "chaos" ? 1 : 0.15);
   cursorEl.style.transform = `translate3d(${pointer.x}px, ${pointer.y}px, 0)`;
   writeClock(presenceEl, clock.elapsed());
-  trail.step(dt);
-  trail.draw();
   typeQuote(now);
   tiles.draw(pose, uv, extra, live);
   raf = requestAnimationFrame(tick);
@@ -482,7 +476,6 @@ window.addEventListener(
   (e) => {
     pointer.x = e.clientX;
     pointer.y = e.clientY;
-    trail.stamp(e.clientX, e.clientY);
   },
   on,
 );
@@ -493,7 +486,6 @@ window.addEventListener(
     if (isChromeTarget(e.target)) return;
     pointer.x = e.clientX;
     pointer.y = e.clientY;
-    trail.stamp(e.clientX, e.clientY, 1.4);
     if (phase === "hold") nextWork();
     else if (phase === "chaos") plantChunk();
   },

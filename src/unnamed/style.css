@@ -31,11 +31,6 @@ canvas {
   z-index: 0;
 }
 
-#trail {
-  z-index: 1;
-  pointer-events: none;
-}
-
 .caption {
   position: fixed;
   left: 50%;

@@ -14,7 +14,7 @@
     <link rel="canonical" href="https://art.gorelikov.ae/you.html" />
     <link rel="icon" href="/favicon.svg?v=ag" type="image/svg+xml" />
     <link rel="icon" href="/favicon.png?v=ag" type="image/png" sizes="32x32" />
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=ag" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -23,20 +23,14 @@
     />
   </head>
   <body>
-    <div class="veil" aria-hidden="true"></div>
+    <canvas id="mark" aria-hidden="true"></canvas>
     <div class="cursor" id="cursor" aria-hidden="true"></div>
     <a class="mark" href="./" aria-label="лабиринт">
       <img src="/logo.svg" width="88" height="28" alt="" />
     </a>
     <span class="meta">машина · человек · 2026</span>
     <span class="presence" id="presence">00:00</span>
-    <p class="whisper" id="whisper"></p>
-    <main class="sheet" id="sheet">
-      <p class="count" id="count"></p>
-      <ul class="stats" id="stats"></ul>
-      <ul class="traits" id="traits"></ul>
-      <p class="verdict" id="verdict"></p>
-    </main>
+    <button class="keep" id="keep" type="button">оставить след</button>
     <a class="back-arrow" id="back" href="./" aria-label="лабиринт">←</a>
     <script type="module" src="/src/you/main.ts"></script>
   </body>

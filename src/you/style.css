@@ -14,88 +14,63 @@ body {
   user-select: none;
 }
 
-.veil {
+#mark {
   position: fixed;
   inset: 0;
-  background:
-    radial-gradient(ellipse at 50% 28%, rgba(214, 186, 150, 0.1), transparent 52%),
-    radial-gradient(ellipse at 50% 100%, rgba(5, 3, 8, 0.85), transparent 48%);
-  pointer-events: none;
-}
-
-.sheet {
-  position: fixed;
-  z-index: 8;
-  left: 50%;
-  top: 52%;
-  transform: translate(-50%, -50%);
-  width: min(32rem, 86vw);
-  text-align: center;
+  width: 100%;
+  height: 100%;
+  display: block;
+  z-index: 0;
   opacity: 0;
   transition: opacity 1.8s ease;
-  pointer-events: none;
 }
 
-.sheet.is-on {
+#mark.is-on {
   opacity: 1;
 }
 
-.sheet.is-rare .count {
-  color: rgba(244, 214, 160, 0.95);
-}
-
-.count {
-  font-family: "Cormorant Garamond", Georgia, serif;
-  font-style: italic;
-  font-size: clamp(28px, 5vw, 48px);
-  letter-spacing: 0.08em;
-  color: rgba(244, 239, 230, 0.9);
-  margin-bottom: 1.4rem;
-}
-
-.stats,
-.traits {
-  list-style: none;
-  margin: 0 auto 1.2rem;
-  padding: 0;
-  max-width: 22rem;
-}
-
-.stats li,
-.traits li {
+.keep {
+  pointer-events: none;
+  position: fixed;
+  z-index: 14;
+  left: 50%;
+  bottom: max(72px, calc(env(safe-area-inset-bottom) + 56px));
+  transform: translateX(-50%);
+  min-width: 48px;
+  min-height: 44px;
+  padding: 10px 18px;
+  background: none;
+  border: 0;
+  color: rgba(244, 239, 230, 0.72);
+  font: inherit;
   font-size: 11px;
-  letter-spacing: 0.22em;
+  letter-spacing: 0.28em;
   text-transform: lowercase;
-  color: rgba(244, 239, 230, 0.48);
-  line-height: 1.85;
+  cursor: none;
+  opacity: 0;
+  transition: opacity 1.8s ease, color 0.4s ease;
 }
 
-.stats b {
-  font-weight: 400;
-  color: rgba(244, 239, 230, 0.82);
-  letter-spacing: 0.12em;
+.keep.is-on {
+  opacity: 1;
+  pointer-events: auto;
 }
 
-.verdict {
-  font-family: "Cormorant Garamond", Georgia, serif;
-  font-style: italic;
-  font-size: clamp(16px, 2.2vw, 22px);
-  letter-spacing: 0.04em;
-  line-height: 1.45;
-  color: rgba(244, 239, 230, 0.78);
+.keep:hover,
+.keep:focus-visible {
+  color: rgba(244, 239, 230, 0.95);
+  outline: none;
 }
 
-@media (max-width: 720px) {
-  .sheet {
-    top: 56%;
-    width: min(22rem, 88vw);
+@media (hover: none) {
+  .keep {
+    cursor: pointer;
   }
+}
 
-  .count {
-    font-size: 28px;
-  }
-
-  .verdict {
-    font-size: 16px;
+@media (prefers-reduced-motion: reduce) {
+  #mark,
+  .keep {
+    transition: none;
   }
 }
