@@ -19,10 +19,9 @@ const LINES = [
 ];
 
 const reduced = reducedMotion();
-const ROOMS_AT = reduced ? 60_000 : 120_000;
 const FIRST_LINE = reduced ? 7000 : 14000;
-const LINE_STEP = reduced ? 8000 : 16000;
-const LINE_DUR = reduced ? 4500 : 8000;
+const LINE_STEP = reduced ? 13000 : 21000;
+const LINE_DUR = reduced ? 9500 : 13000;
 
 const canvas = document.querySelector<HTMLCanvasElement>("#maze")!;
 const trailCanvas = document.querySelector<HTMLCanvasElement>("#trail")!;
@@ -52,8 +51,9 @@ let hold = 0;
 let holding = false;
 let lastSlit = 0;
 let choiceHinted = false;
-let roomsOpened = false;
 let lastHoverSound = -1;
+let drag: { id: number; x: number; y: number; moved: boolean; vx: number; vy: number; t: number } | null = null;
+let panHinted = false;
 
 function layoutHits() {
   hitsEl.replaceChildren();
@@ -79,7 +79,7 @@ function layoutHits() {
 function placeHits() {
   const nodes = hitsEl.querySelectorAll<HTMLAnchorElement>("a");
   nodes.forEach((a, i) => {
-    const on = revealed.includes(i);
+    const on = revealed.includes(i) && maze.gateOnScreen(i, 48);
     a.classList.toggle("is-on", on);
     a.tabIndex = on ? 0 : -1;
     const p = maze.gatePos(i);
@@ -87,17 +87,22 @@ function placeHits() {
   });
 }
 
-function openRooms() {
-  if (roomsOpened) return;
-  roomsOpened = true;
-  revealed = GATES.map((_, i) => i);
-  placeHits();
-  maze.pulse = 1;
-  if (!choiceHinted) {
-    choiceHinted = true;
-    hintEl.textContent = "коснись · выбери";
-    hintEl.classList.remove("is-gone");
-    window.setTimeout(() => hintEl.classList.add("is-gone"), 6400);
+function revealVisible() {
+  let added = false;
+  for (let i = 0; i < GATES.length; i++) {
+    if (revealed.includes(i)) continue;
+    if (!maze.gateOnScreen(i, 36)) continue;
+    revealed.push(i);
+    added = true;
+  }
+  if (added) {
+    maze.pulse = Math.max(maze.pulse, 0.55);
+    if (!choiceHinted) {
+      choiceHinted = true;
+      hintEl.textContent = "коснись · выбери";
+      hintEl.classList.remove("is-gone");
+      window.setTimeout(() => hintEl.classList.add("is-gone"), 11400);
+    }
   }
 }
 
@@ -120,6 +125,23 @@ function onPointer(x: number, y: number) {
 
 window.addEventListener("pointermove", (e) => {
   onPointer(e.clientX, e.clientY);
+  if (!drag || drag.id !== e.pointerId) return;
+  if (e.pointerType === "mouse" && e.buttons === 0) return;
+  const dx = e.clientX - drag.x;
+  const dy = e.clientY - drag.y;
+  const now = performance.now();
+  const dist = Math.hypot(dx, dy);
+  if (dist > 7 || drag.moved) {
+    drag.moved = true;
+    maze.pan(dx, dy);
+    const dt = Math.max(8, now - drag.t);
+    drag.vx = dx / (dt / 1000);
+    drag.vy = dy / (dt / 1000);
+    drag.x = e.clientX;
+    drag.y = e.clientY;
+    drag.t = now;
+    e.preventDefault();
+  }
 });
 
 window.addEventListener("pointerdown", (e) => {
@@ -128,6 +150,22 @@ window.addEventListener("pointerdown", (e) => {
   holding = true;
   cursorEl.classList.add("is-hold");
   if ((e.target as HTMLElement).closest("#hits")) return;
+  drag = { id: e.pointerId, x: e.clientX, y: e.clientY, moved: false, vx: 0, vy: 0, t: performance.now() };
+  e.preventDefault();
+});
+
+window.addEventListener("pointerup", (e) => {
+  holding = false;
+  cursorEl.classList.remove("is-hold");
+  if (!drag || drag.id !== e.pointerId) return;
+  const wasDrag = drag.moved;
+  const vx = drag.vx;
+  const vy = drag.vy;
+  drag = null;
+  if (wasDrag) {
+    maze.fling(vx, vy);
+    return;
+  }
   const i = maze.hitIndex(pointer.tx, pointer.ty, revealed);
   if (i >= 0) {
     markOpened(GATES[i].id);
@@ -135,13 +173,22 @@ window.addEventListener("pointerdown", (e) => {
     return;
   }
   maze.ripple(pointer.tx, pointer.ty);
-  e.preventDefault();
 });
 
-window.addEventListener("pointerup", () => {
+window.addEventListener("pointercancel", () => {
   holding = false;
   cursorEl.classList.remove("is-hold");
+  drag = null;
 });
+
+window.addEventListener(
+  "wheel",
+  (e) => {
+    e.preventDefault();
+    maze.pan(-e.deltaX, -e.deltaY);
+  },
+  { passive: false },
+);
 
 window.addEventListener(
   "touchmove",
@@ -163,6 +210,8 @@ function tick(now: number) {
   pointer.y += (pointer.ty - pointer.y) * (reduced ? 1 : 0.14);
   hold += ((holding ? 1 : 0) - hold) * 0.1;
 
+  maze.zoomTo(elapsed, reduced);
+
   const nextLine = lineI + 1;
   const at = FIRST_LINE + nextLine * LINE_STEP;
   if (nextLine < LINES.length && elapsed >= at) {
@@ -170,7 +219,17 @@ function tick(now: number) {
     showLine(lineI);
   }
 
-  if (elapsed >= ROOMS_AT) openRooms();
+  if (!panHinted && elapsed > (reduced ? 2200 : 4000) && revealed.length === 0) {
+    panHinted = true;
+    hintEl.textContent = "веди · скролль";
+    hintEl.classList.remove("is-gone");
+    window.setTimeout(() => {
+      if (!choiceHinted) hintEl.classList.add("is-gone");
+    }, 10200);
+  }
+
+  revealVisible();
+  placeHits();
 
   const hit = maze.hitIndex(pointer.x, pointer.y, revealed);
   if (hit !== hover) hover = hit;
@@ -187,7 +246,7 @@ function tick(now: number) {
     lastSlit = now;
   }
 
-  maze.step(dt, pointer.x, pointer.y);
+  maze.step(dt);
   maze.draw({
     mx: pointer.x,
     my: pointer.y,
@@ -196,7 +255,7 @@ function tick(now: number) {
     visited,
     hold,
     simple,
-    awake: Math.min(1, elapsed / ROOMS_AT),
+        awake: Math.min(1, elapsed / (reduced ? 22000 : 40000)),
   });
   trail.step(dt);
   trail.draw();
