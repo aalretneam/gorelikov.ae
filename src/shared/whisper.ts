@@ -1,7 +1,7 @@
 /** Default for every page unless the caller sets `delay`. */
 export const QUOTE_DELAY_MS = 16_000;
-/** Three characters per second. */
-const CHAR_MS = 1000 / 3;
+/** Five characters per second. */
+const CHAR_MS = 1000 / 5;
 const FADE_MS = 2800;
 
 export function bindWhisper(el: HTMLElement) {
