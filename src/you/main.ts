@@ -98,7 +98,7 @@ function tick(now: number) {
 
 resize();
 canvas.classList.add("is-on");
-window.setTimeout(() => keepEl.classList.add("is-on"), reduced ? 400 : 2800);
+window.setTimeout(() => keepEl.classList.add("is-on"), reduced ? 400 : 800);
 void document.fonts.ready.then(() => draw(performance.now()));
 raf = requestAnimationFrame(tick);
 
