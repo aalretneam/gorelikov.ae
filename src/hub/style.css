@@ -52,7 +52,7 @@ canvas {
 
 .whisper {
   top: max(88px, calc(env(safe-area-inset-top) + 80px));
-  transition: opacity 1.4s ease;
+  transition: opacity 0.7s ease;
 }
 
 @media (max-height: 480px) {
