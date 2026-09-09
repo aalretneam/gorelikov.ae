@@ -7,7 +7,8 @@ export function bindWhisper(el: HTMLElement) {
   let n = 0;
   let at = 0;
   let stayLast = true;
-  let mode: "idle" | "type" | "hold" | "fade" = "idle";
+  let pace = 1;
+  let mode: "idle" | "wait" | "type" | "hold" | "fade" = "idle";
 
   function typeWait(text: string, n: number) {
     const ch = text[n - 1];
@@ -40,14 +41,23 @@ export function bindWhisper(el: HTMLElement) {
     n = 1;
     el.textContent = full.slice(0, 1);
     mode = "type";
-    at = now + typeWait(full, n);
+    at = now + typeWait(full, n) * pace;
   }
 
-  function play(lines: string[], opts?: { hold?: number; stayLast?: boolean }) {
+  function play(lines: string[], opts?: { hold?: number; stayLast?: boolean; delay?: number; pace?: number }) {
     const hold = opts?.hold ?? 4000;
     stayLast = opts?.stayLast ?? true;
+    pace = opts?.pace ?? 1;
     stanzas = lines.map((text) => ({ text, hold }));
     i = -1;
+    const delay = opts?.delay ?? 0;
+    if (delay > 0) {
+      mode = "wait";
+      at = performance.now() + delay;
+      el.classList.remove("is-on", "is-off");
+      el.textContent = "";
+      return;
+    }
     mode = "idle";
     next(performance.now());
   }
@@ -57,6 +67,11 @@ export function bindWhisper(el: HTMLElement) {
   }
 
   function tick(now: number) {
+    if (mode === "wait") {
+      if (now < at) return;
+      next(now);
+      return;
+    }
     if (mode === "type") {
       if (now < at) return;
       n += 1;
@@ -71,14 +86,13 @@ export function bindWhisper(el: HTMLElement) {
         at = now + stanzas[i].hold;
         return;
       }
-      const wait = typeWait(full, n);
-      at = now + wait;
+      at = now + typeWait(full, n) * pace;
       return;
     }
     if (mode === "hold" && now >= at) {
       mode = "fade";
       el.classList.add("is-off");
-      at = now + (reduced ? 200 : 1600);
+      at = now + (reduced ? 200 : 1600 * pace);
       return;
     }
     if (mode === "fade" && now >= at) {
