@@ -266,7 +266,7 @@ function setPhase(next: Phase) {
 }
 
 function plantChunk() {
-  if (phase !== "chaos") return;
+  if (phase !== "chaos" || landAt > 0) return;
   clicks += 1;
   const now = performance.now();
   const last = clicks >= need;
