@@ -258,7 +258,7 @@ function setPhase(next: Phase) {
     if (work === WORKS.length - 1) back.show();
     if (!quoted) {
       quoted = true;
-      quote.play([QUOTE], { stayLast: true });
+      quote.play([QUOTE], { stayLast: true, delay: 0 });
     }
   } else {
     captionEl.classList.remove("is-on");

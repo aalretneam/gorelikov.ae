@@ -1,5 +1,8 @@
-/** Two characters per second on every page. */
-const CHAR_MS = 500;
+/** Default for every page unless the caller sets `delay`. */
+export const QUOTE_DELAY_MS = 16_000;
+/** Three characters per second. */
+const CHAR_MS = 1000 / 3;
+const FADE_MS = 2800;
 
 export function bindWhisper(el: HTMLElement) {
   const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -44,7 +47,7 @@ export function bindWhisper(el: HTMLElement) {
     stayLast = opts?.stayLast ?? true;
     stanzas = lines.map((text) => ({ text, hold }));
     i = -1;
-    const delay = opts?.delay ?? 0;
+    const delay = opts?.delay ?? QUOTE_DELAY_MS;
     if (delay > 0) {
       mode = "wait";
       at = performance.now() + delay;
@@ -57,7 +60,7 @@ export function bindWhisper(el: HTMLElement) {
   }
 
   function show(text: string, duration = 9000) {
-    play([text], { hold: duration, stayLast: true });
+    play([text], { hold: duration, stayLast: true, delay: 0 });
   }
 
   function tick(now: number) {
@@ -86,7 +89,7 @@ export function bindWhisper(el: HTMLElement) {
     if (mode === "hold" && now >= at) {
       mode = "fade";
       el.classList.add("is-off");
-      at = now + (reduced ? 200 : 1600);
+      at = now + (reduced ? 200 : FADE_MS);
       return;
     }
     if (mode === "fade" && now >= at) {
