@@ -9,6 +9,7 @@
   --ink: #f4efe6;
   --mute: rgba(244, 239, 230, 0.42);
   --bg: #050308;
+  --whisper-fade: 9s cubic-bezier(0.42, 0, 0.18, 1);
 }
 
 .mark {
@@ -108,7 +109,7 @@
   opacity: 0;
   pointer-events: none;
   white-space: pre-line;
-  transition: opacity 2.8s ease;
+  transition: opacity var(--whisper-fade);
   max-width: min(36rem, 78vw);
 }
 
