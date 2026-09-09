@@ -81,7 +81,7 @@ canvas {
 .quote {
   position: fixed;
   z-index: 8;
-  top: max(56px, calc(env(safe-area-inset-top) + 48px));
+  top: max(88px, calc(env(safe-area-inset-top) + 80px));
   left: 50%;
   transform: translateX(-50%);
   width: min(34rem, 72vw);
@@ -98,7 +98,7 @@ canvas {
   pointer-events: none;
   white-space: pre-line;
   opacity: 0;
-  transition: opacity 0.6s ease;
+  transition: opacity 2.8s ease;
 }
 
 .quote.is-on {
@@ -109,7 +109,7 @@ canvas {
   .quote {
     width: min(22rem, 78vw);
     font-size: 15px;
-    top: max(118px, calc(env(safe-area-inset-top) + 108px));
+    top: max(108px, calc(env(safe-area-inset-top) + 96px));
   }
 }
 

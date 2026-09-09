@@ -5,7 +5,7 @@ import { Glass } from "./glass";
 import { fitGrid, loadWorkImage, maxTiles, preloadMosaics, WORKS } from "./works";
 import { bindSoundToggle } from "../shared/sound-toggle";
 import { bind as bindTrace } from "../shared/trace";
-import { isChromeTarget } from "../shared/whisper";
+import { bindWhisper, isChromeTarget } from "../shared/whisper";
 import { bindBack } from "../shared/back";
 import { reducedMotion } from "../shared/gpu";
 
@@ -26,6 +26,7 @@ const soundEl = document.querySelector<HTMLButtonElement>("#sound")!;
 const tiles = new Tiles(canvas, MAX);
 const glass = new Glass();
 const clock = new PresenceClock();
+const quote = bindWhisper(quoteEl);
 bindSoundToggle(soundEl, glass);
 bindTrace("mosaic");
 const back = bindBack(document.querySelector("#back"));
@@ -70,10 +71,8 @@ let pointer = { x: innerWidth / 2, y: innerHeight / 2 };
 let dpr = 1;
 let cell = 12;
 let clicks = 0;
-const need = reduced ? 3 : 6;
-let quoteN = 0;
-let quoteAt = 0;
-let quoteTyping = false;
+const need = 20 + (((Math.imul(Date.now() | 0, 0x9e3779b9) >>> 0) % 21));
+let quoted = false;
 let switchAt = 0;
 let pendingImg: HTMLImageElement | null = null;
 let applyTexAt = 0;
@@ -111,7 +110,7 @@ function layout(nextAspect = aspect) {
   const w = innerWidth;
   const h = innerHeight;
   const padX = Math.min(w, h) * 0.055;
-  const topReserve = Math.min(w, h) < 720 ? 196 : 132;
+  const topReserve = Math.min(w, h) < 720 ? 200 : 168;
   const botReserve = Math.min(112, h * 0.16);
   const availW = Math.max(64, w - padX * 2);
   const availH = Math.max(64, h - topReserve - botReserve);
@@ -133,7 +132,7 @@ function layout(nextAspect = aspect) {
   const cw = mw / cols;
   const ch = mh / rows;
   cell = Math.min(cw, ch);
-  const inset = 0.006;
+  const inset = 0.02;
   for (let i = 0; i < live; i++) {
     const col = i % cols;
     const row = (i / cols) | 0;
@@ -167,18 +166,37 @@ function layout(nextAspect = aspect) {
   }
 }
 
+function band() {
+  const mobile = Math.min(innerWidth, innerHeight) < 720;
+  return {
+    top: (mobile ? 200 : 168) * dpr,
+    bot: Math.min(112, innerHeight * 0.16) * dpr,
+  };
+}
+
+function clampTile(i: number) {
+  const { top, bot } = band();
+  const W = innerWidth * dpr;
+  const H = innerHeight * dpr;
+  const pad = 18 * dpr;
+  x[i] = Math.min(W - pad, Math.max(pad, x[i]));
+  y[i] = Math.min(H - bot, Math.max(top, y[i]));
+}
+
 function placeScatter(from: number, to: number, teleport: boolean) {
   const count = Math.max(0, to - from);
   if (!count) return;
   const w = innerWidth * dpr;
   const h = innerHeight * dpr;
-  const gw = Math.max(2, Math.ceil(Math.sqrt(count * (w / Math.max(1, h)))));
+  const { top, bot } = band();
+  const roomH = Math.max(40 * dpr, h - top - bot);
+  const gw = Math.max(2, Math.ceil(Math.sqrt(count * (w / Math.max(1, roomH)))));
   const gh = Math.max(2, Math.ceil(count / gw));
   const slots = Array.from({ length: count }, (_, n) => {
     const col = n % gw;
     const row = (n / gw) | 0;
     const px = ((col + 0.08 + hash(from + n + 71) * 0.84) / gw) * w;
-    const py = ((row + 0.08 + hash(from + n + 91) * 0.84) / gh) * h;
+    const py = top + ((row + 0.08 + hash(from + n + 91) * 0.84) / gh) * roomH;
     return [px, py] as [number, number];
   });
   shuffle(slots, from + 201);
@@ -216,11 +234,7 @@ function scatterLive(teleport: boolean) {
 }
 
 function paintWork(index: number, scatter: boolean) {
-  const w = WORKS[index];
-  titleEl.textContent = w.title;
-  metaEl.textContent = w.meta;
-  captionEl.classList.toggle("is-on", phase === "hold");
-  void loadWorkImage(w)
+  void loadWorkImage(WORKS[index])
     .then((img) => {
       if (work !== index) return;
       tiles.setTexture(img);
@@ -235,44 +249,24 @@ function paintWork(index: number, scatter: boolean) {
 
 function setPhase(next: Phase) {
   phase = next;
-  captionEl.classList.toggle("is-on", next === "hold");
   document.documentElement.dataset.mosaic = `${next}:${clicks}`;
   if (next === "hold") {
+    const w = WORKS[work];
+    titleEl.textContent = w.title;
+    metaEl.textContent = w.meta;
+    captionEl.classList.add("is-on");
     if (work === WORKS.length - 1) back.show();
+    if (!quoted) {
+      quoted = true;
+      quote.play([QUOTE], { stayLast: true, delay: 0 });
+    }
   } else {
     captionEl.classList.remove("is-on");
   }
 }
 
-function startQuote() {
-  quoteEl.classList.add("is-on");
-  if (reduced) {
-    quoteEl.textContent = QUOTE;
-    quoteN = QUOTE.length;
-    quoteTyping = false;
-    return;
-  }
-  quoteN = 1;
-  quoteEl.textContent = QUOTE.slice(0, 1);
-  quoteTyping = true;
-  quoteAt = performance.now() + (QUOTE[0] === "\n" ? 140 : 22);
-}
-
-function typeQuote(now: number) {
-  if (!quoteTyping || now < quoteAt) return;
-  quoteN += 1;
-  quoteEl.textContent = QUOTE.slice(0, quoteN);
-  if (quoteN >= QUOTE.length) {
-    quoteTyping = false;
-    return;
-  }
-  const ch = QUOTE[quoteN - 1];
-  const wait = ch === "\n" ? 140 : ch === "," ? 80 : 22 + ((quoteN * 13) % 10);
-  quoteAt = now + wait;
-}
-
 function plantChunk() {
-  if (phase !== "chaos") return;
+  if (phase !== "chaos" || landAt > 0) return;
   clicks += 1;
   const now = performance.now();
   const last = clicks >= need;
@@ -305,7 +299,6 @@ function plantChunk() {
     }
     landAt += 80;
   }
-  glass.clink();
   document.documentElement.dataset.mosaic = `${phase}:${clicks}`;
 }
 
@@ -333,8 +326,6 @@ function nextWork() {
   pendingIndex = work;
   applyTexAt = now + 900;
   pendingImg = null;
-  titleEl.textContent = WORKS[work].title;
-  metaEl.textContent = WORKS[work].meta;
   void loadWorkImage(WORKS[work])
     .then((img) => {
       if (pendingIndex !== work) return;
@@ -363,7 +354,7 @@ function flyTo(i: number, now: number, ax: number, ay: number, ar: number, start
   const dx = ax - fromX[i];
   const dy = ay - fromY[i];
   const len = Math.hypot(dx, dy) || 1;
-  const lift = Math.sin(u * Math.PI) * Math.min(70 * dpr, len * 0.16) * arcS[i];
+  const lift = Math.sin(u * Math.PI) * Math.min(36 * dpr, len * 0.1) * arcS[i];
   x[i] = mix(fromX[i], ax, e) + (-dy / len) * lift;
   y[i] = mix(fromY[i], ay, e) + (dx / len) * lift;
   rot[i] = mix(fromRot[i], ar, e);
@@ -373,31 +364,32 @@ function flyTo(i: number, now: number, ax: number, ay: number, ar: number, start
   return u >= 1;
 }
 
-function wander(i: number, now: number, dt: number, W: number, H: number, margin: number) {
+function wander(i: number, now: number, dt: number, W: number, H: number) {
+  const { top, bot } = band();
   const wanderT = now * 0.00028 + i * 0.031;
   vx[i] += Math.cos(wanderT) * 8 * dpr * dt;
   vy[i] += Math.sin(wanderT * 1.17) * 8 * dpr * dt;
-  if (x[i] < margin) vx[i] += (margin - x[i]) * 1.15 * dt;
-  if (x[i] > W - margin) vx[i] += (W - margin - x[i]) * 1.15 * dt;
-  if (y[i] < margin) vy[i] += (margin - y[i]) * 1.15 * dt;
-  if (y[i] > H - margin) vy[i] += (H - margin - y[i]) * 1.15 * dt;
+  const xMin = 18 * dpr;
+  if (x[i] < xMin) vx[i] += (xMin - x[i]) * 1.15 * dt;
+  if (x[i] > W - xMin) vx[i] += (W - xMin - x[i]) * 1.15 * dt;
+  if (y[i] < top) vy[i] += (top - y[i]) * 1.15 * dt;
+  if (y[i] > H - bot) vy[i] += (H - bot - y[i]) * 1.15 * dt;
   vx[i] *= 0.988;
   vy[i] *= 0.988;
   vr[i] *= 0.993;
   x[i] += vx[i] * dt;
   y[i] += vy[i] * dt;
   rot[i] += vr[i] * dt;
+  clampTile(i);
 }
 
 function tick(now: number) {
   const dt = Math.min(0.05, Math.max(0, now - lastTs) / 1000);
   lastTs = now;
   applyPendingTexture(now);
-  const sizeHold = cell * dpr * 0.495;
-  const sizeChaos = cell * dpr * 0.46;
+  const size = cell * dpr * 0.42;
   const W = innerWidth * dpr;
   const H = innerHeight * dpr;
-  const margin = 28 * dpr;
   let waiting = 0;
   let flying = 0;
   let settled = 0;
@@ -415,6 +407,7 @@ function tick(now: number) {
         fromX[i] = x[i];
         fromY[i] = y[i];
         fromRot[i] = rot[i];
+        clampTile(i);
         flying += 1;
       } else if (flyTo(i, now, hx, hy, jrot[i], homeAt[i], goDur[i])) {
         x[i] = hx;
@@ -422,6 +415,7 @@ function tick(now: number) {
         rot[i] = jrot[i];
         settled += 1;
       } else {
+        clampTile(i);
         flying += 1;
       }
     } else if (looseAt[i] > 0) {
@@ -431,21 +425,23 @@ function tick(now: number) {
         looseAt[i] = 0;
         x[i] = sx[i];
         y[i] = sy[i];
+        clampTile(i);
         waiting += 1;
-        wander(i, now, dt, W, H, margin);
+        wander(i, now, dt, W, H);
       } else {
+        clampTile(i);
         flying += 1;
       }
     } else {
       waiting += 1;
-      wander(i, now, dt, W, H, margin);
+      wander(i, now, dt, W, H);
     }
 
     const o = i * 4;
     pose[o] = x[i];
     pose[o + 1] = y[i];
     pose[o + 2] = rot[i];
-    pose[o + 3] = (phase === "hold" ? sizeHold : sizeChaos) * jsz[i];
+    pose[o + 3] = size * jsz[i];
     extra[o] = shine[i];
     extra[o + 1] = chip[i];
   }
@@ -455,10 +451,10 @@ function tick(now: number) {
     if (done || (landAt > 0 && now >= landAt)) setPhase("hold");
   }
 
-  glass.rustle(phase === "chaos" ? 1 : 0.15);
+  glass.rustle(phase === "chaos" ? 1 : 0.22);
   cursorEl.style.transform = `translate3d(${pointer.x}px, ${pointer.y}px, 0)`;
   writeClock(presenceEl, clock.elapsed());
-  typeQuote(now);
+  quote.tick(now);
   tiles.draw(pose, uv, extra, live);
   raf = requestAnimationFrame(tick);
 }
@@ -532,7 +528,6 @@ window.addEventListener(
 layout(aspect);
 scatterLive(true);
 document.documentElement.dataset.mosaic = `${phase}:${clicks}`;
-startQuote();
 raf = requestAnimationFrame(tick);
 paintWork(0, true);
 void preloadMosaics();

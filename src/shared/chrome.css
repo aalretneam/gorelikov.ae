@@ -27,7 +27,7 @@
 
 .mark img {
   display: block;
-  width: 88px;
+  width: 75px;
   height: auto;
 }
 
@@ -108,7 +108,7 @@
   opacity: 0;
   pointer-events: none;
   white-space: pre-line;
-  transition: opacity 0.7s ease;
+  transition: opacity 2.8s ease;
   max-width: min(36rem, 78vw);
 }
 
