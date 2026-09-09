@@ -28,7 +28,7 @@ type Cell = { x: number; y: number };
 
 const DX = [0, 1, 0, -1];
 const DY = [-1, 0, 1, 0];
-const SCALE_NEAR = 2.48;
+const SCALE_NEAR = 1.42;
 
 function mulberry(seed: number) {
   let a = seed | 0;
@@ -43,6 +43,10 @@ function mulberry(seed: number) {
 function odd(n: number) {
   const v = Math.max(11, n | 0);
   return v % 2 === 0 ? v - 1 : v;
+}
+
+function lerp(a: number, b: number, t: number) {
+  return a + (b - a) * t;
 }
 
 export class Maze {
@@ -192,16 +196,26 @@ export class Maze {
   }
 
   wideScale() {
-    return SCALE_NEAR;
+    const frac = this.w < 720 ? 0.98 : 0.93;
+    return Math.max(0.42, (this.w * frac) / Math.max(1, this.worldW()));
   }
 
   snapWide() {
-    this.scale = SCALE_NEAR;
+    this.scale = this.wideScale();
     this.wrapCam();
   }
 
-  zoomTo(_elapsed: number, _reduced: boolean, _wide = false) {
-    this.scale = SCALE_NEAR;
+  zoomTo(elapsed: number, reduced: boolean, wide = false) {
+    const far = this.wideScale();
+    if (wide) {
+      this.scale = far;
+      this.wrapCam();
+      return;
+    }
+    const dur = reduced ? 12 : 22;
+    const u = Math.min(1, elapsed / 1000 / dur);
+    const k = 1 - Math.exp(-u * 2.8);
+    this.scale = lerp(SCALE_NEAR, far, k);
   }
 
   private clampCam() {

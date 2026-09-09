@@ -101,7 +101,7 @@ canvas {
   align-items: center;
   min-width: 48px;
   min-height: 44px;
-  width: 88px;
+  width: 75px;
   opacity: 0.78;
   pointer-events: auto;
   line-height: 0;
@@ -109,7 +109,7 @@ canvas {
 
 .mark img {
   display: block;
-  width: 88px;
+  width: 75px;
   height: auto;
 }
 
