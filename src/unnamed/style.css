@@ -31,11 +31,6 @@ canvas {
   z-index: 0;
 }
 
-#trail {
-  z-index: 1;
-  pointer-events: none;
-}
-
 .caption {
   position: fixed;
   left: 50%;
@@ -99,7 +94,7 @@ canvas {
   letter-spacing: 0.06em;
   line-height: 1.45;
   text-align: center;
-  color: rgba(230, 225, 214, 0.52);
+  color: rgba(244, 239, 230, 0.82);
   pointer-events: none;
   white-space: pre-line;
   opacity: 0;

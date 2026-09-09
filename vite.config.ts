@@ -14,6 +14,8 @@ export default defineConfig({
         unnamed: "unnamed.html",
         want: "want.html",
         behind: "behind.html",
+        play: "play.html",
+        you: "you.html",
       },
     },
   },

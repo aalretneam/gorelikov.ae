@@ -12,11 +12,12 @@ export type Gate = {
 };
 
 export const GATES: Gate[] = [
-  { id: "field", href: "./field.html", word: "остаться", nx: 0.5, ny: 0.02, rgb: [1, 0.72, 0.42], freq: 196 },
-  { id: "mosaic", href: "./unnamed.html", word: "собрать", nx: 0.02, ny: 0.28, rgb: [0.72, 0.86, 0.92], freq: 247 },
-  { id: "machine", href: "./machine.html", word: "смотреть", nx: 0.98, ny: 0.28, rgb: [0.55, 0.78, 1], freq: 164 },
-  { id: "want", href: "./want.html", word: "хотеть", nx: 0.36, ny: 0.98, rgb: [0.92, 0.48, 0.38], freq: 220 },
-  { id: "behind", href: "./behind.html", word: "уже", nx: 0.64, ny: 0.98, rgb: [0.82, 0.78, 0.7], freq: 131 },
+  { id: "field", href: "./field.html", word: "остаться", nx: 0.5, ny: 0.36, rgb: [1, 0.72, 0.42], freq: 196 },
+  { id: "mosaic", href: "./unnamed.html", word: "собрать", nx: 0.1, ny: 0.44, rgb: [0.72, 0.86, 0.92], freq: 247 },
+  { id: "machine", href: "./machine.html", word: "смотреть", nx: 0.9, ny: 0.44, rgb: [0.55, 0.78, 1], freq: 164 },
+  { id: "want", href: "./want.html", word: "хотеть", nx: 0.22, ny: 0.62, rgb: [0.92, 0.48, 0.38], freq: 220 },
+  { id: "behind", href: "./behind.html", word: "быть", nx: 0.78, ny: 0.62, rgb: [0.82, 0.78, 0.7], freq: 131 },
+  { id: "play", href: "./play.html", word: "играть", nx: 0.5, ny: 0.66, rgb: [0.86, 0.82, 0.55], freq: 294 },
 ];
 
 export const HIT = 72;
@@ -27,8 +28,7 @@ type Cell = { x: number; y: number };
 
 const DX = [0, 1, 0, -1];
 const DY = [-1, 0, 1, 0];
-const SCALE_NEAR = 3.05;
-const SCALE_FAR = 0.28;
+const SCALE_NEAR = 1.42;
 
 function mulberry(seed: number) {
   let a = seed | 0;
@@ -146,21 +146,27 @@ export class Maze {
     this.vy = -vyScreen / this.scale;
   }
 
+  wideScale() {
+    const frac = this.w < 720 ? 0.98 : 0.93;
+    return Math.max(0.42, (this.w * frac) / Math.max(1, this.worldW()));
+  }
+
   snapWide() {
-    this.scale = SCALE_FAR;
+    this.scale = this.wideScale();
     this.clampCam();
   }
 
   zoomTo(elapsed: number, reduced: boolean, wide = false) {
+    const far = this.wideScale();
     if (wide) {
-      this.scale = SCALE_FAR;
+      this.scale = far;
       this.clampCam();
       return;
     }
-    const dur = reduced ? 22 : 40;
+    const dur = reduced ? 12 : 22;
     const u = Math.min(1, elapsed / 1000 / dur);
     const k = 1 - Math.exp(-u * 2.8);
-    this.scale = lerp(SCALE_NEAR, SCALE_FAR, k);
+    this.scale = lerp(SCALE_NEAR, far, k);
     this.clampCam();
   }
 
@@ -177,9 +183,9 @@ export class Maze {
 
   private carveWorld() {
     const simple = isMobileGpu();
-    this.cell = simple ? 28 : 24;
-    this.cols = odd(simple ? 41 : 55);
-    this.rows = odd(simple ? 221 : 321);
+    this.cell = simple ? 26 : 22;
+    this.cols = odd(simple ? 89 : 125);
+    this.rows = odd(simple ? 121 : 157);
     this.grid = new Uint8Array(this.cols * this.rows);
     const cols = this.cols;
     const rows = this.rows;
@@ -241,43 +247,19 @@ export class Maze {
       if (this.at(x, y) && this.at(ox, oy) && !this.at(wx, wy)) this.set(wx, wy, 1);
     }
 
-    const sides: Array<"n" | "e" | "s" | "w"> = ["n", "w", "e", "s", "s"];
-    this.exits = GATES.map((g, i) => this.openExit(g.nx, g.ny, sides[i] ?? "n", cx, cy));
+    this.exits = GATES.map((g) => this.placeRoom(g.nx, g.ny, cx, cy));
   }
 
-  private openExit(nx: number, ny: number, prefer: "n" | "e" | "s" | "w", cx: number, cy: number): Cell {
-    let x = Math.min(this.cols - 2, Math.max(1, Math.round(nx * (this.cols - 1)))) | 1;
-    let y = Math.min(this.rows - 2, Math.max(1, Math.round(ny * (this.rows - 1)))) | 1;
-    if (prefer === "n") y = 1;
-    else if (prefer === "s") {
-      y = this.rows - 2;
-      if ((y & 1) === 0) y -= 1;
-    } else if (prefer === "w") x = 1;
-    else {
-      x = this.cols - 2;
-      if ((x & 1) === 0) x -= 1;
+  private placeRoom(nx: number, ny: number, cx: number, cy: number): Cell {
+    let x = Math.min(this.cols - 3, Math.max(3, Math.round(nx * (this.cols - 1)))) | 1;
+    let y = Math.min(this.rows - 3, Math.max(3, Math.round(ny * (this.rows - 1)))) | 1;
+    const room = this.roomR;
+    for (let yy = y - room; yy <= y + room; yy++) {
+      for (let xx = x - room; xx <= x + room; xx++) this.set(xx, yy, 1);
     }
-    x = Math.min(this.cols - 2, Math.max(1, x | 1));
-    y = Math.min(this.rows - 2, Math.max(1, y | 1));
-
-    this.set(x, y, 1);
     if (!this.connected(cx, cy, x, y)) this.tunnel(cx, cy, x, y);
     this.set(x, y, 1);
-
-    if (prefer === "n") {
-      for (let yy = y; yy >= 0; yy--) this.set(x, yy, 1);
-      return { x, y: Math.min(y + 2, this.rows - 3) | 1 };
-    }
-    if (prefer === "s") {
-      for (let yy = y; yy < this.rows; yy++) this.set(x, yy, 1);
-      return { x, y: Math.max(y - 2, 3) | 1 };
-    }
-    if (prefer === "w") {
-      for (let xx = x; xx >= 0; xx--) this.set(xx, y, 1);
-      return { x: Math.min(x + 2, this.cols - 3) | 1, y };
-    }
-    for (let xx = x; xx < this.cols; xx++) this.set(xx, y, 1);
-    return { x: Math.max(x - 2, 3) | 1, y };
+    return { x, y };
   }
 
   private connected(x0: number, y0: number, x1: number, y1: number) {
@@ -322,6 +304,11 @@ export class Maze {
     const e = this.exits[i];
     if (!e) return { x: this.camX, y: this.camY };
     return this.worldPt(e.x, e.y);
+  }
+
+  centerPos(): Pt {
+    const p = this.worldPt(this.rcx, this.rcy);
+    return this.toScreen(p.x, p.y);
   }
 
   gatePos(i: number): Pt {
@@ -380,6 +367,7 @@ export class Maze {
     hold: number;
     simple: boolean;
     awake: number;
+    profile?: boolean;
   }) {
     const ctx = this.ctx;
     const s = this.dpr;
@@ -387,7 +375,7 @@ export class Maze {
     ctx.fillStyle = "#050308";
     ctx.fillRect(0, 0, this.w, this.h);
 
-    const { mx, my, reveal, hover, visited, hold, simple, awake } = opts;
+    const { mx, my, reveal, hover, visited, hold, simple, awake, profile } = opts;
     const breath = 0.5 + 0.5 * Math.sin(this.t * 0.55);
     const cell = this.cell;
     const scale = this.scale;
@@ -476,10 +464,17 @@ export class Maze {
     ctx.arc(room.x, room.y, cell * 4.2, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.fillStyle = `rgba(244,236,214,${0.22 + breath * 0.14 + awake * 0.12})`;
+    ctx.fillStyle = `rgba(244,236,214,${0.22 + breath * 0.14 + awake * 0.12 + (profile ? 0.18 : 0)})`;
     ctx.beginPath();
-    ctx.arc(room.x, room.y, 3.2 + breath * 1.4, 0, Math.PI * 2);
+    ctx.arc(room.x, room.y, 3.2 + breath * 1.4 + (profile ? 1.2 : 0), 0, Math.PI * 2);
     ctx.fill();
+    if (profile) {
+      ctx.strokeStyle = `rgba(244,220,170,${0.42 + breath * 0.2})`;
+      ctx.lineWidth = 1.5 / scale;
+      ctx.beginPath();
+      ctx.arc(room.x, room.y, cell * 1.85, 0, Math.PI * 2);
+      ctx.stroke();
+    }
     ctx.strokeStyle = `rgba(244,236,214,${0.14 + breath * 0.08})`;
     ctx.lineWidth = 1.2 / scale;
     ctx.beginPath();
@@ -513,6 +508,7 @@ export class Maze {
       else if (g.id === "mosaic") this.drawGlass(p, R, G, B, hot, scale);
       else if (g.id === "machine") this.drawRing(p, R, G, B, hot, scale);
       else if (g.id === "want") this.drawMass(p, R, G, B, hot, scale);
+      else if (g.id === "play") this.drawPlay(p, R, G, B, hot, scale);
       else this.drawWake(p, R, G, B, hot, scale);
     }
 
@@ -613,6 +609,27 @@ export class Maze {
     ctx.fillStyle = `rgba(${r},${g},${b},0.95)`;
     ctx.beginPath();
     ctx.arc(p.x, p.y, 2.8 / scale, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  private drawPlay(p: Pt, r: number, g: number, b: number, hot: boolean, scale: number) {
+    const ctx = this.ctx;
+    const k = 1 / scale;
+    ctx.strokeStyle = `rgba(${r},${g},${b},${hot ? 0.8 : 0.45})`;
+    ctx.lineWidth = 0.9 * k;
+    for (let i = -1; i <= 1; i++) {
+      ctx.beginPath();
+      ctx.moveTo(p.x + i * 5 * k, p.y - 6 * k);
+      ctx.lineTo(p.x + i * 5 * k, p.y + 6 * k);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(p.x - 6 * k, p.y + i * 5 * k);
+      ctx.lineTo(p.x + 6 * k, p.y + i * 5 * k);
+      ctx.stroke();
+    }
+    ctx.fillStyle = `rgba(${r},${g},${b},0.95)`;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 2.2 * k, 0, Math.PI * 2);
     ctx.fill();
   }
 }

@@ -3,23 +3,16 @@ import { PresenceClock, writeClock } from "../clock";
 import { dprCap, isMobileGpu, reducedMotion } from "../shared/gpu";
 import { markOpened, openedGates } from "../shared/memory";
 import { bindSoundToggle } from "../shared/sound-toggle";
-import { bind as bindTrace, claimVisit, markContinue } from "../shared/trace";
+import { bind as bindTrace, markContinue } from "../shared/trace";
 import { GestureTrail } from "../shared/trail";
 import { bindWhisper, isChromeTarget } from "../shared/whisper";
+import { roomsDone } from "../shared/portrait";
 import { GATES, HIT, Maze } from "./maze";
 import { HubSound } from "./sound";
 
-const LINES = [
-  "Это лабиринт",
-  "где нет конца",
-  "или есть",
-  "кто-то найдёт тут вдохновение",
-  "кто-то смысл",
-  "Всё зависит от тебя..",
-  "И твоего выбора ..",
-];
-
 const HUB_WIDE = "ag-hub-wide";
+const GATE_FIRST = 80_000;
+const GATE_STEP = 40_000;
 
 function hubIsWide() {
   try {
@@ -27,7 +20,7 @@ function hubIsWide() {
   } catch {
     /* private mode */
   }
-  return /(?:field|unnamed|machine|want|behind)\.html(?:$|[?#])/.test(document.referrer);
+  return /(?:field|unnamed|machine|want|behind|play|you)\.html(?:$|[?#])/.test(document.referrer);
 }
 
 function markHubWide() {
@@ -39,15 +32,10 @@ function markHubWide() {
 }
 
 const reduced = reducedMotion();
-const FIRST_LINE = reduced ? 7000 : 14000;
-const LINE_STEP = reduced ? 13000 : 21000;
-const LINE_DUR = reduced ? 9500 : 13000;
-
 const canvas = document.querySelector<HTMLCanvasElement>("#maze")!;
 const trailCanvas = document.querySelector<HTMLCanvasElement>("#trail")!;
 const cursorEl = document.querySelector<HTMLDivElement>("#cursor")!;
 const whisperEl = document.querySelector<HTMLParagraphElement>("#whisper")!;
-const hintEl = document.querySelector<HTMLParagraphElement>("#hint")!;
 const presenceEl = document.querySelector<HTMLElement>("#presence")!;
 const soundEl = document.querySelector<HTMLButtonElement>("#sound")!;
 const hitsEl = document.querySelector<HTMLDivElement>("#hits")!;
@@ -67,27 +55,27 @@ bindSoundToggle(soundEl, sound);
 
 const visited = openedGates();
 bindTrace("hub");
-const INTRO: string[] = [];
-if (claimVisit()) {
-  INTRO.push("Ты здесь не для того, чтобы смотреть.", "Ты здесь, чтобы оставить след.");
-}
-if (visited.size >= 5) INTRO.push("ты уже был");
-const SPEAK = INTRO.length ? [...INTRO, ...LINES] : LINES;
-const speakFirst = INTRO.length ? (reduced ? 2500 : 4500) : FIRST_LINE;
-const speakStep = INTRO.length ? (reduced ? 8000 : 11000) : LINE_STEP;
+whisper.play(
+  [
+    "Ты здесь не для того, чтобы смотреть,\nты здесь, чтобы оставить след",
+    "Это лабиринт, где нет конца..\nили есть?\nКто-то найдет в нем вдохновение..\nКто-то смысл...",
+    "Все зависит от твоего выбора...",
+  ],
+  { hold: reduced ? 4000 : 10000, stayLast: true },
+);
+
 const pointer = { x: innerWidth * 0.5, y: innerHeight * 0.5, tx: innerWidth * 0.5, ty: innerHeight * 0.5 };
 let lastTs = performance.now();
 let raf = 0;
-let lineI = -1;
 let revealed: number[] = [];
 let hover = -1;
 let hold = 0;
 let holding = false;
 let lastSlit = 0;
-let choiceHinted = false;
 let lastHoverSound = -1;
 let drag: { id: number; x: number; y: number; moved: boolean; vx: number; vy: number; t: number } | null = null;
-let panHinted = false;
+let profileOn = roomsDone() >= 3;
+let profileHit: HTMLAnchorElement | null = null;
 
 function layoutHits() {
   hitsEl.replaceChildren();
@@ -110,36 +98,54 @@ function layoutHits() {
     });
     hitsEl.append(a);
   }
+  profileHit = document.createElement("a");
+  profileHit.className = "hit";
+  profileHit.href = "./you.html";
+  profileHit.setAttribute("aria-label", "ты");
+  profileHit.tabIndex = -1;
+  profileHit.style.width = `${HIT}px`;
+  profileHit.style.height = `${HIT}px`;
+  const word = document.createElement("span");
+  word.className = "word";
+  word.textContent = "ты";
+  profileHit.append(word);
+  profileHit.addEventListener("click", () => markHubWide());
+  hitsEl.append(profileHit);
+}
+
+function timedCount(elapsed: number) {
+  const first = reduced ? 40_000 : GATE_FIRST;
+  const step = reduced ? 20_000 : GATE_STEP;
+  if (elapsed < first) return 0;
+  return Math.min(GATES.length, 1 + Math.floor((elapsed - first) / step));
+}
+
+function mergeReveal(elapsed: number) {
+  const want = timedCount(elapsed);
+  const next: number[] = [];
+  for (let i = 0; i < GATES.length; i++) {
+    if (i < want || visited.has(GATES[i].id)) next.push(i);
+  }
+  return next;
 }
 
 function placeHits() {
   const nodes = hitsEl.querySelectorAll<HTMLAnchorElement>("a");
   nodes.forEach((a, i) => {
+    if (a === profileHit) {
+      const on = profileOn;
+      a.classList.toggle("is-on", on);
+      a.tabIndex = on ? 0 : -1;
+      const p = maze.centerPos();
+      a.style.transform = `translate3d(${p.x}px, ${p.y}px, 0)`;
+      return;
+    }
     const on = revealed.includes(i) && maze.gateOnScreen(i, 48);
     a.classList.toggle("is-on", on);
     a.tabIndex = on ? 0 : -1;
     const p = maze.gatePos(i);
     a.style.transform = `translate3d(${p.x}px, ${p.y}px, 0)`;
   });
-}
-
-function revealVisible() {
-  let added = false;
-  for (let i = 0; i < GATES.length; i++) {
-    if (revealed.includes(i)) continue;
-    if (!maze.gateOnScreen(i, 36)) continue;
-    revealed.push(i);
-    added = true;
-  }
-  if (added) {
-    maze.pulse = Math.max(maze.pulse, 0.55);
-    if (!choiceHinted) {
-      choiceHinted = true;
-      hintEl.textContent = "коснись · выбери";
-      hintEl.classList.remove("is-gone");
-      window.setTimeout(() => hintEl.classList.add("is-gone"), 11400);
-    }
-  }
 }
 
 function resize() {
@@ -198,6 +204,14 @@ window.addEventListener("pointerup", (e) => {
     maze.fling(vx, vy);
     return;
   }
+  if (profileOn) {
+    const c = maze.centerPos();
+    if (Math.hypot(pointer.tx - c.x, pointer.ty - c.y) < HIT * 0.5) {
+      markHubWide();
+      window.location.href = "./you.html";
+      return;
+    }
+  }
   const i = maze.hitIndex(pointer.tx, pointer.ty, revealed);
   if (i >= 0) {
     markOpened(GATES[i].id);
@@ -246,33 +260,26 @@ function tick(now: number) {
 
   maze.zoomTo(elapsed, reduced, wide);
 
-  const nextLine = lineI + 1;
-  const at = speakFirst + nextLine * speakStep;
-  if (nextLine < SPEAK.length && elapsed >= at && !whisper.busy(now)) {
-    lineI = nextLine;
-    whisper.show(SPEAK[lineI], LINE_DUR);
-  }
+  const nextReveal = mergeReveal(elapsed);
+  if (nextReveal.length > revealed.length) maze.pulse = Math.max(maze.pulse, 0.55);
+  revealed = nextReveal;
+  if (!profileOn && roomsDone() >= 3) profileOn = true;
 
-  if (!panHinted && elapsed > (reduced ? 2200 : 4000) && revealed.length === 0) {
-    panHinted = true;
-    hintEl.textContent = "веди · скролль";
-    hintEl.classList.remove("is-gone");
-    window.setTimeout(() => {
-      if (!choiceHinted) hintEl.classList.add("is-gone");
-    }, 10200);
-  }
-
-  revealVisible();
   placeHits();
 
-  const hit = maze.hitIndex(pointer.x, pointer.y, revealed);
+  let hit = maze.hitIndex(pointer.x, pointer.y, revealed);
+  if (hit < 0 && profileOn) {
+    const c = maze.centerPos();
+    if (Math.hypot(pointer.x - c.x, pointer.y - c.y) < HIT * 0.5) hit = 100;
+  }
   if (hit !== hover) hover = hit;
   cursorEl.classList.toggle("is-ring", hit >= 0);
   cursorEl.style.transform = `translate3d(${pointer.x}px, ${pointer.y}px, 0)`;
 
   if (sound.enabled && hit !== lastHoverSound) {
     lastHoverSound = hit;
-    if (hit >= 0) sound.hover(true, GATES[hit].freq);
+    if (hit >= 0 && hit < GATES.length) sound.hover(true, GATES[hit].freq);
+    else if (hit === 100) sound.hover(true, 110);
     else sound.hover(false);
   }
   if (sound.enabled && now - lastSlit > 5000 + Math.random() * 5000 && Math.random() < 0.01) {
@@ -285,11 +292,12 @@ function tick(now: number) {
     mx: pointer.x,
     my: pointer.y,
     reveal: revealed,
-    hover: hit,
+    hover: hit < GATES.length ? hit : -1,
     visited,
     hold,
     simple,
-        awake: wide ? 1 : Math.min(1, elapsed / (reduced ? 22000 : 40000)),
+    awake: wide ? 1 : Math.min(1, elapsed / (reduced ? 12000 : 22000)),
+    profile: profileOn,
   });
   trail.step(dt);
   trail.draw();
@@ -308,8 +316,8 @@ window.addEventListener("visibilitychange", () => {
 });
 
 layoutHits();
+revealed = mergeReveal(0);
 resize();
-hintEl.classList.add("is-gone");
 raf = requestAnimationFrame(tick);
 
 if (import.meta.hot) {

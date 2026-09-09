@@ -5,8 +5,8 @@ import { Glass } from "./glass";
 import { fitGrid, loadWorkImage, maxTiles, preloadMosaics, WORKS } from "./works";
 import { bindSoundToggle } from "../shared/sound-toggle";
 import { bind as bindTrace } from "../shared/trace";
-import { GestureTrail } from "../shared/trail";
 import { isChromeTarget } from "../shared/whisper";
+import { bindBack } from "../shared/back";
 import { reducedMotion } from "../shared/gpu";
 
 const QUOTE = "Ничто, кроме души, недостойно восхищения\nа для великой души всё меньше неё";
@@ -15,11 +15,9 @@ const reduced = reducedMotion();
 const MAX = maxTiles();
 
 const canvas = document.querySelector<HTMLCanvasElement>("#mosaic")!;
-const trailCanvas = document.querySelector<HTMLCanvasElement>("#trail")!;
 const captionEl = document.querySelector<HTMLElement>("#caption")!;
 const titleEl = document.querySelector<HTMLElement>("#work-title")!;
 const metaEl = document.querySelector<HTMLElement>("#work-meta")!;
-const hintEl = document.querySelector<HTMLElement>("#hint")!;
 const cursorEl = document.querySelector<HTMLDivElement>("#cursor")!;
 const quoteEl = document.querySelector<HTMLParagraphElement>("#quote")!;
 const presenceEl = document.querySelector<HTMLElement>("#presence")!;
@@ -27,10 +25,10 @@ const soundEl = document.querySelector<HTMLButtonElement>("#sound")!;
 
 const tiles = new Tiles(canvas, MAX);
 const glass = new Glass();
-const trail = new GestureTrail(trailCanvas);
 const clock = new PresenceClock();
 bindSoundToggle(soundEl, glass);
 bindTrace("mosaic");
+const back = bindBack(document.querySelector("#back"));
 
 const pose = new Float32Array(MAX * 4);
 const uv = new Float32Array(MAX * 4);
@@ -111,7 +109,6 @@ function layout(nextAspect = aspect) {
   const prevLive = live;
   aspect = nextAspect;
   dpr = tiles.resize(innerWidth, innerHeight);
-  trail.resize(innerWidth, innerHeight, dpr);
   const w = innerWidth;
   const h = innerHeight;
   const padX = Math.min(w, h) * 0.055;
@@ -242,15 +239,13 @@ function setPhase(next: Phase) {
   captionEl.classList.toggle("is-on", next === "hold");
   document.documentElement.dataset.mosaic = `${next}:${clicks}`;
   if (next === "hold") {
-    hintEl.textContent = "коснись · следующая картина";
-    hintEl.classList.remove("is-gone");
+    if (work === WORKS.length - 1) back.show();
     if (!assembledOnce) {
       assembledOnce = true;
       startQuote();
     }
   } else {
     captionEl.classList.remove("is-on");
-    hintEl.textContent = "коснись · собери";
   }
 }
 
@@ -468,8 +463,6 @@ function tick(now: number) {
   glass.rustle(phase === "chaos" ? 1 : 0.15);
   cursorEl.style.transform = `translate3d(${pointer.x}px, ${pointer.y}px, 0)`;
   writeClock(presenceEl, clock.elapsed());
-  trail.step(dt);
-  trail.draw();
   typeQuote(now);
   tiles.draw(pose, uv, extra, live);
   raf = requestAnimationFrame(tick);
@@ -483,7 +476,6 @@ window.addEventListener(
   (e) => {
     pointer.x = e.clientX;
     pointer.y = e.clientY;
-    trail.stamp(e.clientX, e.clientY);
   },
   on,
 );
@@ -494,7 +486,6 @@ window.addEventListener(
     if (isChromeTarget(e.target)) return;
     pointer.x = e.clientX;
     pointer.y = e.clientY;
-    trail.stamp(e.clientX, e.clientY, 1.4);
     if (phase === "hold") nextWork();
     else if (phase === "chaos") plantChunk();
   },
@@ -546,7 +537,6 @@ window.addEventListener(
 layout(aspect);
 scatterLive(true);
 document.documentElement.dataset.mosaic = `${phase}:${clicks}`;
-hintEl.textContent = "коснись · собери";
 raf = requestAnimationFrame(tick);
 paintWork(0, true);
 void preloadMosaics();

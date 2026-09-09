@@ -1,28 +1,21 @@
 import "./style.css";
 import { PresenceClock, writeClock } from "../clock";
-import { dprCap, reducedMotion } from "../shared/gpu";
+import { dprCap } from "../shared/gpu";
 import { bindSoundToggle } from "../shared/sound-toggle";
 import { bind as bindTrace } from "../shared/trace";
 import { GestureTrail } from "../shared/trail";
 import { bindWhisper, isChromeTarget } from "../shared/whisper";
+import { bindBack } from "../shared/back";
 import { BehindSound } from "./sound";
 import { Wake } from "./wake";
-
-const LINES = [
-  "смерть мы видим впереди",
-  "большая часть её у нас за плечами",
-  "сколько минуло — принадлежит смерти",
-];
 
 const canvas = document.querySelector<HTMLCanvasElement>("#world")!;
 const trailCanvas = document.querySelector<HTMLCanvasElement>("#trail")!;
 const cursorEl = document.querySelector<HTMLDivElement>("#cursor")!;
 const whisperEl = document.querySelector<HTMLParagraphElement>("#whisper")!;
-const hintEl = document.querySelector<HTMLParagraphElement>("#hint")!;
 const presenceEl = document.querySelector<HTMLElement>("#presence")!;
 const soundEl = document.querySelector<HTMLButtonElement>("#sound")!;
 
-const reduced = reducedMotion();
 const wake = new Wake(canvas);
 const trail = new GestureTrail(trailCanvas);
 const sound = new BehindSound();
@@ -30,13 +23,17 @@ const clock = new PresenceClock();
 const whisper = bindWhisper(whisperEl);
 bindSoundToggle(soundEl, sound);
 bindTrace("behind");
+bindBack(document.querySelector("#back"), 30_000);
+whisper.play(
+  [
+    "смерть мы видим впереди\nбольшая часть её у нас за плечами\nсколько минуло — принадлежит смерти",
+  ],
+  { hold: 8000, stayLast: true },
+);
 
 const pointer = { x: innerWidth * 0.5, y: innerHeight * 0.5 };
 let lastTs = performance.now();
 let raf = 0;
-let lineI = 0;
-let nextLine = reduced ? 7 : 16;
-let hinted = false;
 
 function resize() {
   const dpr = dprCap();
@@ -48,10 +45,6 @@ window.addEventListener("pointermove", (e) => {
   pointer.x = e.clientX;
   pointer.y = e.clientY;
   trail.stamp(e.clientX, e.clientY);
-  if (!hinted) {
-    hinted = true;
-    hintEl.classList.add("is-gone");
-  }
 });
 
 window.addEventListener("pointerdown", (e) => {
@@ -76,11 +69,6 @@ function tick(now: number) {
   trail.step(dt);
   trail.draw();
   sound.setLook(look.forward, look.back);
-  if (elapsed / 1000 >= nextLine && lineI < LINES.length && !whisper.busy(now)) {
-    whisper.show(LINES[lineI], reduced ? 7800 : 10600);
-    lineI += 1;
-    nextLine += reduced ? 14 : 25;
-  }
   whisper.tick(now);
   cursorEl.style.transform = `translate3d(${pointer.x}px, ${pointer.y}px, 0)`;
   raf = requestAnimationFrame(tick);

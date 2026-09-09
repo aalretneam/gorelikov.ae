@@ -1,0 +1,77 @@
+@import "../shared/chrome.css";
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #050308;
+  color: var(--ink);
+  font-family: "Outfit", system-ui, sans-serif;
+  font-weight: 300;
+  cursor: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+#mark {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  z-index: 0;
+  opacity: 0;
+  transition: opacity 1.8s ease;
+}
+
+#mark.is-on {
+  opacity: 1;
+}
+
+.keep {
+  pointer-events: none;
+  position: fixed;
+  z-index: 14;
+  left: max(18px, env(safe-area-inset-left));
+  bottom: max(22px, env(safe-area-inset-bottom));
+  transform: none;
+  min-width: 48px;
+  min-height: 44px;
+  padding: 10px 8px;
+  background: none;
+  border: 0;
+  color: rgba(244, 239, 230, 0.72);
+  font: inherit;
+  font-size: 11px;
+  letter-spacing: 0.28em;
+  text-transform: lowercase;
+  cursor: none;
+  text-align: left;
+  opacity: 0;
+  transition: opacity 1.8s ease, color 0.4s ease;
+}
+
+.keep.is-on {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.keep:hover,
+.keep:focus-visible {
+  color: rgba(244, 239, 230, 0.95);
+  outline: none;
+}
+
+@media (hover: none) {
+  .keep {
+    cursor: pointer;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #mark,
+  .keep {
+    transition: none;
+  }
+}
