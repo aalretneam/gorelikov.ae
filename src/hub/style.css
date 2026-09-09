@@ -50,6 +50,17 @@ canvas {
   pointer-events: auto;
 }
 
+.whisper {
+  top: max(88px, calc(env(safe-area-inset-top) + 80px));
+  transition: opacity 1.4s ease;
+}
+
+@media (max-height: 480px) {
+  .whisper {
+    top: max(82px, calc(env(safe-area-inset-top) + 74px));
+  }
+}
+
 .meta,
 .presence {
   opacity: 0;

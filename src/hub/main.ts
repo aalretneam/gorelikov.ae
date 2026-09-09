@@ -61,7 +61,7 @@ whisper.play(
     "Это лабиринт, где нет конца..\nили есть?\nКто-то найдет в нем вдохновение..\nКто-то смысл...",
     "Все зависит от твоего выбора...",
   ],
-  { hold: reduced ? 4000 : 10000, stayLast: true },
+  { hold: reduced ? 4000 : 10000, stayLast: true, delay: reduced ? 400 : 15_000, pace: 2 },
 );
 
 const pointer = { x: innerWidth * 0.5, y: innerHeight * 0.5, tx: innerWidth * 0.5, ty: innerHeight * 0.5 };
