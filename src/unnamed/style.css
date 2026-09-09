@@ -105,6 +105,10 @@ canvas {
   opacity: 1;
 }
 
+.quote.is-off {
+  opacity: 0;
+}
+
 @media (max-width: 720px) {
   .quote {
     width: min(22rem, 78vw);
