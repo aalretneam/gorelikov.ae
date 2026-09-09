@@ -29,6 +29,11 @@ type Cell = { x: number; y: number };
 const DX = [0, 1, 0, -1];
 const DY = [-1, 0, 1, 0];
 const SCALE_NEAR = 1.42;
+/** Drag and wheel move less of the world than the finger/wheel, so the maze stays calm. */
+const PAN_DRAG = 0.38;
+const PAN_WHEEL = 0.26;
+const FLING_GAIN = 0.32;
+const FLING_MAX = 220;
 
 function mulberry(seed: number) {
   let a = seed | 0;
@@ -184,15 +189,24 @@ export class Maze {
     };
   }
 
-  pan(dx: number, dy: number) {
-    this.camX -= dx / this.scale;
-    this.camY -= dy / this.scale;
+  pan(dx: number, dy: number, gain = PAN_DRAG) {
+    this.camX -= (dx * gain) / this.scale;
+    this.camY -= (dy * gain) / this.scale;
     this.wrapCam();
   }
 
+  wheel(dx: number, dy: number) {
+    this.pan(dx, dy, PAN_WHEEL);
+  }
+
   fling(vxScreen: number, vyScreen: number) {
-    this.vx = -vxScreen / this.scale;
-    this.vy = -vyScreen / this.scale;
+    this.vx = (-vxScreen * FLING_GAIN) / this.scale;
+    this.vy = (-vyScreen * FLING_GAIN) / this.scale;
+    const sp = Math.hypot(this.vx, this.vy);
+    if (sp > FLING_MAX) {
+      this.vx *= FLING_MAX / sp;
+      this.vy *= FLING_MAX / sp;
+    }
   }
 
   wideScale() {
@@ -406,9 +420,9 @@ export class Maze {
     this.ripples = this.ripples.filter((r) => r.t < 2.4);
     this.camX += this.vx * dt;
     this.camY += this.vy * dt;
-    this.vx *= Math.pow(0.08, dt);
-    this.vy *= Math.pow(0.08, dt);
-    if (Math.hypot(this.vx, this.vy) < 8) {
+    this.vx *= Math.pow(0.12, dt);
+    this.vy *= Math.pow(0.12, dt);
+    if (Math.hypot(this.vx, this.vy) < 12) {
       this.vx = 0;
       this.vy = 0;
     }

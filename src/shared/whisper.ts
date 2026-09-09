@@ -1,7 +1,7 @@
 /** Default for every page unless the caller sets `delay`. */
 export const QUOTE_DELAY_MS = 16_000;
-/** Matches `transition: opacity 2.8s` on `.whisper` / `.quote`. */
-const FADE_MS = 2800;
+/** Matches `--whisper-fade` on `.whisper` / `.quote`. */
+const FADE_MS = 9000;
 
 export function bindWhisper(el: HTMLElement) {
   const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -39,7 +39,7 @@ export function bindWhisper(el: HTMLElement) {
   }
 
   function play(lines: string[], opts?: { hold?: number; stayLast?: boolean; delay?: number }) {
-    const hold = opts?.hold ?? 4000;
+    const hold = opts?.hold ?? 8000;
     stayLast = opts?.stayLast ?? true;
     stanzas = lines.map((text) => ({ text, hold }));
     i = -1;

@@ -233,7 +233,7 @@ window.addEventListener(
   "wheel",
   (e) => {
     e.preventDefault();
-    maze.pan(-e.deltaX, -e.deltaY);
+    maze.wheel(-e.deltaX, -e.deltaY);
   },
   { passive: false },
 );

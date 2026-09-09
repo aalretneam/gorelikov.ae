@@ -55,7 +55,7 @@ whisper.play(
     "ищи смысл...",
     "Живи с людьми так, будто на тебя смотрит Бог,\nговори с Богом так, будто тебя слушают люди..",
   ],
-    { hold: reduced ? 2500 : 5200, stayLast: true },
+    { hold: reduced ? 2500 : 8000, stayLast: true },
 );
 
 function toShaderPoint(x: number, y: number): [number, number] {
