@@ -9,6 +9,13 @@ export function bindWhisper(el: HTMLElement) {
   let stayLast = true;
   let mode: "idle" | "type" | "hold" | "fade" = "idle";
 
+  function typeWait(text: string, n: number) {
+    const ch = text[n - 1];
+    if (ch === "\n") return 140;
+    if (ch === "," || ch === "." || ch === "?" || ch === "…") return 80;
+    return 22 + ((n * 13) % 10);
+  }
+
   function next(now: number) {
     i += 1;
     if (i >= stanzas.length) {
@@ -30,9 +37,10 @@ export function bindWhisper(el: HTMLElement) {
       at = now + Math.min(1400, stanzas[i].hold);
       return;
     }
-    el.textContent = "";
+    n = 1;
+    el.textContent = full.slice(0, 1);
     mode = "type";
-    at = now;
+    at = now + typeWait(full, n);
   }
 
   function play(lines: string[], opts?: { hold?: number; stayLast?: boolean }) {
@@ -63,8 +71,7 @@ export function bindWhisper(el: HTMLElement) {
         at = now + stanzas[i].hold;
         return;
       }
-      const ch = full[n - 1];
-      const wait = ch === "\n" ? 460 : ch === "," || ch === "." || ch === "?" ? 240 : 92 + ((n * 17) % 36);
+      const wait = typeWait(full, n);
       at = now + wait;
       return;
     }

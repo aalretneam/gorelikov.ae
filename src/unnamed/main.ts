@@ -71,7 +71,6 @@ let dpr = 1;
 let cell = 12;
 let clicks = 0;
 const need = reduced ? 3 : 6;
-let assembledOnce = false;
 let quoteN = 0;
 let quoteAt = 0;
 let quoteTyping = false;
@@ -240,10 +239,6 @@ function setPhase(next: Phase) {
   document.documentElement.dataset.mosaic = `${next}:${clicks}`;
   if (next === "hold") {
     if (work === WORKS.length - 1) back.show();
-    if (!assembledOnce) {
-      assembledOnce = true;
-      startQuote();
-    }
   } else {
     captionEl.classList.remove("is-on");
   }
@@ -257,10 +252,10 @@ function startQuote() {
     quoteTyping = false;
     return;
   }
-  quoteN = 0;
-  quoteEl.textContent = "";
+  quoteN = 1;
+  quoteEl.textContent = QUOTE.slice(0, 1);
   quoteTyping = true;
-  quoteAt = performance.now();
+  quoteAt = performance.now() + (QUOTE[0] === "\n" ? 140 : 22);
 }
 
 function typeQuote(now: number) {
@@ -272,7 +267,7 @@ function typeQuote(now: number) {
     return;
   }
   const ch = QUOTE[quoteN - 1];
-  const wait = ch === "\n" ? 520 : ch === "," ? 220 : 68 + ((quoteN * 17) % 24);
+  const wait = ch === "\n" ? 140 : ch === "," ? 80 : 22 + ((quoteN * 13) % 10);
   quoteAt = now + wait;
 }
 
@@ -537,6 +532,7 @@ window.addEventListener(
 layout(aspect);
 scatterLive(true);
 document.documentElement.dataset.mosaic = `${phase}:${clicks}`;
+startQuote();
 raf = requestAnimationFrame(tick);
 paintWork(0, true);
 void preloadMosaics();

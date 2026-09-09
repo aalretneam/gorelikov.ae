@@ -254,7 +254,7 @@ function arrivalTimeline(now: number) {
     headlineEl.classList.add("is-ghost");
   }
 
-  const subStart = reduced ? 800 : 4500;
+  const subStart = reduced ? 800 : 2800;
   const revealMs = reduced ? 400 : 20000;
   const orMs = reduced ? 200 : 1800;
   if (t >= subStart) {
