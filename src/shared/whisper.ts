@@ -12,6 +12,7 @@ export function bindWhisper(el: HTMLElement) {
   let full = "";
   let n = 0;
   let at = 0;
+  let typeAt = 0;
   let stayLast = true;
   let mode: "idle" | "wait" | "type" | "hold" | "fade" = "idle";
 
@@ -39,7 +40,7 @@ export function bindWhisper(el: HTMLElement) {
     n = 1;
     el.textContent = full.slice(0, 1);
     mode = "type";
-    at = now + CHAR_MS;
+    typeAt = now;
   }
 
   function play(lines: string[], opts?: { hold?: number; stayLast?: boolean; delay?: number }) {
@@ -70,8 +71,9 @@ export function bindWhisper(el: HTMLElement) {
       return;
     }
     if (mode === "type") {
-      if (now < at) return;
-      n += 1;
+      const expect = Math.min(full.length, 1 + Math.floor((now - typeAt) / CHAR_MS));
+      if (expect <= n) return;
+      n = expect;
       el.textContent = full.slice(0, n);
       if (n >= full.length) {
         const last = i === stanzas.length - 1;
@@ -81,9 +83,7 @@ export function bindWhisper(el: HTMLElement) {
         }
         mode = "hold";
         at = now + stanzas[i].hold;
-        return;
       }
-      at = now + CHAR_MS;
       return;
     }
     if (mode === "hold" && now >= at) {
