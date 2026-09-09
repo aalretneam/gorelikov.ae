@@ -98,7 +98,7 @@ canvas {
   pointer-events: none;
   white-space: pre-line;
   opacity: 0;
-  transition: opacity 0.7s ease;
+  transition: opacity 2.8s ease;
 }
 
 .quote.is-on {

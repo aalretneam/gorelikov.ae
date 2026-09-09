@@ -1,5 +1,8 @@
-/** Two characters per second on every page. */
-const CHAR_MS = 500;
+/** Default for every page unless the caller sets `delay`. */
+export const QUOTE_DELAY_MS = 16_000;
+/** Three characters per second. */
+const CHAR_MS = 1000 / 3;
+const FADE_MS = 2800;
 
 export function bindWhisper(el: HTMLElement) {
   const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -9,6 +12,7 @@ export function bindWhisper(el: HTMLElement) {
   let full = "";
   let n = 0;
   let at = 0;
+  let typeAt = 0;
   let stayLast = true;
   let mode: "idle" | "wait" | "type" | "hold" | "fade" = "idle";
 
@@ -36,7 +40,7 @@ export function bindWhisper(el: HTMLElement) {
     n = 1;
     el.textContent = full.slice(0, 1);
     mode = "type";
-    at = now + CHAR_MS;
+    typeAt = now;
   }
 
   function play(lines: string[], opts?: { hold?: number; stayLast?: boolean; delay?: number }) {
@@ -44,7 +48,7 @@ export function bindWhisper(el: HTMLElement) {
     stayLast = opts?.stayLast ?? true;
     stanzas = lines.map((text) => ({ text, hold }));
     i = -1;
-    const delay = opts?.delay ?? 0;
+    const delay = opts?.delay ?? QUOTE_DELAY_MS;
     if (delay > 0) {
       mode = "wait";
       at = performance.now() + delay;
@@ -57,7 +61,7 @@ export function bindWhisper(el: HTMLElement) {
   }
 
   function show(text: string, duration = 9000) {
-    play([text], { hold: duration, stayLast: true });
+    play([text], { hold: duration, stayLast: true, delay: 0 });
   }
 
   function tick(now: number) {
@@ -67,8 +71,9 @@ export function bindWhisper(el: HTMLElement) {
       return;
     }
     if (mode === "type") {
-      if (now < at) return;
-      n += 1;
+      const expect = Math.min(full.length, 1 + Math.floor((now - typeAt) / CHAR_MS));
+      if (expect <= n) return;
+      n = expect;
       el.textContent = full.slice(0, n);
       if (n >= full.length) {
         const last = i === stanzas.length - 1;
@@ -78,15 +83,13 @@ export function bindWhisper(el: HTMLElement) {
         }
         mode = "hold";
         at = now + stanzas[i].hold;
-        return;
       }
-      at = now + CHAR_MS;
       return;
     }
     if (mode === "hold" && now >= at) {
       mode = "fade";
       el.classList.add("is-off");
-      at = now + (reduced ? 200 : 1600);
+      at = now + (reduced ? 200 : FADE_MS);
       return;
     }
     if (mode === "fade" && now >= at) {
